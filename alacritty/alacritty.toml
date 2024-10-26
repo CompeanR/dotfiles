@@ -1,0 +1,36 @@
+
+[colors.primary]
+background = "0x282828"
+foreground = "0xebdbb2"
+
+[font]
+size = 12
+
+[font.normal]
+family = "SFMono Nerd Font"
+style = "Regular"
+
+[font.bold]
+family = "SFMono Nerd Font"
+style = "Bold"
+
+[font.italic]
+family = "SFMono Nerd Font"
+style = "Italic"
+
+[font.bold_italic]
+family = "SFMono Nerd Font"
+style = "Bold Italic"
+
+[shell]
+args = ["-c", "tmux attach -t session-cero || tmux new -s session-cero"]
+program = "/usr/bin/zsh"
+
+[window]
+decorations = "buttonless"
+opacity = 0.88
+
+[window.padding]
+x = 4
+y = 4
+
