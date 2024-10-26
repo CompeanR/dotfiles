@@ -1,0 +1,184 @@
+{
+  "vim.insertModeKeyBindings": [
+    // Remap 'jk' to Escape in insert mode
+    {
+      "before": ["j", "k"],
+      "after": ["<Esc>"]
+    }
+  ],
+  "vim.visualModeKeyBindings": [
+    // Cursor
+    { "before": ["<leader>", "c", "c"], "commands": ["composer.startComposerPrompt"]},
+    { "before": ["s"], "after": ["<leader>", "<leader>", "s"] },
+  ],
+  "vim.normalModeKeyBindingsNonRecursive": [
+    // New ones 
+    { "before": ["<leader>", "j", "a"], "commands": ["workbench.action.joinAllGroups"] },
+    { "before": ["<leader>", "e", "u", "p"], "commands": ["workbench.action.unpinEditor"] },
+    { "before": ["<leader>", "d", "w"], "commands": ["editor.debug.action.selectionToWatch"] },
+    { "before": ["<leader>", "k", "s"], "commands": ["workbench.action.openGlobalKeybindings"] },
+
+    // Debug Views
+    { "before": ["<leader>", "d", "h", "w"], "commands": ["workbench.debug.watchExpressionsView.toggleVisibility"] },
+    { "before": ["<leader>", "d", "h", "c"], "commands": ["workbench.debug.callStackView.toggleVisibility"] },
+    { "before": ["<leader>", "d", "f", "w"], "commands": ["workbench.debug.action.focusWatchView"] },
+    { "before": ["<leader>", "d", "f", "c"], "commands": ["workbench.debug.action.focusCallStackView"] },
+
+
+    // EasyMotion
+    { "before": ["s"], "after": ["<leader>", "<leader>", "s"] },
+
+    // Ctrl Commands
+    { "before": ["<C-S-l>"], "commands": ["workbench.action.moveEditorRightInGroup"] },
+    { "before": ["<C-\\>"], "commands": ["workbench.action.splitEditorRight"] },
+    { "before": ["<C-S-->"], "commands": ["workbench.action.splitEditorDown"] },
+    { "before": ["<c-f>"], "commands": ["workbench.action.joinAllGroups"] },
+    { "before": ["<C-m>"], "commands": ["workbench.action.moveEditorToNextGroup"] },
+    { "before": ["<C-z>"], "commands": ["workbench.action.toggleZenMode"] },
+    { "before": ["<C-h>"], "commands": ["workbench.action.focusPreviousGroup"] },
+    { "before": ["<C-l>"], "commands": ["workbench.action.focusNextGroup"] },
+    { "before": ["<C-w>"], "commands": ["workbench.action.closeActiveEditor"] },
+  
+
+    // Tab Navigation
+    { "before": ["<C-[>"], "commands": ["workbench.action.previousEditor"] },
+    { "before": ["<C-]>"], "commands": ["workbench.action.nextEditor"] },
+
+    // Projects
+    { "before": ["<leader>", "p", "o"], "commands": ["projectManager.listProjects"] },
+
+    // Debugger
+    { "before": ["c-j"], "commands": ["workbench.action.debug.stepOver"]},
+    { "before": ["c-e"], "commands": ["editor.debug.action.showDebugHover"]},
+    { "before": ["<leader>", "d", "r", "a"], "commands": ["workbench.debug.viewlet.action.removeAllBreakpoints"] },
+    { "before": ["<leader>", "d", "a"], "commands": ["editor.debug.action.toggleBreakpoint"] },
+    { "before": ["<leader>", "d", "c"], "commands": ["workbench.action.debug.continue"] },
+    { "before": ["<leader>", "d", "b"], "commands": ["workbench.debug.viewBreakpoints"] },
+    { "before": ["<leader>", "d", "e"], "commands": ["editor.debug.action.evaluate"] },
+    { "before": ["<leader>", "d", "s", "i"], "commands": ["workbench.action.debug.stepInto"] },
+    { "before": ["<leader>", "d", "s"], "commands": ["workbench.action.debug.stop"] },
+    { "before": ["<leader>", "d", "d"], "commands": ["workbench.action.debug.start"] },
+    { "before": ["<leader>", "d", "r", "i"], "commands": ["extension.liveServer.goOnline"] },
+    { "before": ["<leader>", "d", "r", "c"], "commands": ["editor.debug.action.runToCursor"] },
+    { "before": ["<leader>", "d", "o"], "commands": ["workbench.view.debug"] },
+    { "before": ["<leader>", "d", "m"], "commands": ["workbench.debug.viewlet.action.toggleBreakpointsActivatedAction"] },
+    { "before": ["<leader>", "d", "s", "l"], "commands": ["php-debug.startWithListen"] },
+    { "before": ["<leader>", "d", "t"], "commands": ["extension.toggleBreakpointEnabled"] },
+
+
+    // File Explorer
+    { "before": ["<C-S-e>"], "commands": ["workbench.view.explorer"] },
+    { "before": ["c", "e"], "commands": ["workbench.view.explorer"] },
+
+    // Continuous Shift
+    { "before": ["<leader>", "h"], "commands": ["editor.action.clearHighlightSearch"] },
+
+    // Remaps
+    { "before": ["<leader>", "n", "h"], "commands": ["editor.action.clearHighlightSearch"] },
+
+    // Move Selected Line / Block
+    { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"] },
+    { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"] },
+
+    // Finding Things
+    { "before": ["<leader>", "f", "f"], "commands": ["workbench.action.findInFiles"] },
+    { "before": ["<leader>", "s", "f"], "commands": ["workbench.action.quickOpen"] },
+    { "before": ["<leader>", "l", "s"], "commands": ["outline.focus"] },
+    { "before": ["<leader>", "f", "s"], "commands": ["workbench.action.gotoSymbol"] },
+
+    // Code Completion
+    { "before": ["<leader>", "r", "m"], "commands": ["workbench.action.debug.run"] },
+    { "before": ["<C-g>"], "commands": ["editor.action.quickFix"] },
+
+    // Jump Commands
+    { "before": ["[", "h"], "commands": ["workbench.action.previousEditor"] },
+    { "before": ["]", "l"], "commands": ["workbench.action.nextEditor"] },
+    { "before": ["[", "g"], "commands": ["editor.action.marker.prev"] },
+    { "before": ["]", "g"], "commands": ["editor.action.marker.next"] },
+    { "before": ["[", "m"], "commands": ["editor.action.goToReferences"] },
+    { "before": ["]", "m"], "commands": ["editor.action.goToImplementation"] },
+    { "before": ["[", "c"], "commands": ["workbench.action.navigateBack"] },
+    { "before": ["]", "c"], "commands": ["workbench.action.navigateForward"] },
+
+    // LSP Commands
+    { "before": ["<leader>", "l", "r"], "commands": ["editor.action.rename"] },
+    { "before": ["<leader>", "l", "f"], "commands": ["editor.action.formatDocument"] },
+    { "before": ["<leader>", "l", "a"], "commands": ["editor.action.quickFix"] },
+    { "before": ["<leader>", "l", "l"], "commands": ["workbench.actions.view.problems"] },
+
+    // GoTo Commands
+    { "before": ["<leader>", "a"], "commands": ["workbench.action.showCommands"] },
+    { "before": ["g", "d"], "commands": ["editor.action.revealDefinition"] },
+    { "before": ["g", "D"], "commands": ["editor.action.revealDeclaration"] },
+    { "before": ["g", "i"], "commands": ["editor.action.goToImplementation"] },
+    { "before": ["g", "r"], "commands": ["references-view.find"] },
+
+    // Todo
+    { "before": ["<leader>", "t", "o"], "commands": ["todo.show"] },
+
+    // Menu Commands
+    { "before": ["<leader>", "m", "m"], "commands": ["workbench.action.showCommands"] },
+
+    // Settings
+    { "before": ["<leader>", "o", "s"], "commands": ["workbench.action.openSettings"] },
+
+    // Project Window
+    { "before": ["]", "p"], "commands": ["workbench.action.nextEditorInGroup"] },
+    { "before": ["[", "p"], "commands": ["workbench.action.previousEditorInGroup"] },
+
+    // Editor
+    { "before": ["<leader>", "e", "o"], "commands": ["editor.action.selectHighlights"] },
+    { "before": ["<leader>", "h"], "commands": ["editor.action.showHover"] },
+    { "before": ["<leader>", "e", "p"], "commands": ["workbench.action.pinEditor"] },
+    { "before": ["<leader>", "e", "c"], "commands": ["workbench.action.closeOtherEditors"] },
+    { "before": ["<leader>", "e", "r"], "commands": ["revealFileInOS"] },
+    { "before": ["c-a"], "commands": ["workbench.action.toggleAuxiliaryBar"] },
+
+    { "before": ["<leader>", "f", "l"], "commands": ["eslint.executeAutofix"] },
+    { "before": ["<leader>", "e", "w"], "commands": ["workbench.action.toggleEditorWidths"] },
+    { "before": ["<leader>", "e", "o", "r"], "commands": ["workbench.action.openRecentFile"] },
+    { "before": ["<leader>", "e", "f", "r"], "commands": ["editor.action.startFindReplaceAction"] },
+    { "before": ["[", "e"], "commands": ["workbench.action.decreaseViewSize"] },
+    { "before": ["]", "e"], "commands": ["workbench.action.increaseViewSize"] },
+    { "before": ["<leader>", "e", "t"], "commands": ["workbench.action.showAllEditorsByMostRecentlyUsed"] },
+    { "before": ["<A-1>"], "commands": ["workbench.action.openEditorAtIndex1"] },
+    { "before": ["<A-2>"], "commands": ["workbench.action.openEditorAtIndex2"] },
+    { "before": ["<A-3>"], "commands": ["workbench.action.openEditorAtIndex3"] },
+    { "before": ["<A-4>"], "commands": ["workbench.action.openEditorAtIndex4"] },
+    { "before": ["<A-5>"], "commands": ["workbench.action.openEditorAtIndex5"] },
+    { "before": ["<A-6>"], "commands": ["workbench.action.openEditorAtIndex6"] },
+    { "before": ["<A-o>"], "commands": ["editor.action.selectHighlights"] },
+    { "before": ["<A-f>"], "commands": ["workbench.action.findInFiles"] },
+
+    // Files
+    { "before": ["<leader>", "f", "r"], "commands": ["workbench.action.files.rename"] },
+    { "before": ["<leader>", "f", "c"], "commands": ["workbench.action.files.newUntitledFile"] },
+
+    // Bookmarks Window - Quick Access
+    { "before": ["<leader>", "q", "q"], "commands": ["bookmarks.toggle"] },
+    { "before": ["<leader>", "q", "l"], "commands": ["bookmarks.listFromAllFiles"] },
+    { "before": ["<leader>", "q", "s"], "commands": ["bookmarks.list"] },
+    { "before": ["]", "q"], "commands": ["bookmarks.jumpToNext"] },
+    { "before": ["[", "q"], "commands": ["bookmarks.jumpToPrevious"] },
+    { "before": ["<leader>", "q", "e"], "commands": ["bookmarks.toggleLabeled"] },
+
+    // Git Window
+    { "before": ["<leader>", "g", "o"], "commands": ["workbench.view.scm"] },
+    { "before": ["<leader>", "g", "r"], "commands": ["git.revertSelectedRanges"] },
+    { "before": ["<leader>", "g", "l"], "commands": ["git.showFileHistory"] },
+    { "before": ["<leader>", "g", "f"], "commands": ["git.openFile"] },
+    { "before": ["]", "d"], "commands": ["git.nextChange"] },
+    { "before": ["[", "d"], "commands": ["git.prevChange"] },
+
+    // Local History
+    { "before": ["<leader>", "l", "h"], "commands": ["localHistory.view"] }
+  ],
+  "vim.visualModeKeyBindingsNonRecursive": [
+    // Continuous Shift in Visual Mode
+    { "before": ["<"], "after": ["<gv"] },
+    { "before": [">"], "after": [">gv"] },
+    // Move Selected Line / Block
+    { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"], "after": ["g", "v"] },
+    { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"], "after": ["g", "v"] }
+  ]
+}
