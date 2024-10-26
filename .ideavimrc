@@ -1,0 +1,296 @@
+"source ~/.vimrc
+" Find more examples here: https://jb.gg/share-ideavimrc
+let mapleader=" "
+" Don't use Ex mode, use Q for formatting.
+map Q gq
+set number relativenumber
+set scrolloff=5
+set history=1000
+set visualbell
+set showmode
+set hlsearch
+set incsearch
+set ignorecase
+set smartcase
+set gdefault
+set notimeout
+set timeoutlen=5000
+set showmode
+set highlightedyank
+set NERDTree
+set sneak
+set easymotion
+
+" Make compatibility between mac and linux env.
+if has ('mac')
+  let g:is_mac = 1
+else
+  let g:is_mac = 0
+endif
+
+if g:is_mac
+    """ Window navigation
+    nmap <D-d> <C-d>
+    nmap <D-u> <C-u>
+    nmap <D-o> <C-o>
+    nmap <D-i> <C-i>
+    nmap <D-r> <C-r>
+    nmap <D-S-L> :action MoveTabRight<CR>
+    nnoremap <D-\> :action SplitVertically<CR>
+    nnoremap <d-s--> :action SplitHorizontally<CR>
+    nnoremap <d-=> :action Unsplit<CR>
+    nnoremap <d-m> :action MoveEditorToOppositeTabGroup<CR>
+    nnoremap <d-z> :action ToggleDistractionFreeMode<CR>
+    nnoremap <d-h> :action PrevSplitter<CR>
+    nnoremap <d-l> :action NextSplitter<CR>
+    nnoremap <d-w> :action CloseContent<CR>
+
+    " Tab Navigation
+    nmap <d-[> :action PreviousTab<CR>
+    nmap <d-]> :action NextTab<CR>
+
+    "Debugger
+    nmap <D-e> :action QuickEvaluateExpression<CR>
+    nmap <D-j> :action StepOver<CR>
+
+    "Bookmarks
+    nnoremap <d-s-b> :action ActivateBookmarksToolWindow<CR>
+endif
+
+""" Window navigation
+nmap <C-S-L> :action MoveTabRight<CR>
+nnoremap <c-\> :action SplitVertically<CR>
+nnoremap <c-s--> :action SplitHorizontally<CR>
+nnoremap <c-=> :action Unsplit<CR>
+nnoremap <c-m> :action MoveEditorToOppositeTabGroup<CR>
+nnoremap <c-z> :action ToggleDistractionFreeMode<CR>
+nnoremap <c-h> :action PrevSplitter<CR>
+nnoremap <c-l> :action NextSplitter<CR>
+nnoremap <c-w> :action CloseContent<CR>
+
+" Tab Navigation
+nmap <c-[> :action PreviousTab<CR>
+nmap <c-]> :action NextTab<CR>
+
+" Debugger
+nmap <c-e> :action QuickEvaluateExpression<CR>
+nmap <c-j> :action StepOver<CR>
+
+"Bookmarks
+nnoremap <c-s-b> :action ActivateBookmarksToolWindow<CR>
+
+" NERDTree Configs
+"let g:NERDTreeWinSize=30
+"let g:NERDTreeMapPreview = 'O'
+nmap <c-s-e> :NERDTreeToggle<CR>
+nmap ce :NERDTreeFocus<CR>
+
+" continuous shift
+xnoremap < <gv
+xnoremap > >gv
+nmap <leader>h :nohlsearch<CR>
+
+" Remaps
+inoremap jk <ESC>
+nnoremap <leader>nh :nohl<CR>
+
+
+" Tab navigation
+nnoremap <leader>tn :bnext<CR>
+nnoremap <leader>tp :bprevious<CR>
+nmap <leader>t :action GotoTest<CR>
+
+" Move selected line / block of text in visual mode
+xnoremap J :m '>+1<CR>gv=gv
+xnoremap K :m '<-2<CR>gv=gv
+
+" Finding things
+nnoremap <leader>ff :action FindInPath<CR>
+nnoremap <leader>sf :action GotoFile<CR>
+nnoremap <leader>ls :action ActivateStructureToolWindow<CR>
+noremap <leader>fs :action FileStructurePopup<CR>
+
+" Code completion
+nnoremap <leader>rm :action RunMenu<CR>
+nnoremap <c-g> :action Generate<CR>
+
+" Jump
+nmap [h :action PreviousTab<CR>
+nmap ]l :action NextTab<CR>
+nmap [g :action GotoPreviousError<CR>
+nmap ]g :action GotoNextError<CR>
+nmap [u :action GotoPrevElementUnderCaretUsage<CR>
+nmap ]u :action GotoNextElementUnderCaretUsage<CR>
+nmap <c-s-k> :action PreviousOccurence<CR>
+nmap <c-s-j> :action NextOccurence<CR>
+nmap [m :action MethodUp<CR>
+nmap ]m :action MethodDown<CR>
+nmap [c :action JumpToLastChange<CR>
+nmap ]c :action JumpToNextChange<CR>
+
+" LSP
+nnoremap <leader>lr :action RenameElement<CR>
+nnoremap <leader>lR :action RenameFile<CR>
+nnoremap <leader>lf :action ReformatCode<CR>
+nnoremap <leader>r :action Refactorings.QuickListPopupAction<CR>
+nnoremap <leader>la :action ShowIntentionActions<CR>
+nnoremap <leader>ll :action ActivateProblemsViewToolWindow<CR>
+
+" gotos
+nmap <leader>a :action GotoAction<CR>
+nmap ga :action GotoAction<CR>
+nmap <leader>of :action GotoFile<CR>
+nmap gs :action GotoSymbol<CR>
+nmap gT :action TextSearchAction<CR>
+nmap go :action GotoSuperMethod<CR>
+nmap gd :action GotoDeclaration<CR>
+nmap gD :action GotoTypeDeclaration<CR>
+nmap gi :action GotoImplementation<CR>
+nmap gI :action QuickImplementations<CR>
+nmap gn :action ShowNavBar<CR>
+nmap gr :action FindUsages<CR>
+
+" Todo
+nmap <leader>to :action ActivateTODOToolWindow<CR>
+
+" Menu
+nmap <leader>mm :action MainMenu<CR>
+nmap <leader>ma :action AnalyzeMenu<CR>
+nmap <leader>mb :action BuildMenu<CR>
+nmap <leader>mc :action CodeMenu<CR>
+nmap <leader>mf :action FindMenuGroup<CR>
+nmap <leader>mg :action GoToMenu<CR>
+nmap <leader>ms :action ScopeViewPopupMenu<CR>
+nmap <leader>mt :action EditorTabPopupMenu<CR>
+nmap <leader>mw :action ToolWindowsGroup<CR>
+
+" Debugger
+nmap <leader>dra :action Debugger.RemoveAllBreakpoints<CR>
+nmap <leader>da :action ToggleLineBreakpoint<CR>
+nmap <c-n> :action Resume<CR>
+nnoremap <leader>db :action ViewBreakpoints<CR>
+nnoremap <leader>de :action EvaluateExpression<CR>
+nnoremap <leader>dsi :action StepInto<CR>
+nnoremap <leader>ds :action RunToolbarMainMultipleStopAction<CR>
+nnoremap <leader>dd :action Debug<CR>
+nnoremap <leader>dri :action JavaScript.Debugger.ReloadInBrowser<CR>
+nnoremap <leader>drc :action RunToCursor<CR>
+nnoremap <leader>do :action ActivateDebugToolWindow<CR>
+nnoremap <leader>dm :action XDebugger.MuteBreakpoints<CR>
+nnoremap <leader>dsl :action PhpListenDebugAction<CR>
+nnoremap <leader>dw :action Debugger.AddToWatch<CR>
+nnoremap <leader>dt :action ToggleBreakpointEnabled<CR>
+
+" Settings
+nmap <leader>os :action ShowSettings<CR>
+nnoremap <leader>wc :action HideActiveWindow<CR>
+
+" Project Window
+nnoremap ]p :action NextProjectWindow<CR>
+nnoremap [p :action PreviousProjectWindow<CR>
+nnoremap <leader>po :action OpenProjectWindows<CR>
+nnoremap <leader>pr :action $LRU<CR>
+nnoremap <leader>pc :action PhpNewClass<CR>
+
+" Editor
+nnoremap <leader>eo :action SelectNextOccurrence<CR>
+nnoremap <leader>h :action ShowHoverInfo<CR>
+nnoremap <leader>fl :action Javascript.Linters.EsLint.Fix<CR>
+nnoremap <leader>ep :action PinActiveTab<CR>
+nnoremap <leader>ec :action CloseAllUnpinnedEditors<CR>
+nnoremap <leader>er :action RevealIn<CR>
+nnoremap <leader>em :action MaximizeEditorInSplit<CR>
+nnoremap <leader>en :action MaximizeEditorInSplit<CR>
+nnoremap <leader>eor :action RecentChanges<CR>
+nnoremap <leader>efr :action Replace<CR>
+nnoremap [e :action StretchSplitToLeft<CR>
+nnoremap ]e :action StretchSplitToRight<CR>
+nnoremap <leader>et :action EditorTabsGroup<CR>
+nnoremap <a-1> :action GoToTab1<CR>
+nnoremap <c-2> :action GoToTab2<CR>
+nnoremap <c-3> :action GoToTab3<CR>
+nnoremap <c-4> :action GoToTab4<CR>
+nnoremap <c-5> :action GoToTab5<CR>
+nnoremap <c-6> :action GoToTab6<CR>
+
+" Files
+nnoremap <leader>fr :action RenameFile<CR>
+nnoremap <leader>fc :action PhpNewClass<CR>
+
+" Bookmarks Window
+nnoremap <leader>ba :action ToggleBookmark<CR>
+nnoremap <leader>bb :action ShowBookmarks<CR>
+nnoremap ]b :action GotoNextBookmark<CR>
+nnoremap [b :action GotoPreviousBookmark<CR>
+nnoremap <leader>brm :action DeleteMnemonicFromBookmark<CR>
+nnoremap <leader>bm :action ToggleBookmarkWithMnemonic<CR>
+nnoremap <leader>be :action EditBookmark<CR>
+nnoremap <leader><leader>m :action ShowTypeBookmarks<CR>
+nnoremap <leader><leader>1 :action ToggleBookmark1<CR>
+nnoremap <leader><leader>2 :action ToggleBookmark2<CR>
+nnoremap <leader><leader>3 :action ToggleBookmark3<CR>
+nnoremap <leader><leader>4 :action ToggleBookmark4<CR>
+nnoremap <leader><leader>5 :action ToggleBookmark5<CR>
+nnoremap <leader><leader>6 :action ToggleBookmark6<CR>
+nnoremap <leader><leader>7 :action ToggleBookmark7<CR>
+nnoremap <leader><leader>8 :action ToggleBookmark8<CR>
+nnoremap <leader><leader>9 :action ToggleBookmark9<CR>
+nnoremap <leader>1 :action GotoBookmark1<CR>
+nnoremap <leader>2 :action GotoBookmark2<CR>
+nnoremap <leader>3 :action GotoBookmark3<CR>
+nnoremap <leader>4 :action GotoBookmark4<CR>
+nnoremap <leader>5 :action GotoBookmark5<CR>
+nnoremap <leader>6 :action GotoBookmark6<CR>
+nnoremap <leader>7 :action GotoBookmark7<CR>
+nnoremap <leader>8 :action GotoBookmark8<CR>
+nnoremap <leader>9 :action GotoBookmark9<CR>
+
+" Commits Window
+nnoremap <leader>cc :action ActivateCommitToolWindow<CR>
+nnoremap <leader>cs :action Vcs.Show.Shelf<CR>
+
+" Git Window
+nnoremap <leader>go :action ActivateVersionControlToolWindow<CR>
+nnoremap <leader>gr :action Vcs.RollbackChangedLines<CR>
+nnoremap <leader>gl :action Vcs.ShowDiffChangedLines<CR>
+nnoremap <leader>gf :action Diff.ShowDiff<CR>
+nnoremap ]d :action NextDiff<CR>
+nnoremap [d :action PreviousDiff<CR>
+nnoremap <leader>gb :action Annotate<CR>
+
+" Set Plugins
+Plug 'preservim/nerdtree'
+Plug 'easymotion/vim-easymotion'
+Plug 'tpope/vim-commentary'
+Plug 'machakann/vim-highlightedyank'
+
+" Functions
+
+" Debugger
+" Define a function for hard continue and reloading the browser.
+function! HardContinue()
+    action XDebugger.MuteBreakpoints
+    action Resume
+    action JavaScript.Debugger.ReloadInBrowser
+    action XDebugger.MuteBreakpoints
+endfunction
+nnoremap <leader>dhc :call HardContinue()<CR>
+
+
+" Define a function for soft continue
+function! SoftContinue()
+    action XDebugger.MuteBreakpoints
+
+    for i in range(1000)
+	" just loop
+    endfor
+
+    action Resume
+
+    for i in range(1000)
+	" just loop
+    endfor
+
+    action XDebugger.MuteBreakpoints
+endfunction
+nnoremap <leader>dsc :call SoftContinue()<CR>
