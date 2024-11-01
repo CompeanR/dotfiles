@@ -185,16 +185,6 @@
         "when": "editorTextFocus && inDebugMode"
     },
     {
-        "key": "ctrl+h",
-        "command": "editor.action.showHover",
-        "when": "editorTextFocus"
-    },
-    {
-        "key": "cmd+k cmd+i",
-        "command": "-editor.action.showHover",
-        "when": "editorTextFocus"
-    },
-    {
         "key": "pagedown",
         "command": "-workbench.action.terminal.scrollDownPage",
         "when": "terminalFocus && terminalHasBeenCreated && !terminalAltBufferActive || terminalFocus && terminalProcessSupported && !terminalAltBufferActive"
@@ -957,7 +947,7 @@
         "when": "editorTextFocus && vim.active && vim.overrideCtrlC && vim.use<C-c> && !inDebugRepl"
     },
     {
-        "key": "shift+alt+s",
+        "key": "alt+cmd+s",
         "command": "workbench.action.toggleAuxiliaryBar"
     },
     {
@@ -971,11 +961,6 @@
     {
         "key": "shift+alt+v",
         "command": "workbench.debug.variablesView.toggleVisibility"
-    },
-    {
-        "key": "shift+cmd+[",
-        "command": "-workbench.action.terminal.focusPrevious",
-        "when": "terminalFocus && terminalHasBeenCreated && !terminalEditorFocus || terminalFocus && terminalProcessSupported && !terminalEditorFocus"
     },
     {
         "key": "ctrl+tab",
@@ -1296,5 +1281,41 @@
         "key": "ctrl+`",
         "command": "-workbench.action.terminal.toggleTerminal",
         "when": "terminal.active"
+    },
+    {
+        "key": "alt+k",
+        "command": "cursorai.action.generateInTerminal"
+    },
+    {
+        "key": "alt+cmd+l",
+        "command": "workbench.action.terminal.focusNextPane",
+        "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
+    },
+    {
+        "key": "alt+cmd+right",
+        "command": "-workbench.action.terminal.focusNextPane",
+        "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
+    },
+    {
+        "key": "alt+cmd+h",
+        "command": "workbench.action.terminal.focusPreviousPane",
+        "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
+    },
+    {
+        "key": "alt+cmd+left",
+        "command": "-workbench.action.terminal.focusPreviousPane",
+        "when": "terminalFocus && terminalHasBeenCreated || terminalFocus && terminalProcessSupported"
+    },
+    {
+        "key": "shift+cmd+n",
+        "command": "explorer.newFile"
+    },
+    {
+        "key": "alt+s",
+        "command": "workbench.action.focusAuxiliaryBar"
+    },
+    {
+        "key": "shift+cmd+l",
+        "command": "workbench.action.moveEditorToRightGroup"
     }
 ]

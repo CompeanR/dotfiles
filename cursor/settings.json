@@ -13,16 +13,19 @@
   ],
   "vim.normalModeKeyBindingsNonRecursive": [
     // New ones 
-    { "before": ["<leader>", "j", "a"], "commands": ["workbench.action.joinAllGroups"] },
+    { "before": ["<leader>", "e", "j"], "commands": ["workbench.action.joinAllGroups"] },
     { "before": ["<leader>", "e", "u", "p"], "commands": ["workbench.action.unpinEditor"] },
     { "before": ["<leader>", "d", "w"], "commands": ["editor.debug.action.selectionToWatch"] },
     { "before": ["<leader>", "k", "s"], "commands": ["workbench.action.openGlobalKeybindings"] },
+    { "before": ["<leader>", "g", "r"], "commands": ["git.revertSelectedRanges"] },
+
 
     // Debug Views
     { "before": ["<leader>", "d", "h", "w"], "commands": ["workbench.debug.watchExpressionsView.toggleVisibility"] },
     { "before": ["<leader>", "d", "h", "c"], "commands": ["workbench.debug.callStackView.toggleVisibility"] },
     { "before": ["<leader>", "d", "f", "w"], "commands": ["workbench.debug.action.focusWatchView"] },
     { "before": ["<leader>", "d", "f", "c"], "commands": ["workbench.debug.action.focusCallStackView"] },
+    { "before": ["<leader>", "d", "r", "c"], "commands": ["editor.debug.action.runToCursor"]},
 
 
     // EasyMotion
@@ -157,7 +160,7 @@
     // Bookmarks Window - Quick Access
     { "before": ["<leader>", "q", "q"], "commands": ["bookmarks.toggle"] },
     { "before": ["<leader>", "q", "l"], "commands": ["bookmarks.listFromAllFiles"] },
-    { "before": ["<leader>", "q", "s"], "commands": ["bookmarks.list"] },
+    { "before": ["<leader>", "q", "f"], "commands": ["bookmarks.list"] },
     { "before": ["]", "q"], "commands": ["bookmarks.jumpToNext"] },
     { "before": ["[", "q"], "commands": ["bookmarks.jumpToPrevious"] },
     { "before": ["<leader>", "q", "e"], "commands": ["bookmarks.toggleLabeled"] },
