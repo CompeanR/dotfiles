@@ -36,11 +36,12 @@ if g:is_mac
     nmap <D-i> <C-i>
     nmap <D-r> <C-r>
     nmap <D-S-L> :action MoveTabRight<CR>
+    vmap <d-u> <c-u>
+    vmap <d-d> <c-d>
     nnoremap <D-\> :action SplitVertically<CR>
     nnoremap <d-s--> :action SplitHorizontally<CR>
     nnoremap <d-=> :action Unsplit<CR>
     nnoremap <d-m> :action MoveEditorToOppositeTabGroup<CR>
-    nnoremap <d-z> :action ToggleDistractionFreeMode<CR>
     nnoremap <d-h> :action PrevSplitter<CR>
     nnoremap <d-l> :action NextSplitter<CR>
     nnoremap <d-w> :action CloseContent<CR>
@@ -93,6 +94,8 @@ nmap <leader>h :nohlsearch<CR>
 " Remaps
 inoremap jk <ESC>
 nnoremap <leader>nh :nohl<CR>
+nmap s <Plug>(easymotion-s2)
+vmap s <Plug>(easymotion-s2)
 
 
 " Tab navigation
@@ -139,7 +142,7 @@ nnoremap <leader>ll :action ActivateProblemsViewToolWindow<CR>
 " gotos
 nmap <leader>a :action GotoAction<CR>
 nmap ga :action GotoAction<CR>
-nmap <leader>of :action GotoFile<CR>
+nmap <d-p> :action GotoFile<CR>
 nmap gs :action GotoSymbol<CR>
 nmap gT :action TextSearchAction<CR>
 nmap go :action GotoSuperMethod<CR>
@@ -167,9 +170,10 @@ nmap <leader>mw :action ToolWindowsGroup<CR>
 " Debugger
 nmap <leader>dra :action Debugger.RemoveAllBreakpoints<CR>
 nmap <leader>da :action ToggleLineBreakpoint<CR>
-nmap <c-n> :action Resume<CR>
-nnoremap <leader>db :action ViewBreakpoints<CR>
+nmap <leader>dc :action Resume<CR>
+nnoremap <leader>dbb :action ViewBreakpoints<CR>
 nnoremap <leader>de :action EvaluateExpression<CR>
+vnoremap <leader>de :action EvaluateExpression<CR>
 nnoremap <leader>dsi :action StepInto<CR>
 nnoremap <leader>ds :action RunToolbarMainMultipleStopAction<CR>
 nnoremap <leader>dd :action Debug<CR>
@@ -180,6 +184,9 @@ nnoremap <leader>dm :action XDebugger.MuteBreakpoints<CR>
 nnoremap <leader>dsl :action PhpListenDebugAction<CR>
 nnoremap <leader>dw :action Debugger.AddToWatch<CR>
 nnoremap <leader>dt :action ToggleBreakpointEnabled<CR>
+nnoremap <leader>dsm :action SmartStepInto<CR>
+nnoremap <leader>dse :action ShowExecutionPoint<CR>
+nnoremap <leader>dbe :action EditBreakpoint<CR>
 
 " Settings
 nmap <leader>os :action ShowSettings<CR>
@@ -207,11 +214,14 @@ nnoremap [e :action StretchSplitToLeft<CR>
 nnoremap ]e :action StretchSplitToRight<CR>
 nnoremap <leader>et :action EditorTabsGroup<CR>
 nnoremap <a-1> :action GoToTab1<CR>
-nnoremap <c-2> :action GoToTab2<CR>
-nnoremap <c-3> :action GoToTab3<CR>
-nnoremap <c-4> :action GoToTab4<CR>
-nnoremap <c-5> :action GoToTab5<CR>
-nnoremap <c-6> :action GoToTab6<CR>
+nnoremap <a-2> :action GoToTab2<CR>
+nnoremap <a-3> :action GoToTab3<CR>
+nnoremap <a-4> :action GoToTab4<CR>
+nnoremap <a-5> :action GoToTab5<CR>
+nnoremap <a-6> :action GoToTab6<CR>
+nnoremap <a-o> :action SelectNextOccurrence<CR>
+nnoremap <a-f> :action FindInPath<CR>
+
 
 " Files
 nnoremap <leader>fr :action RenameFile<CR>
@@ -246,8 +256,9 @@ nnoremap <leader>8 :action GotoBookmark8<CR>
 nnoremap <leader>9 :action GotoBookmark9<CR>
 
 " Commits Window
-nnoremap <leader>cc :action ActivateCommitToolWindow<CR>
+nnoremap <leader>co :action ActivateCommitToolWindow<CR>
 nnoremap <leader>cs :action Vcs.Show.Shelf<CR>
+nnoremap <leader>cc :action Vcs.Show.Local.Changes<CR>
 
 " Git Window
 nnoremap <leader>go :action ActivateVersionControlToolWindow<CR>
@@ -257,6 +268,11 @@ nnoremap <leader>gf :action Diff.ShowDiff<CR>
 nnoremap ]d :action NextDiff<CR>
 nnoremap [d :action PreviousDiff<CR>
 nnoremap <leader>gb :action Annotate<CR>
+
+" Local History
+nnoremap <leader>lo :action RecentChanges<CR>
+nnoremap <leader>lh :action LocalHistory<CR>
+vmap <leader>ls :action LocalHistory.ShowSelectionHistory<CR>
 
 " Set Plugins
 Plug 'preservim/nerdtree'

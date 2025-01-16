@@ -19,6 +19,30 @@
     { "before": ["<leader>", "k", "s"], "commands": ["workbench.action.openGlobalKeybindings"] },
     { "before": ["<leader>", "g", "r"], "commands": ["git.revertSelectedRanges"] },
 
+    // Next and previous changes
+    { "before": ["<leader>", "n", "c"], "commands": ["workbench.action.compareEditor.nextChange"] },
+    { "before": ["C-n"], "commands": ["workbench.action.compareEditor.nextChange"] },
+    { "before": ["<leader>", "p", "c"], "commands": ["workbench.action.compareEditor.previousChange"] },
+    { "before": ["C-p"], "commands": ["workbench.action.compareEditor.previousChange"] },
+
+
+    // Numbered Bookmarks
+    // Numbered bookmarks 0-5
+    { "before": ["<leader>", "<leader>", "0"], "commands": ["numberedBookmarks.toggleBookmark0"]},
+    { "before": ["<leader>", "<leader>", "1"], "commands": ["numberedBookmarks.toggleBookmark1"]},
+    { "before": ["<leader>", "<leader>", "2"], "commands": ["numberedBookmarks.toggleBookmark2"]},
+    { "before": ["<leader>", "<leader>", "3"], "commands": ["numberedBookmarks.toggleBookmark3"]},
+    { "before": ["<leader>", "<leader>", "4"], "commands": ["numberedBookmarks.toggleBookmark4"]},
+    { "before": ["<leader>", "<leader>", "5"], "commands": ["numberedBookmarks.toggleBookmark5"]},
+
+    // Jump to numbered bookmarks 0-5
+    { "before": ["<leader>", "0"], "commands": ["numberedBookmarks.jumpToBookmark0"]},
+    { "before": ["<leader>", "1"], "commands": ["numberedBookmarks.jumpToBookmark1"]},
+    { "before": ["<leader>", "2"], "commands": ["numberedBookmarks.jumpToBookmark2"]},
+    { "before": ["<leader>", "3"], "commands": ["numberedBookmarks.jumpToBookmark3"]},
+    { "before": ["<leader>", "4"], "commands": ["numberedBookmarks.jumpToBookmark4"]},
+    { "before": ["<leader>", "5"], "commands": ["numberedBookmarks.jumpToBookmark5"]},
+
 
     // Debug Views
     { "before": ["<leader>", "d", "h", "w"], "commands": ["workbench.debug.watchExpressionsView.toggleVisibility"] },
@@ -98,7 +122,7 @@
     { "before": ["]", "l"], "commands": ["workbench.action.nextEditor"] },
     { "before": ["[", "g"], "commands": ["editor.action.marker.prev"] },
     { "before": ["]", "g"], "commands": ["editor.action.marker.next"] },
-    { "before": ["[", "m"], "commands": ["editor.action.goToReferences"] },
+    { "before": ["g", "r"], "commands": ["editor.action.goToReferences"] },
     { "before": ["]", "m"], "commands": ["editor.action.goToImplementation"] },
     { "before": ["[", "c"], "commands": ["workbench.action.navigateBack"] },
     { "before": ["]", "c"], "commands": ["workbench.action.navigateForward"] },
