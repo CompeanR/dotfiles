@@ -112,6 +112,7 @@ nnoremap <leader>ff :action FindInPath<CR>
 nnoremap <leader>sf :action GotoFile<CR>
 nnoremap <leader>ls :action ActivateStructureToolWindow<CR>
 noremap <leader>fs :action FileStructurePopup<CR>
+nnoremap <leader>far :action Replace<CR>
 
 " Code completion
 nnoremap <leader>rm :action RunMenu<CR>
