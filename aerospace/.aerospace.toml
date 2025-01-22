@@ -56,6 +56,14 @@ run = 'layout floating'
 if.app-name-regex-substring = 'cisco'
 run = 'layout floating'
 
+[[on-window-detected]]
+if.app-name-regex-substring = 'edge'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'monica'
+run = 'layout floating'
+
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
 # - Constant:     gaps.outer.top = 8
@@ -158,6 +166,7 @@ alt-i = 'exec-and-forget open -a "IntelliJ IDEA"'
 alt-s = 'exec-and-forget open -a "Slack"'
 alt-e = 'exec-and-forget open -a "Microsoft Edge"'
 alt-d = 'exec-and-forget open -a "DBeaver"'
+alt-n = 'exec-and-forget open -a "Notion"'
 
 # ------------ SERVICE MODE --------------
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode
