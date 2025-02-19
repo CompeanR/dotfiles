@@ -5,7 +5,8 @@ shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
 adjust-cell-height = 30%
 background-opacity = .95
-quick-terminal-autohide = false
+quick-terminal-autohide = true
+background-blur = true
 
 mouse-hide-while-typing = true
 mouse-scroll-multiplier = 2

@@ -14,11 +14,4 @@ keymap.set("i", "jk", "<ESC>", { desc = "Exit insert mode with jk" })
 -- keymap.set("n", "<leader>nh", ":nohl<CR>", { desc = "Clear search highlights" })
 
 -- Select All
-keymap.set("n", "<D-a>", "gg<S-v>G", { desc = "Select All" })
-
--- General navigation
-keymap.set("n", "<D-d>", "<C-d>", { desc = "Scroll down (Mac)" })
-keymap.set("n", "<D-u>", "<C-u>", { desc = "Scroll up (Mac)" })
-keymap.set("n", "<D-o>", "<C-o>", { desc = "Jump to older cursor position (Mac)" })
-keymap.set("n", "<D-i>", "<C-i>", { desc = "Jump to newer cursor position (Mac)" })
-keymap.set("n", "<D-r>", "<C-r>", { desc = "Redo (Mac)" })
+keymap.set("n", "<c-a>", "gg<S-v>G", { desc = "Select All" })
