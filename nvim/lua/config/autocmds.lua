@@ -6,3 +6,15 @@
 --
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
+-- vim.api.nvim_create_autocmd({ "VimResized" }, {
+--   desc = "Resize nvim-tree if nvim window got resized",
+--
+--   group = vim.api.nvim_create_augroup("NvimTreeResize", { clear = true }),
+--   callback = function()
+--     local percentage = 15
+--
+--     local ratio = percentage / 100
+--     local width = math.floor(vim.go.columns * ratio)
+--     vim.cmd("tabdo NvimTreeResize " .. width)
+--   end,
+-- })
