@@ -207,5 +207,6 @@
     // Move Selected Line / Block
     { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"], "after": ["g", "v"] },
     { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"], "after": ["g", "v"] }
-  ]
+  ],
+  "workbench.colorTheme": "Visual Studio Light"
 }
