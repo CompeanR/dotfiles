@@ -1,12 +1,6 @@
 local dap = require("dap")
 local dapui = require("dapui")
 
-dap.adapters.chrome = {
-  type = "executable",
-  command = "node",
-  args = { os.getenv("HOME") .. "/path/to/vscode-chrome-debug/out/src/chromeDebug.js" }, -- TODO adjust
-}
-
 dap.configurations.javascriptreact = { -- change this to javascript if needed
   {
     name = "Attach to chrome",
@@ -19,6 +13,21 @@ dap.configurations.javascriptreact = { -- change this to javascript if needed
     port = 9222,
     webRoot = "${workspaceFolder}",
   },
+}
+
+dap.configurations.php = {
+  {
+    name = "Listen for XDebug (Docker)",
+    type = "php",
+    request = "launch",
+    port = 9000,
+    pathMappings = {
+      -- Map container paths to local paths
+      ["/var/www/html/app"] = "${workspaceFolder}/services/docs3-core/app"
+    },
+    stopOnEntry = false,
+    log = true
+  }
 }
 
 return   {
