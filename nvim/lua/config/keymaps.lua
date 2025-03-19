@@ -52,4 +52,4 @@ local function expand_empty_tag()
   end
   return "<CR>"
 end
-vim.keymap.set("i", "<CR>", expand_empty_tag, { expr = true, noremap = true, desc = "Expand empty HTML/JSX tags" })
+-- vim.keymap.set("i", "<CR>", expand_empty_tag, { expr = true, noremap = true, desc = "Expand empty HTML/JSX tags" })

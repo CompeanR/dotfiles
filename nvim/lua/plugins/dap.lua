@@ -1,7 +1,33 @@
 local dap = require("dap")
 local dapui = require("dapui")
 
-dap.configurations.javascriptreact = { -- change this to javascript if needed
+dap.adapters["pwa-node"] = {
+  type = "server",
+  host = "localhost",
+  port = 9229,
+  executable = {
+    command = "node",
+    args = {
+      vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
+      "9229",
+    },
+  },
+}
+
+dap.configurations.javascript = {
+  {
+    type = "pwa-node",
+    request = "launch",
+    name = "Nodote xd",
+    runtimeExecutable = "node",
+    program = "${workspaceFolder}/dist/index.js",
+    outFiles = { "${workspaceFolder}/dist/**/*.js" },
+  },
+}
+
+dap.configurations.typescript = dap.configurations.javascript
+
+dap.configurations.javascriptreact = {
   {
     name = "Attach to chrome",
     type = "chrome",
@@ -15,22 +41,7 @@ dap.configurations.javascriptreact = { -- change this to javascript if needed
   },
 }
 
-dap.configurations.php = {
-  {
-    name = "Listen for XDebug (Docker)",
-    type = "php",
-    request = "launch",
-    port = 9000,
-    pathMappings = {
-      -- Map container paths to local paths
-      ["/var/www/html/app"] = "${workspaceFolder}/services/docs3-core/app"
-    },
-    stopOnEntry = false,
-    log = true
-  }
-}
-
-return   {
+return {
   {
     "mfussenegger/nvim-dap",
     dependencies = {
@@ -49,7 +60,6 @@ return   {
       { "<leader>dra", function() require("dap").clear_breakpoints() end, desc = "Clear Breakpoints" },
       { "<leader>dJ", function() require("dap").down() end, desc = "Down" },
       { "<leader>dK", function() require("dap").up() end, desc = "Up" },
-    },
+    }
   },
 }
-
