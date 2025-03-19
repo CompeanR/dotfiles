@@ -1,5 +1,4 @@
 local dap = require("dap")
-local dapui = require("dapui")
 
 dap.adapters["pwa-node"] = {
   type = "server",
@@ -56,7 +55,7 @@ return {
       { "<leader>da", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
       { "<leader>dO", function() require("dap").step_out() end, desc = "Step Out" },
       { "J", function() require("dap").step_over() end, desc = "Step Over" },
-      { "<leader>dda", function() require("dap").continue({ before = get_args }) end, desc = "Run with Args" },
+      { "<leader>dda", function() require("dap").continue() end, desc = "Run with Args" },
       { "<leader>dra", function() require("dap").clear_breakpoints() end, desc = "Clear Breakpoints" },
       { "<leader>dJ", function() require("dap").down() end, desc = "Down" },
       { "<leader>dK", function() require("dap").up() end, desc = "Up" },
