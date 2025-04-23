@@ -21,7 +21,7 @@ enable-normalization-opposite-orientation-for-nested-containers = true
 # See: https://nikitabobko.github.io/AeroSpace/guide#layouts
 # The 'accordion-padding' specifies the size of accordion padding
 # You can set 0 to disable the padding feature
-accordion-padding = 250
+accordion-padding = 50
 
 # Possible values: tiles|accordion
 default-root-container-layout = 'tiles'
@@ -62,6 +62,18 @@ run = 'layout floating'
 
 [[on-window-detected]]
 if.app-name-regex-substring = 'monica'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'chrome'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'cursor'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'firefox'
 run = 'layout floating'
 
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
@@ -140,7 +152,6 @@ alt-7 = 'workspace 7'
 alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
 alt-b = 'workspace B'
-alt-o = 'workspace O'
 alt-p = 'workspace P'
 alt-q = 'workspace Q'
 alt-r = 'workspace R'
@@ -196,6 +207,7 @@ alt-n = 'exec-and-forget open -a "Notion"'
 alt-g = 'exec-and-forget open -a "Ghostty"'
 alt-a = 'exec-and-forget open -a "Arc"'
 alt-m = 'exec-and-forget open -a "Firefox"'
+alt-o = 'exec-and-forget open -a "Cursor"'
 
 # ------------ SERVICE MODE --------------
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode

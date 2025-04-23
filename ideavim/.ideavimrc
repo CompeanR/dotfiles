@@ -59,7 +59,10 @@ if g:is_mac
 endif
 
 """ Window navigation
-nmap <C-S-L> :action MoveTabRight<CR>
+nmap <leader>wl :action MoveTabRight<CR>
+nmap <leader>wh :action MoveTabLeft<CR>
+nmap <leader>wj :action MoveTabDown<CR>
+nmap <leader>wk :action MoveTabUp<CR>
 nnoremap <c-\> :action SplitVertically<CR>
 nnoremap <c-s--> :action SplitHorizontally<CR>
 nnoremap <c-=> :action Unsplit<CR>
@@ -70,8 +73,8 @@ nnoremap <c-l> :action NextSplitter<CR>
 nnoremap <c-w> :action CloseContent<CR>
 
 " Tab Navigation
-nmap <c-[> :action PreviousTab<CR>
-nmap <c-]> :action NextTab<CR>
+nmap <s-h> :action PreviousTab<CR>
+nmap <s-l> :action NextTab<CR>
 
 " Debugger
 nmap <c-e> :action QuickEvaluateExpression<CR>
@@ -108,7 +111,7 @@ xnoremap J :m '>+1<CR>gv=gv
 xnoremap K :m '<-2<CR>gv=gv
 
 " Finding things
-nnoremap <leader>ff :action FindInPath<CR>
+nnoremap <leader>sg :action FindInPath<CR>
 nnoremap <leader>sf :action GotoFile<CR>
 nnoremap <leader>ls :action ActivateStructureToolWindow<CR>
 noremap <leader>fs :action FileStructurePopup<CR>
@@ -121,8 +124,8 @@ nnoremap <c-g> :action Generate<CR>
 " Jump
 nmap [h :action PreviousTab<CR>
 nmap ]l :action NextTab<CR>
-nmap [g :action GotoPreviousError<CR>
-nmap ]g :action GotoNextError<CR>
+nmap [e :action GotoPreviousError<CR>
+nmap ]e :action GotoNextError<CR>
 nmap [u :action GotoPrevElementUnderCaretUsage<CR>
 nmap ]u :action GotoNextElementUnderCaretUsage<CR>
 nmap <c-s-k> :action PreviousOccurence<CR>
@@ -143,7 +146,7 @@ nnoremap <leader>ll :action ActivateProblemsViewToolWindow<CR>
 " gotos
 nmap <leader>a :action GotoAction<CR>
 nmap ga :action GotoAction<CR>
-nmap <d-p> :action GotoFile<CR>
+nmap <leader>ff :action GotoFile<CR>
 nmap gs :action GotoSymbol<CR>
 nmap gT :action TextSearchAction<CR>
 nmap go :action GotoSuperMethod<CR>
@@ -188,6 +191,7 @@ nnoremap <leader>dt :action ToggleBreakpointEnabled<CR>
 nnoremap <leader>dsm :action SmartStepInto<CR>
 nnoremap <leader>dse :action ShowExecutionPoint<CR>
 nnoremap <leader>dbe :action EditBreakpoint<CR>
+nnoremap <leader>df :action ActivateDebugToolWindow<CR>
 
 " Settings
 nmap <leader>os :action ShowSettings<CR>
@@ -205,15 +209,14 @@ nnoremap <leader>eo :action SelectNextOccurrence<CR>
 nnoremap <leader>h :action ShowHoverInfo<CR>
 nnoremap <leader>fl :action Javascript.Linters.EsLint.Fix<CR>
 nnoremap <leader>ep :action PinActiveTab<CR>
-nnoremap <leader>ec :action CloseAllUnpinnedEditors<CR>
+nnoremap <leader>bo :action CloseAllEditorsButActive<CR>
 nnoremap <leader>er :action RevealIn<CR>
 nnoremap <leader>em :action MaximizeEditorInSplit<CR>
 nnoremap <leader>en :action MaximizeEditorInSplit<CR>
 nnoremap <leader>eor :action RecentChanges<CR>
 nnoremap <leader>efr :action Replace<CR>
-nnoremap [e :action StretchSplitToLeft<CR>
-nnoremap ]e :action StretchSplitToRight<CR>
 nnoremap <leader>et :action EditorTabsGroup<CR>
+nnoremap <leader>ew :action HideAllWindows<CR>
 nnoremap <a-1> :action GoToTab1<CR>
 nnoremap <a-2> :action GoToTab2<CR>
 nnoremap <a-3> :action GoToTab3<CR>
@@ -266,14 +269,19 @@ nnoremap <leader>go :action ActivateVersionControlToolWindow<CR>
 nnoremap <leader>gr :action Vcs.RollbackChangedLines<CR>
 nnoremap <leader>gl :action Vcs.ShowDiffChangedLines<CR>
 nnoremap <leader>gf :action Diff.ShowDiff<CR>
-nnoremap ]d :action NextDiff<CR>
-nnoremap [d :action PreviousDiff<CR>
+nnoremap ]h :action NextDiff<CR>
+nnoremap [h :action PreviousDiff<CR>
 nnoremap <leader>gb :action Annotate<CR>
+nnoremap <leader>gd :action Compare.SameVersion<CR>
+nnoremap <leader>gg :action ActivateVersionControlToolWindow<CR>
 
 " Local History
 nnoremap <leader>lo :action RecentChanges<CR>
 nnoremap <leader>lh :action LocalHistory<CR>
 vmap <leader>ls :action LocalHistory.ShowSelectionHistory<CR>
+
+" API Endpoints
+nnoremap <leader>ee :action RunClass<CR>
 
 " Set Plugins
 Plug 'preservim/nerdtree'
@@ -310,4 +318,5 @@ function! SoftContinue()
 
     action XDebugger.MuteBreakpoints
 endfunction
+
 nnoremap <leader>dsc :call SoftContinue()<CR>

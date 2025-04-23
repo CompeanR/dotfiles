@@ -12,6 +12,9 @@
     { "before": ["s"], "after": ["<leader>", "<leader>", "s"] },
   ],
   "vim.normalModeKeyBindingsNonRecursive": [
+    // Buffers
+    { "before": ["<leader>", "b", "o"], "commands": ["workbench.action.closeOtherEditors"] },
+
     // New ones 
     { "before": ["<leader>", "e", "j"], "commands": ["workbench.action.joinAllGroups"] },
     { "before": ["<leader>", "e", "u", "p"], "commands": ["workbench.action.unpinEditor"] },
@@ -68,8 +71,8 @@
   
 
     // Tab Navigation
-    { "before": ["<C-[>"], "commands": ["workbench.action.previousEditor"] },
-    { "before": ["<C-]>"], "commands": ["workbench.action.nextEditor"] },
+    { "before": ["<S-h>"], "commands": ["workbench.action.previousEditor"] },
+    { "before": ["<S-l>"], "commands": ["workbench.action.nextEditor"] },
 
     // Projects
     { "before": ["<leader>", "p", "o"], "commands": ["projectManager.listProjects"] },
@@ -155,7 +158,7 @@
 
     // Editor
     { "before": ["<leader>", "e", "o"], "commands": ["editor.action.selectHighlights"] },
-    { "before": ["<leader>", "h"], "commands": ["editor.action.showHover"] },
+    { "before": ["K"], "commands": ["editor.action.showHover"] },
     { "before": ["<leader>", "e", "p"], "commands": ["workbench.action.pinEditor"] },
     { "before": ["<leader>", "e", "c"], "commands": ["workbench.action.closeOtherEditors"] },
     { "before": ["<leader>", "e", "r"], "commands": ["revealFileInOS"] },
@@ -208,5 +211,6 @@
     { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"], "after": ["g", "v"] },
     { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"], "after": ["g", "v"] }
   ],
-  "workbench.colorTheme": "Visual Studio Light"
+  "workbench.colorTheme": "Visual Studio Light",
+  "editor.accessibilitySupport": "off"
 }

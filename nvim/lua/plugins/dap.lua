@@ -17,10 +17,45 @@ dap.configurations.javascript = {
   {
     type = "pwa-node",
     request = "launch",
-    name = "Nodote xd",
+    name = "Nodoste xd",
+    cwd = "${workspaceFolder}",
+    runtimeExecutable = "npx",
+    sourceMaps = true,
+    protocol = "inspector",
+    runtimeArgs = { "nodemon", "--exec", "ts-node", "${file}"},
+    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**"
+    },
+  },
+  {
+    type = "pwa-node",
+    request = "attach",
+    name = "Attach to Node Process",
+    processId = require("dap.utils").pick_process,
+    cwd = "${workspaceFolder}",
+    sourceMaps = true,
+    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**"
+    },
+  },
+  {
+    type = "pwa-node",
+    request = "launch",
+    name = "Launch Node.js File",
+    program = "${workspaceFolder}/bin/www",
+    cwd = "${workspaceFolder}",
     runtimeExecutable = "node",
-    program = "${workspaceFolder}/dist/index.js",
-    outFiles = { "${workspaceFolder}/dist/**/*.js" },
+    sourceMaps = true,
+    protocol = "inspector",
+    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**"
+    },
   },
 }
 

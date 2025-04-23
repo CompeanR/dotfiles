@@ -905,7 +905,7 @@
         "command": "-workbench.action.nextEditor"
     },
     {
-        "key": "alt+[",
+        "key": "ctrl+[",
         "command": "workbench.action.previousEditor"
     },
     {
@@ -1236,7 +1236,7 @@
         "when": "!notebookEditorFocused && editorLangId == 'markdown'"
     },
     {
-        "key": "alt+]",
+        "key": "ctrl+]",
         "command": "workbench.action.nextEditor"
     },
     {
