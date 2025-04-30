@@ -211,6 +211,6 @@
     { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"], "after": ["g", "v"] },
     { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"], "after": ["g", "v"] }
   ],
-  "workbench.colorTheme": "Visual Studio Light",
+  "workbench.colorTheme": "Vitesse Dark Soft",
   "editor.accessibilitySupport": "off"
 }
