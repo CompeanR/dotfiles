@@ -3,12 +3,12 @@ local dap = require("dap")
 dap.adapters["pwa-node"] = {
   type = "server",
   host = "localhost",
-  port = 9229,
+  port = "${port}",
   executable = {
     command = "node",
     args = {
       vim.fn.stdpath("data") .. "/mason/packages/js-debug-adapter/js-debug/src/dapDebugServer.js",
-      "9229",
+      "${port}",
     },
   },
 }
@@ -23,6 +23,22 @@ dap.configurations.javascript = {
     sourceMaps = true,
     protocol = "inspector",
     runtimeArgs = { "nodemon", "--exec", "ts-node", "${file}"},
+    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**"
+    },
+  },
+  {
+    type = "pwa-node",
+    request = "launch",
+    name = "Nestsote",
+    cwd = "${workspaceFolder}",
+    runtimeExecutable = "npm",
+    sourceMaps = true,
+    protocol = "inspector",
+    console = "internal",
+    runtimeArgs = { "run", "start:dev" },
     skipFiles = {"<node_internals>/**", "node_modules/**"},
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
