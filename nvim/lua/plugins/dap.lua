@@ -60,13 +60,13 @@ dap.configurations.javascript = {
   },
   {
     type = "pwa-node",
-    request = "launch",
-    name = "Launch Node.js File",
-    program = "${workspaceFolder}/bin/www",
+    request = "attach",
+    name = "Attach to Nestsote",
     cwd = "${workspaceFolder}",
-    runtimeExecutable = "node",
     sourceMaps = true,
     protocol = "inspector",
+    port = 9229,
+    restart = true,
     skipFiles = {"<node_internals>/**", "node_modules/**"},
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
