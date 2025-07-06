@@ -76,6 +76,17 @@ run = 'layout floating'
 if.app-name-regex-substring = 'firefox'
 run = 'layout floating'
 
+[[on-window-detected]]
+if.app-name-regex-substring = 'anki'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'claude'
+run = 'layout floating'
+
+[[on-window-detected]]
+if.app-name-regex-substring = 'arc'
+run = 'layout floating'
 # Gaps between windows (inner-*) and between monitor edges (outer-*).
 # Possible values:
 # - Constant:     gaps.outer.top = 8
@@ -153,14 +164,12 @@ alt-8 = 'workspace 8'
 alt-9 = 'workspace 9'
 alt-p = 'workspace P'
 alt-q = 'workspace Q'
-alt-r = 'workspace R'
 alt-t = 'workspace T'
 alt-u = 'workspace U'
 alt-v = 'workspace V'
 alt-w = 'workspace W'
 alt-x = 'workspace X'
 alt-y = 'workspace Y'
-alt-z = 'workspace Z'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
 alt-shift-1 = 'move-node-to-workspace 1'
@@ -197,16 +206,15 @@ alt-f = "layout floating tiling"
 alt-shift-f = "fullscreen"
 
 # ----------- APPS ------------
-alt-c = 'exec-and-forget open -a "Google Chrome"'
-alt-i = 'exec-and-forget open -a "IntelliJ IDEA"'
 alt-s = 'exec-and-forget open -a "Slack"'
-alt-e = 'exec-and-forget open -a "Microsoft Edge"'
 alt-d = 'exec-and-forget open -a "DBeaver"'
 alt-n = 'exec-and-forget open -a "Notion"'
 alt-g = 'exec-and-forget open -a "Ghostty"'
-alt-a = 'exec-and-forget open -a "Arc"'
+alt-a = 'exec-and-forget open -a "Anki"'
 alt-m = 'exec-and-forget open -a "Firefox"'
 alt-o = 'exec-and-forget open -a "Cursor"'
+alt-z = 'exec-and-forget open -a "Zen"'
+alt-c = 'exec-and-forget open -a "Google Chrome"'
 
 # ------------ SERVICE MODE --------------
 # See: https://nikitabobko.github.io/AeroSpace/commands#mode

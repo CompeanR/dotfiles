@@ -212,5 +212,9 @@
     { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"], "after": ["g", "v"] }
   ],
   "workbench.colorTheme": "Vitesse Dark Soft",
-  "editor.accessibilitySupport": "off"
+  "editor.accessibilitySupport": "off",
+  "diffEditor.maxComputationTime": 0,
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }

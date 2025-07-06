@@ -3,3 +3,6 @@
 -- Add any additional options here
 vim.opt.autoindent = true
 vim.opt.smartindent = true
+vim.opt.shiftwidth = 4
+vim.opt.tabstop = 4
+vim.opt.expandtab = true

@@ -1,5 +1,6 @@
 local dap = require("dap")
 
+-- Backend
 dap.adapters["pwa-node"] = {
   type = "server",
   host = "localhost",
@@ -22,11 +23,11 @@ dap.configurations.javascript = {
     runtimeExecutable = "npx",
     sourceMaps = true,
     protocol = "inspector",
-    runtimeArgs = { "nodemon", "--exec", "ts-node", "${file}"},
-    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    runtimeArgs = { "nodemon", "--exec", "ts-node", "${file}" },
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
-      "!**/node_modules/**"
+      "!**/node_modules/**",
     },
   },
   {
@@ -39,10 +40,10 @@ dap.configurations.javascript = {
     protocol = "inspector",
     console = "internal",
     runtimeArgs = { "run", "start:dev" },
-    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
-      "!**/node_modules/**"
+      "!**/node_modules/**",
     },
   },
   {
@@ -52,10 +53,10 @@ dap.configurations.javascript = {
     processId = require("dap.utils").pick_process,
     cwd = "${workspaceFolder}",
     sourceMaps = true,
-    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
-      "!**/node_modules/**"
+      "!**/node_modules/**",
     },
   },
   {
@@ -67,20 +68,58 @@ dap.configurations.javascript = {
     protocol = "inspector",
     port = 9229,
     restart = true,
-    skipFiles = {"<node_internals>/**", "node_modules/**"},
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
     resolveSourceMapLocations = {
       "${workspaceFolder}/**",
-      "!**/node_modules/**"
+      "!**/node_modules/**",
+    },
+  },
+  {
+    type = "pwa-node",
+    request = "launch",
+    name = "🧪 Debug All Tests",
+    cwd = "${workspaceFolder}",
+    runtimeExecutable = "npm",
+    sourceMaps = true,
+    protocol = "inspector",
+    console = "integratedTerminal",
+    runtimeArgs = { "test", "--", "--runInBand", "--no-coverage" },
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**",
+    },
+    env = {
+      NODE_ENV = "test",
+    },
+  },
+  {
+    type = "pwa-node",
+    request = "launch",
+    name = "🧪 Debug Jest Tests (Current File)",
+    cwd = "${workspaceFolder}",
+    runtimeExecutable = "npm",
+    sourceMaps = true,
+    protocol = "inspector",
+    console = "integratedTerminal",
+    runtimeArgs = { "test", "--", "--runInBand", "--no-coverage", "${relativeFile}" },
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**",
+    },
+    env = {
+      NODE_ENV = "test",
     },
   },
 }
-
 dap.configurations.typescript = dap.configurations.javascript
 
+-- Frontend
 dap.configurations.javascriptreact = {
   {
     name = "Attach to chrome",
-    type = "chrome",
+    type = "chrome-debug-adapter",
     request = "attach",
     program = "${file}",
     cwd = vim.fn.getcwd(),
@@ -90,6 +129,7 @@ dap.configurations.javascriptreact = {
     webRoot = "${workspaceFolder}",
   },
 }
+dap.configurations.typescriptreact = dap.configurations.javascriptreact
 
 return {
   {
@@ -103,13 +143,55 @@ return {
       },
     },
     keys = {
-      { "<leader>da", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
-      { "<leader>dO", function() require("dap").step_out() end, desc = "Step Out" },
-      { "J", function() require("dap").step_over() end, desc = "Step Over" },
-      { "<leader>dda", function() require("dap").continue() end, desc = "Run with Args" },
-      { "<leader>dra", function() require("dap").clear_breakpoints() end, desc = "Clear Breakpoints" },
-      { "<leader>dJ", function() require("dap").down() end, desc = "Down" },
-      { "<leader>dK", function() require("dap").up() end, desc = "Up" },
-    }
+      {
+        "<leader>da",
+        function()
+          require("dap").toggle_breakpoint()
+        end,
+        desc = "Toggle Breakpoint",
+      },
+      {
+        "<leader>dO",
+        function()
+          require("dap").step_out()
+        end,
+        desc = "Step Out",
+      },
+      {
+        "J",
+        function()
+          require("dap").step_over()
+        end,
+        desc = "Step Over",
+      },
+      {
+        "<leader>dda",
+        function()
+          require("dap").continue()
+        end,
+        desc = "Run with Args",
+      },
+      {
+        "<leader>dra",
+        function()
+          require("dap").clear_breakpoints()
+        end,
+        desc = "Clear Breakpoints",
+      },
+      {
+        "<leader>dJ",
+        function()
+          require("dap").down()
+        end,
+        desc = "Down",
+      },
+      {
+        "<leader>dK",
+        function()
+          require("dap").up()
+        end,
+        desc = "Up",
+      },
+    },
   },
 }
