@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# Claude popup toggle using session name detection (recommended approach)
-POPUP_SESSION="claude_popup"
+# Claude popup toggle using session name detection (window-specific)
+WINDOW_ID=$(tmux display-message -p '#{window_id}')
+POPUP_SESSION="claude_popup_${WINDOW_ID}"
 CURRENT_DIR="${1:-$PWD}"
 
 # Get current session name
 CURRENT_SESSION=$(tmux display-message -p '#S' 2>/dev/null)
 
-# Check if we're already in the popup session
-if [ "$CURRENT_SESSION" = "$POPUP_SESSION" ]; then
-    # We're in the popup, detach to close it
+# Check if we're already in a popup session (any claude_popup_* session)
+if echo "$CURRENT_SESSION" | grep -q "^claude_popup_"; then
+    # We're in a popup, detach to close it
     tmux detach-client
     exit 0
 fi
