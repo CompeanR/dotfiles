@@ -26,4 +26,3 @@ fi
 
 # Open popup that attaches to the background session
 tmux display-popup -xC -yC -w 70% -h 90% -d "$CURRENT_DIR" -E "TERM=xterm-256color tmux attach -t '$POPUP_SESSION'"
-
