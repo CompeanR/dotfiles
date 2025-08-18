@@ -17,8 +17,14 @@ fi
 
 # Create background session if it doesn't exist
 if ! tmux has-session -t "$POPUP_SESSION" 2>/dev/null; then
-    # Create detached session with Claude
-    tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /opt/homebrew/bin/claude --resume || /opt/homebrew/bin/claude"
+    # Detect OS
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # Create detached session with Claude
+        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /opt/homebrew/bin/claude --resume || /opt/homebrew/bin/claude"
+    else
+        # Create detached session with Claude
+        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /home/compean/.local/share/pnpm/claude --resume || /home/compean/.local/share/pnpm/claude"
+    fi
 
     # Configure session for popup use
     tmux set-option -s -t "$POPUP_SESSION" status off
