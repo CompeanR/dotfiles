@@ -48,17 +48,27 @@ return {
       -- Keep only the listener to open the UI when session initializes
       dap.listeners.after = dap.listeners.after or {}
       dap.listeners.after.event_initialized = dap.listeners.after.event_initialized or {}
-      dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+      dap.listeners.after.event_initialized["dapui_config"] = function()
+        dapui.open()
+      end
 
       -- Create commands for manual control
-      vim.api.nvim_create_user_command("DapUIOpen", function() dapui.open() end, {})
+      vim.api.nvim_create_user_command("DapUIOpen", function()
+        dapui.open()
+      end, {})
 
-      vim.api.nvim_create_user_command("DapUIClose", function() dapui.close() end, {})
+      vim.api.nvim_create_user_command("DapUIClose", function()
+        dapui.close()
+      end, {})
 
-      vim.api.nvim_create_user_command("DapUIToggle", function() dapui.toggle() end, {})
+      vim.api.nvim_create_user_command("DapUIToggle", function()
+        dapui.toggle()
+      end, {})
 
       -- Add keymaps for manual control
-      vim.keymap.set("n", "<leader>du", function() dapui.toggle() end, { desc = "Toggle DAP UI" })
+      vim.keymap.set("n", "<leader>du", function()
+        dapui.toggle()
+      end, { desc = "Toggle DAP UI" })
 
       -- Override the default <leader>de to automatically eval expression under cursor
       vim.keymap.set("n", "<leader>de", function()
@@ -72,6 +82,9 @@ return {
           dapui.eval(nil, { enter = true })
         end
       end, { desc = "DAP Eval Expression" })
+
+      -- Show a notification to confirm the override
+      vim.notify("DAP UI handlers configured to keep UI open during debugging", vim.log.levels.INFO)
     end,
   },
 }

@@ -20,10 +20,10 @@ if ! tmux has-session -t "$POPUP_SESSION" 2>/dev/null; then
     # Detect OS
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # Create detached session with Claude
-        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /opt/homebrew/bin/claude --resume || /opt/homebrew/bin/claude"
+        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && cyc || /opt/homebrew/bin/claude"
     else
-        # Create detached session with Claude
-        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /home/compean/.local/share/pnpm/claude --resume || /home/compean/.local/share/pnpm/claude"
+        # Create detached session with Claude in YOLO mode
+        tmux new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && /home/compean/.nvm/versions/node/v22.17.1/bin/claude --dangerously-skip-permissions"
     fi
 
     # Configure session for popup use
@@ -31,4 +31,13 @@ if ! tmux has-session -t "$POPUP_SESSION" 2>/dev/null; then
 fi
 
 # Open popup that attaches to the background session
-tmux display-popup -xC -yC -w 70% -h 90% -d "$CURRENT_DIR" -E "TERM=xterm-256color tmux attach -t '$POPUP_SESSION'"
+# Dynamic sizing: use 70% for large terminals, 95% for small ones
+TERM_WIDTH=$(tmux display-message -p '#{client_width}')
+if [ "$TERM_WIDTH" -gt 200 ]; then
+    WIDTH="70%"
+    HEIGHT="90%"
+else
+    WIDTH="95%"
+    HEIGHT="95%"
+fi
+tmux display-popup -xC -yC -w "$WIDTH" -h "$HEIGHT" -d "$CURRENT_DIR" -E "TERM=xterm-256color tmux attach -t '$POPUP_SESSION'"
