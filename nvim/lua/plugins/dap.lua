@@ -91,21 +91,21 @@ dap.configurations.javascript = {
   --     "!**/node_modules/**",
   --   },
   -- },
-  -- {
-  --   type = "pwa-node",
-  --   request = "attach",
-  --   name = "Attach to Nestsote",
-  --   cwd = "${workspaceFolder}",
-  --   sourceMaps = true,
-  --   protocol = "inspector",
-  --   port = 9229,
-  --   restart = true,
-  --   skipFiles = { "<node_internals>/**", "node_modules/**" },
-  --   resolveSourceMapLocations = {
-  --     "${workspaceFolder}/**",
-  --     "!**/node_modules/**",
-  --   },
-  -- },
+  {
+    type = "pwa-node",
+    request = "attach",
+    name = "Attach to Nestsote",
+    cwd = "${workspaceFolder}",
+    sourceMaps = true,
+    protocol = "inspector",
+    port = 9229,
+    restart = true,
+    skipFiles = { "<node_internals>/**", "node_modules/**" },
+    resolveSourceMapLocations = {
+      "${workspaceFolder}/**",
+      "!**/node_modules/**",
+    },
+  },
   {
     type = "pwa-node",
     request = "attach",
@@ -183,6 +183,7 @@ dap.configurations.javascriptreact = {
   },
 }
 dap.configurations.typescriptreact = dap.configurations.javascriptreact
+dap.configurations.typescript = vim.list_extend(dap.configurations.typescript, dap.configurations.typescriptreact)
 
 return {
   {
