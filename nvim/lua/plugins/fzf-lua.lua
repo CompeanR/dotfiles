@@ -5,10 +5,8 @@ return {
 
     require("fzf-lua").setup({
       files = {
-        -- Ensure hidden files are shown by default
-        hidden = true,
-        -- Use fd with explicit hidden flag
-        fd_opts = "--color=never --hidden --type f --type l --exclude .git",
+        hidden = false,
+        fd_opts = "--color=never --type f --type l --exclude .git",
       },
       actions = {
         files = {
@@ -31,4 +29,3 @@ return {
     })
   end,
 }
-

@@ -1,6 +1,8 @@
 local function close_neotree_after_load()
   vim.defer_fn(function()
-    vim.cmd("Neotree close")
+    if vim.fn.exists(":Neotree") == 2 then
+      vim.cmd("Neotree close")
+    end
   end, 50)
 end
 
@@ -20,7 +22,9 @@ return {
       function()
         require("persistence").select()
         vim.defer_fn(function()
-          vim.cmd("Neotree close")
+          if vim.fn.exists(":Neotree") == 2 then
+            vim.cmd("Neotree close")
+          end
         end, 150)
       end,
       desc = "Select Session",

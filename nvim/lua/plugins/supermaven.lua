@@ -22,10 +22,10 @@ return {
     require("supermaven-nvim").setup(opts)
 
     -- Start disabled by default
-    -- vim.schedule(function()
-    --   local api = require("supermaven-nvim.api")
-    --   if api.is_running() then api.stop() end
-    -- end)
+    vim.schedule(function()
+      local api = require("supermaven-nvim.api")
+      if api.is_running() then api.stop() end
+    end)
 
     -- Toggle keymap
     vim.keymap.set("n", "<leader>as", function() require("supermaven-nvim.api").toggle() end, { desc = "Toggle Supermaven AI" })
