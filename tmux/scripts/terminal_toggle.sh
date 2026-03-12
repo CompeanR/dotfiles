@@ -1,8 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
-# Opencode popup toggle using session name detection (window-specific)
-TOOL="opencode"
+# Terminal popup toggle using session name detection (window-specific)
+TOOL="terminal"
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 POPUP_STATE_SCRIPT="$SCRIPT_DIR/popup_state.sh"
 POPUP_CLOSE_SCRIPT="$SCRIPT_DIR/popup_close.sh"
@@ -88,11 +88,7 @@ if tmux -L "$POPUP_SOCKET" list-clients -t "$POPUP_SESSION" 2>/dev/null | grep -
 fi
 
 if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
-    else
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "source ~/.zshrc && cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
-    fi
+    tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR"
     tmux -L "$POPUP_SOCKET" set-option -s -t "$POPUP_SESSION" status off
     tmux -L "$POPUP_SOCKET" set -g prefix C-c
     tmux -L "$POPUP_SOCKET" unbind C-b
@@ -120,8 +116,7 @@ tmux -L "$POPUP_SOCKET" unbind -n M-[ 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-] 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-{ 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-} 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-p 2>/dev/null
-tmux -L "$POPUP_SOCKET" bind-key -n M-p run-shell -b "#{@scripts_dir}/opencode_toggle.sh #{pane_current_path}"
+tmux -L "$POPUP_SOCKET" bind C-p run-shell -b "#{@scripts_dir}/terminal_toggle.sh #{pane_current_path}"
 tmux -L "$POPUP_SOCKET" bind-key -n M-[ run-shell -b "$PARENT_NAV_SCRIPT prev-window"
 tmux -L "$POPUP_SOCKET" bind-key -n M-] run-shell -b "$PARENT_NAV_SCRIPT next-window"
 tmux -L "$POPUP_SOCKET" bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
@@ -143,7 +138,13 @@ tmux -L "$POPUP_SOCKET" bind-key -n M-9 select-window -t 9
 printf -v ATTACH_CMD '%q ' "$POPUP_ATTACH_SCRIPT" "$POPUP_SOCKET" "$POPUP_SESSION" "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID" "$TOOL"
 ATTACH_CMD=${ATTACH_CMD% }
 
-WIDTH="75%"
-HEIGHT="90%"
+TERM_WIDTH=$(tmux_parent display-message -c "$PARENT_CLIENT" -p '#{client_width}' 2>/dev/null || echo 200)
+if [ "$TERM_WIDTH" -gt 200 ]; then
+    WIDTH="70%"
+    HEIGHT="90%"
+else
+    WIDTH="85%"
+    HEIGHT="95%"
+fi
 
 tmux_parent display-popup -c "$PARENT_CLIENT" -xC -yC -w "$WIDTH" -h "$HEIGHT" -d "$CURRENT_DIR" -E "TERM=xterm-256color $ATTACH_CMD"

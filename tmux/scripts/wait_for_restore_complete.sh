@@ -8,7 +8,7 @@ echo "$(date): wait_for_restore_complete.sh started" >> $LOG_FILE
 MAX_WAIT=30  # Maximum 30 seconds
 COUNTER=0
 
-# Check if tmux-resurrect restore process is running
+# Check if tmux-resurrect restore process is running (check both default and popup-hub sockets)
 while [ $COUNTER -lt $MAX_WAIT ]; do
     # Check if any pane is still running the restore script
     if ! tmux list-panes -a -F '#{pane_current_command}' 2>/dev/null | grep -q "restore.sh"; then
@@ -17,9 +17,10 @@ while [ $COUNTER -lt $MAX_WAIT ]; do
         sleep 3
         echo "$(date): Running cleanup script." >> $LOG_FILE
         # Run cleanup
-        "$(dirname "$0")/claude_cleanup_auto.sh"
+        "$(dirname "$0")/codex_cleanup_auto.sh"
         echo "$(date): Cleanup script finished." >> $LOG_FILE
         tmux list-sessions >> $LOG_FILE # Log existing sessions after cleanup
+        tmux -L popup-hub list-sessions >> $LOG_FILE # Log popup-hub sessions
         exit 0
     fi
     echo "$(date): restore.sh process found. Waiting..." >> $LOG_FILE
