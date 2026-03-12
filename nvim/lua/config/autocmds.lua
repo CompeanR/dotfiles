@@ -18,3 +18,5 @@
 --     vim.cmd("tabdo NvimTreeResize " .. width)
 --   end,
 -- })
+
+require("config.markdown_gd").setup()
