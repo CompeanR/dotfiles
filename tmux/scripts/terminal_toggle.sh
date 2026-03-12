@@ -122,8 +122,8 @@ tmux -L "$POPUP_SOCKET" bind-key -n M-] run-shell -b "$PARENT_NAV_SCRIPT next-wi
 tmux -L "$POPUP_SOCKET" bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
 tmux -L "$POPUP_SOCKET" bind-key -n M-} run-shell -b "$PARENT_NAV_SCRIPT next-session"
 
-tmux -L "$POPUP_SOCKET" bind-key -n M-c new-window
-tmux -L "$POPUP_SOCKET" bind-key -n M-x kill-pane
+tmux -L "$POPUP_SOCKET" bind-key -n M-w new-window
+tmux -L "$POPUP_SOCKET" bind-key -n M-q kill-pane
 tmux -L "$POPUP_SOCKET" bind-key -n M-0 select-window -t 0
 tmux -L "$POPUP_SOCKET" bind-key -n M-1 select-window -t 1
 tmux -L "$POPUP_SOCKET" bind-key -n M-2 select-window -t 2
