@@ -78,6 +78,7 @@ POPUP_SESSION="${TOOL}_popup_${WINDOW_ID}"
 if [ "$RESTORE_MODE" -eq 0 ]; then
     CURRENT_SESSION=$(tmux_parent display-message -c "$PARENT_CLIENT" -p '#S' 2>/dev/null || true)
     if echo "$CURRENT_SESSION" | grep -q "^${TOOL}_popup_"; then
+        "$POPUP_STATE_SCRIPT" clear-tool "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID"
         tmux detach-client
         exit 0
     fi
