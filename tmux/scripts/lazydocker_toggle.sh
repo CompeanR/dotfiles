@@ -117,7 +117,10 @@ tmux -L "$POPUP_SOCKET" unbind -n M-] 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-{ 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-} 2>/dev/null
 tmux -L "$POPUP_SOCKET" bind C-d run-shell -b '"#{@popup_close_script}" "#{@parent_socket}" "#{@parent_client}" "#{@parent_session_id}" "#{@parent_window_id}" "#{client_tty}"'
-tmux -L "$POPUP_SOCKET" bind-key -n M-[ run-shell -b '"#{@parent_nav_script}" prev-window "#{@parent_socket}" "#{@parent_client}" "#{@parent_session_id}" "#{@parent_window_id}" "#{client_tty}"'
+tmux -L "$POPUP_SOCKET" bind-key -n M-[ run-shell -b "$PARENT_NAV_SCRIPT prev-window"
+tmux -L "$POPUP_SOCKET" bind-key -n M-] run-shell -b "$PARENT_NAV_SCRIPT next-window"
+tmux -L "$POPUP_SOCKET" bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
+tmux -L "$POPUP_SOCKET" bind-key -n M-} run-shell -b "$PARENT_NAV_SCRIPT next-session"
 
 tmux -L "$POPUP_SOCKET" unbind -n M-c 2>/dev/null
 tmux -L "$POPUP_SOCKET" unbind -n M-x 2>/dev/null
