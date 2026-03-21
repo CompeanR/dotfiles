@@ -11,9 +11,9 @@ return {
       actions = {
         files = {
           -- Remap ctrl+s to open in vertical split
-          ["alt-v"] = actions.file_vsplit,
-          -- Map ctrl+shift+s to open in horizontal split
-          ["alt-s"] = actions.file_split,
+          ["alt-s"] = actions.file_vsplit,
+          -- Map ctrl+v to open in horizontal split
+          ["alt-v"] = actions.file_split,
           -- Disable ctrl+v since it conflicts with paste on Linux
           ["ctrl-v"] = false,
           -- Keep other default actions
