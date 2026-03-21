@@ -9,8 +9,9 @@ CLAUDE_SESSIONS=$(tmux -L popup-hub list-sessions -F '#{session_name}' 2>/dev/nu
 TERMINAL_SESSIONS=$(tmux -L popup-hub list-sessions -F '#{session_name}' 2>/dev/null | grep '^terminal_popup_')
 OPENCODE_SESSIONS=$(tmux -L popup-hub list-sessions -F '#{session_name}' 2>/dev/null | grep '^opencode_popup_')
 LAZYDOCKER_SESSIONS=$(tmux -L popup-hub list-sessions -F '#{session_name}' 2>/dev/null | grep '^lazydocker_popup_')
+LAZYGIT_SESSIONS=$(tmux -L popup-hub list-sessions -F '#{session_name}' 2>/dev/null | grep '^lazygit_popup_')
 
-if [ -z "$CODEX_SESSIONS" ] && [ -z "$CLAUDE_SESSIONS" ] && [ -z "$TERMINAL_SESSIONS" ] && [ -z "$OPENCODE_SESSIONS" ] && [ -z "$LAZYDOCKER_SESSIONS" ]; then
+if [ -z "$CODEX_SESSIONS" ] && [ -z "$CLAUDE_SESSIONS" ] && [ -z "$TERMINAL_SESSIONS" ] && [ -z "$OPENCODE_SESSIONS" ] && [ -z "$LAZYDOCKER_SESSIONS" ] && [ -z "$LAZYGIT_SESSIONS" ]; then
     exit 0
 fi
 
@@ -31,3 +32,4 @@ cleanup_sessions "$CLAUDE_SESSIONS"
 cleanup_sessions "$TERMINAL_SESSIONS"
 cleanup_sessions "$OPENCODE_SESSIONS"
 cleanup_sessions "$LAZYDOCKER_SESSIONS"
+cleanup_sessions "$LAZYGIT_SESSIONS"

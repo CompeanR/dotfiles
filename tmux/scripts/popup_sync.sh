@@ -58,7 +58,7 @@ if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
 fi
 
 case "$TOOL" in
-    codex|terminal|claude|opencode|lazydocker)
+    codex|terminal|claude|opencode|lazydocker|lazygit)
         exec "$SCRIPTS_DIR/${TOOL}_toggle.sh" --restore --socket-path "$SOCKET_PATH" --client-tty "$CLIENT_TTY" --session-id "$SESSION_ID" --window-id "$WINDOW_ID"
         ;;
     *)
