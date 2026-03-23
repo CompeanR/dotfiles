@@ -1,0 +1,74 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": ["opencode-gemini-auth", "file:///home/compean/.config/opencode/plugins/notify.ts"],
+    "agent": {
+        "autoaccept": {
+            "mode": "primary",
+            "tools": {
+                "write": true,
+                "edit": true,
+                "bash": true
+            },
+            "permission": {
+                "edit": "allow"
+            }
+        },
+        "sdd-orchestrator": {
+            "mode": "all",
+            "description": "SDD Orchestrator - lean prompt, delegates phase work to skills",
+            "prompt": "SPEC-DRIVEN DEVELOPMENT (SDD) ORCHESTRATOR\n==========================================\n\nYou are the SDD orchestrator. Keep your normal assistant identity and apply SDD as an overlay.\n\nCORE OPERATING RULES:\n- Delegate-only: never do analysis/design/implementation/verification inline\n- Launch sub-agents via Task for all phase work\n- Lead only coordinates DAG state, user approvals, and concise summaries\n- /sdd-new, /sdd-continue, /sdd-ff are meta-commands handled by orchestrator (not skills)\n\nARTIFACT STORE POLICY:\n- artifact_store.mode: engram | openspec | none\n- Default: engram when available; openspec only if user explicitly requests file artifacts; otherwise none\n- In none mode, do not write project files; return inline and recommend enabling engram/openspec\n\nCOMMANDS:\n- /sdd-init -> sdd-init\n- /sdd-explore <topic> -> sdd-explore\n- /sdd-new <change> -> sdd-explore then sdd-propose\n- /sdd-continue [change] -> create next missing artifact\n- /sdd-ff [change] -> sdd-propose -> sdd-spec -> sdd-design -> sdd-tasks\n- /sdd-apply [change] -> sdd-apply in batches\n- /sdd-verify [change] -> sdd-verify\n- /sdd-archive [change] -> sdd-archive\n\nDEPENDENCY GRAPH:\nproposal -> specs --> tasks -> apply -> verify -> archive\n             ^\n             |\n           design\n\nRESULT CONTRACT:\nEach phase returns: status, executive_summary, artifacts, next_recommended, risks.\n\nSTATE AND CONVENTIONS (SOURCE OF TRUTH):\nKeep this prompt lean. Do not inline full persistence or naming specs.\nUse shared files under ~/.config/opencode/skills/_shared/:\n- engram-convention.md\n- persistence-contract.md\n- openspec-convention.md\n\nRECOVERY RULE:\nIf state is missing, recover before continuing:\n- engram: mem_search(...) then mem_get_observation(...)\n- openspec: read openspec/changes/*/state.yaml\n- none: explain state was not persisted\n\nSDD SUGGESTION RULE:\nSuggest SDD for substantial features/refactors.\nDo not force SDD for small fixes/questions. - When reporting information to me, be extremely concise and sacrifice grammar for the sake of concision.",
+            "tools": {
+                "read": true,
+                "write": true,
+                "edit": true,
+                "bash": true
+            },
+            "permission": {
+                "question": "allow"
+            }
+        }
+    },
+    "mcp": {
+        "context7": {
+            "type": "remote",
+            "url": "https://mcp.context7.com/mcp",
+            "enabled": true,
+            "timeout": 2500
+        },
+        // "notion": {
+        //     "type": "remote",
+        //     "url": "https://mcp.notion.com/mcp",
+        //     "enabled": true,
+        //     "timeout": 2500
+        // },
+        // "Framelink_Figma_MCP": {
+        //     "type": "local",
+        //     "command": [
+        //         "npx",
+        //         "-y",
+        //         "figma-developer-mcp",
+        //         "--figma-api-key=${FIGMA_API_KEY}",
+        //         "--stdio"
+        //     ],
+        //     "enabled": true
+        // },
+        "engram": {
+            "command": ["engram", "mcp", "--tools=agent"],
+            "enabled": true,
+            "type": "local"
+        },
+        "playwright": {
+            "type": "local",
+            "command": ["npx", "-y", "@playwright/mcp@latest"],
+            "enabled": true
+        },
+        "stitch": {
+            "type": "remote",
+            "url": "https://stitch.googleapis.com/mcp",
+            "enabled": true,
+            "headers": {
+                "X-Goog-Api-Key": "${GOOGLE_API_KEY}"
+            }
+        }
+    }
+}

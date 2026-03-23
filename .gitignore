@@ -1,0 +1,14 @@
+# Local-only opencode files
+/opencode/.gitignore
+/opencode/node_modules/
+/opencode/package.json
+/opencode/bun.lock
+/opencode/config.json
+/opencode/config.mcp-on.json
+/opencode/engram.db
+/opencode/engram.db-shm
+/opencode/engram.db-wal
+/opencode/frecency.jsonl
+/opencode/kv.json
+/opencode/model.json
+/opencode/prompt-history.jsonl
