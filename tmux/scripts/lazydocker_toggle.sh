@@ -8,6 +8,7 @@ POPUP_STATE_SCRIPT="$SCRIPT_DIR/popup_state.sh"
 POPUP_CLOSE_SCRIPT="$SCRIPT_DIR/popup_close.sh"
 POPUP_ATTACH_SCRIPT="$SCRIPT_DIR/popup_attach.sh"
 PARENT_NAV_SCRIPT="$SCRIPT_DIR/popup_parent_nav.sh"
+POPUP_REBIND_SCRIPT="$SCRIPT_DIR/popup_rebind_keys.sh"
 POPUP_SOCKET="popup-hub"
 RESTORE_MODE=0
 CURRENT_DIR_ARG=""
@@ -111,31 +112,7 @@ tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @popup_tool "$TOOL"
 tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @popup_close_script "$POPUP_CLOSE_SCRIPT"
 tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @parent_nav_script "$PARENT_NAV_SCRIPT"
 
-tmux -L "$POPUP_SOCKET" unbind -n C-c 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-[ 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-] 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-{ 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-} 2>/dev/null
-tmux -L "$POPUP_SOCKET" bind C-d run-shell -b '"#{@popup_close_script}" "#{@parent_socket}" "#{@parent_client}" "#{@parent_session_id}" "#{@parent_window_id}" "#{client_tty}"'
-tmux -L "$POPUP_SOCKET" bind-key -n M-[ run-shell -b "$PARENT_NAV_SCRIPT prev-window"
-tmux -L "$POPUP_SOCKET" bind-key -n M-] run-shell -b "$PARENT_NAV_SCRIPT next-window"
-tmux -L "$POPUP_SOCKET" bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
-tmux -L "$POPUP_SOCKET" bind-key -n M-} run-shell -b "$PARENT_NAV_SCRIPT next-session"
-
-tmux -L "$POPUP_SOCKET" unbind -n M-c 2>/dev/null
-tmux -L "$POPUP_SOCKET" unbind -n M-x 2>/dev/null
-tmux -L "$POPUP_SOCKET" bind-key -n M-w new-window
-tmux -L "$POPUP_SOCKET" bind-key -n M-q kill-pane
-tmux -L "$POPUP_SOCKET" bind-key -n M-0 select-window -t 0
-tmux -L "$POPUP_SOCKET" bind-key -n M-1 select-window -t 1
-tmux -L "$POPUP_SOCKET" bind-key -n M-2 select-window -t 2
-tmux -L "$POPUP_SOCKET" bind-key -n M-3 select-window -t 3
-tmux -L "$POPUP_SOCKET" bind-key -n M-4 select-window -t 4
-tmux -L "$POPUP_SOCKET" bind-key -n M-5 select-window -t 5
-tmux -L "$POPUP_SOCKET" bind-key -n M-6 select-window -t 6
-tmux -L "$POPUP_SOCKET" bind-key -n M-7 select-window -t 7
-tmux -L "$POPUP_SOCKET" bind-key -n M-8 select-window -t 8
-tmux -L "$POPUP_SOCKET" bind-key -n M-9 select-window -t 9
+"$POPUP_REBIND_SCRIPT" "$POPUP_SOCKET" "$PARENT_NAV_SCRIPT" --bind-format prefix C-d
 
 printf -v ATTACH_CMD '%q ' "$POPUP_ATTACH_SCRIPT" "$POPUP_SOCKET" "$POPUP_SESSION" "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID" "$TOOL"
 ATTACH_CMD=${ATTACH_CMD% }
