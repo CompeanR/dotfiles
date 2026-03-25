@@ -1,10 +1,14 @@
 font-family = SFMono Nerd Font
+font-style = Regular
+font-style-bold = Bold
+font-style-italic = Italic
+font-style-bold-italic = BoldItalic
 font-size = 12
-theme = GruvboxDarkHard
+theme = AlacrittySync
 shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
-adjust-cell-height = 10%
-background-opacity = .95
+adjust-cell-height = 0
+background-opacity = .93
 quick-terminal-autohide = true
 background-blur = true
 
@@ -16,7 +20,28 @@ window-save-state = always
 macos-titlebar-style = transparent
 window-colorspace = "display-p3"
 
-background = 1C2021
+# synced w/ alacritty import: ~/.config/omarchy/current/theme/alacritty.toml
+background = #121212
+foreground = #bebebe
+cursor-color = #eaeaea
+selection-background = #333333
+selection-foreground = #bebebe
+palette = 0=#333333
+palette = 1=#D35F5F
+palette = 2=#FFC107
+palette = 3=#b91c1c
+palette = 4=#e68e0d
+palette = 5=#D35F5F
+palette = 6=#bebebe
+palette = 7=#bebebe
+palette = 8=#8a8a8d
+palette = 9=#B91C1C
+palette = 10=#FFC107
+palette = 11=#b90a0a
+palette = 12=#f59e0b
+palette = 13=#B91C1C
+palette = 14=#eaeaea
+palette = 15=#ffffff
 
 # keybindings
 keybind = cmd+s>r=reload_config
