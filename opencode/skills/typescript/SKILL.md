@@ -33,6 +33,7 @@ metadata:
 - Prefer a root `.prettierrc.json` using that config unless the repo already has an explicit conflicting style.
 - Add `format` and `format:check` scripts when introducing Prettier.
 - Run `npm run typecheck` after meaningful TypeScript changes when available.
+- Public class methods should explicitly declare `public` instead of relying on TypeScript's default visibility.
 - Preserve existing project conventions if they are already intentionally different; otherwise use the config above as the default.
 
 ## Code Examples

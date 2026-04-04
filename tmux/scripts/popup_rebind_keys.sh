@@ -90,9 +90,6 @@ tmux_popup bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
 tmux_popup bind-key -n M-} run-shell -b "$PARENT_NAV_SCRIPT next-session"
 tmux_popup bind-key -n PPage if-shell -F '#{pane_in_mode}' 'send-keys -X halfpage-up' 'copy-mode -e; send-keys -X halfpage-up'
 tmux_popup bind-key -n NPage if-shell -F '#{pane_in_mode}' 'send-keys -X halfpage-down' 'copy-mode -e; send-keys -X halfpage-down'
-tmux_popup bind-key -n Up run-shell -b "$PARENT_NAV_SCRIPT prev-window"
-tmux_popup bind-key -n Down run-shell -b "$PARENT_NAV_SCRIPT next-window"
-
 tmux_popup bind-key -n M-w new-window
 tmux_popup bind-key -n M-q kill-pane
 tmux_popup bind-key -n M-0 select-window -t 0
