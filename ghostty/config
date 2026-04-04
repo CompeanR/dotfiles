@@ -3,12 +3,13 @@ font-style = Regular
 font-style-bold = Bold
 font-style-italic = Italic
 font-style-bold-italic = BoldItalic
-font-size = 12
-theme = AlacrittySync
-shell-integration-features = no-cursor,sudo,no-title
+font-size = 16
+# theme = AlacrittySync
+shell-integration-features = sudo,no-title
 cursor-style = block
+cursor-style-blink = false
 adjust-cell-height = 0
-background-opacity = .93
+background-opacity = 0.80
 quick-terminal-autohide = true
 background-blur = true
 
@@ -17,7 +18,7 @@ mouse-scroll-multiplier = 2
 
 window-padding-balance = true
 window-save-state = always
-macos-titlebar-style = transparent
+macos-option-as-alt = true
 window-colorspace = "display-p3"
 
 # synced w/ alacritty import: ~/.config/omarchy/current/theme/alacritty.toml
@@ -46,7 +47,6 @@ palette = 15=#ffffff
 # keybindings
 keybind = cmd+s>r=reload_config
 keybind = cmd+s>x=close_surface
-
 keybind = cmd+s>n=new_window
 
 # tabs 
@@ -73,14 +73,11 @@ keybind = cmd+s>9=goto_tab:9
 # split
 keybind = cmd+s>\=new_split:right
 keybind = cmd+s>-=new_split:down
-
 keybind = cmd+s>j=goto_split:bottom
 keybind = cmd+s>k=goto_split:top
 keybind = cmd+s>h=goto_split:left
 keybind = cmd+s>l=goto_split:right
-
 keybind = cmd+s>z=toggle_split_zoom
-
 keybind = cmd+s>e=equalize_splits
 
 # other
@@ -89,5 +86,3 @@ keybind = cmd+s>n=new_window
 
 # Unbinds
 keybind = global:cmd+d=unbind
-
-# Remappings for tmux
