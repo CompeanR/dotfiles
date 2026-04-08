@@ -7,6 +7,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 POPUP_STATE_SCRIPT="$SCRIPT_DIR/popup_state.sh"
 POPUP_CLOSE_SCRIPT="$SCRIPT_DIR/popup_close.sh"
 POPUP_ATTACH_SCRIPT="$SCRIPT_DIR/popup_attach.sh"
+POPUP_SYNC_ENV_SCRIPT="$SCRIPT_DIR/popup_sync_env.sh"
 PARENT_NAV_SCRIPT="$SCRIPT_DIR/popup_parent_nav.sh"
 POPUP_REBIND_SCRIPT="$SCRIPT_DIR/popup_rebind_keys.sh"
 POPUP_SOCKET="popup-hub"
@@ -73,6 +74,28 @@ if [ -z "$CURRENT_DIR_ARG" ]; then
 else
     CURRENT_DIR="$CURRENT_DIR_ARG"
 fi
+
+POPUP_ENV_ARGS=()
+while IFS= read -r env_line; do
+    if [ -n "$env_line" ]; then
+        POPUP_ENV_ARGS+=(-e "$env_line")
+    fi
+done < <("$POPUP_SYNC_ENV_SCRIPT" "$PARENT_SOCKET")
+
+PARENT_TERM=$(tmux_parent show-environment -g TERM 2>/dev/null || true)
+if [ -z "$PARENT_TERM" ] || [ "$PARENT_TERM" = "-TERM" ]; then
+    PARENT_TERM="tmux-256color"
+else
+    PARENT_TERM=${PARENT_TERM#TERM=}
+fi
+
+PARENT_COLORTERM=$(tmux_parent show-environment -g COLORTERM 2>/dev/null || true)
+if [ -z "$PARENT_COLORTERM" ] || [ "$PARENT_COLORTERM" = "-COLORTERM" ]; then
+    PARENT_COLORTERM="truecolor"
+else
+    PARENT_COLORTERM=${PARENT_COLORTERM#COLORTERM=}
+fi
+
 WINDOW_ID="$PARENT_WINDOW_ID"
 POPUP_SESSION="${TOOL}_popup_${WINDOW_ID}"
 
@@ -90,9 +113,9 @@ fi
 
 if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
+        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
     else
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "source ~/.zshrc && cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
+        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "source ~/.zshrc && cd '$CURRENT_DIR' && while true; do opencode -c || opencode; done"
     fi
     tmux -L "$POPUP_SOCKET" set-option -s -t "$POPUP_SESSION" status off
     tmux -L "$POPUP_SOCKET" set -g prefix C-c
@@ -118,10 +141,10 @@ tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @parent_nav_script "$P
 
 "$POPUP_REBIND_SCRIPT" "$POPUP_SOCKET" "$PARENT_NAV_SCRIPT" --bind-format root M-p
 
-printf -v ATTACH_CMD '%q ' "$POPUP_ATTACH_SCRIPT" "$POPUP_SOCKET" "$POPUP_SESSION" "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID" "$TOOL"
+printf -v ATTACH_CMD '%q ' env "TERM=$PARENT_TERM" "COLORTERM=$PARENT_COLORTERM" "$POPUP_ATTACH_SCRIPT" "$POPUP_SOCKET" "$POPUP_SESSION" "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID" "$TOOL"
 ATTACH_CMD=${ATTACH_CMD% }
 
 WIDTH="75%"
 HEIGHT="90%"
 
-tmux_parent display-popup -c "$PARENT_CLIENT" -xC -yC -w "$WIDTH" -h "$HEIGHT" -d "$CURRENT_DIR" -E "TERM=xterm-256color $ATTACH_CMD"
+tmux_parent display-popup -c "$PARENT_CLIENT" -xC -yC -w "$WIDTH" -h "$HEIGHT" -d "$CURRENT_DIR" -E "$ATTACH_CMD"

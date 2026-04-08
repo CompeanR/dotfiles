@@ -7,6 +7,7 @@ SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 POPUP_STATE_SCRIPT="$SCRIPT_DIR/popup_state.sh"
 POPUP_CLOSE_SCRIPT="$SCRIPT_DIR/popup_close.sh"
 POPUP_ATTACH_SCRIPT="$SCRIPT_DIR/popup_attach.sh"
+POPUP_SYNC_ENV_SCRIPT="$SCRIPT_DIR/popup_sync_env.sh"
 PARENT_NAV_SCRIPT="$SCRIPT_DIR/popup_parent_nav.sh"
 POPUP_REBIND_SCRIPT="$SCRIPT_DIR/popup_rebind_keys.sh"
 POPUP_SOCKET="popup-hub"
@@ -73,6 +74,14 @@ if [ -z "$CURRENT_DIR_ARG" ]; then
 else
     CURRENT_DIR="$CURRENT_DIR_ARG"
 fi
+
+POPUP_ENV_ARGS=()
+while IFS= read -r env_line; do
+    if [ -n "$env_line" ]; then
+        POPUP_ENV_ARGS+=(-e "$env_line")
+    fi
+done < <("$POPUP_SYNC_ENV_SCRIPT" "$PARENT_SOCKET")
+
 WINDOW_ID="$PARENT_WINDOW_ID"
 POPUP_SESSION="${TOOL}_popup_${WINDOW_ID}"
 
@@ -89,7 +98,7 @@ if tmux -L "$POPUP_SOCKET" list-clients -t "$POPUP_SESSION" 2>/dev/null | grep -
 fi
 
 if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
-    tmux -L "$POPUP_SOCKET" -f /dev/null new-session -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do lazydocker; done"
+    tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do lazydocker; done"
     tmux -L "$POPUP_SOCKET" set-option -s -t "$POPUP_SESSION" status off
     tmux -L "$POPUP_SOCKET" set -g prefix C-c
     tmux -L "$POPUP_SOCKET" unbind C-b

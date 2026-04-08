@@ -7,8 +7,8 @@ return {
     opts.sections.lualine_c = {
       {
         "filename",
-        path = 1,
-        shorting_target = 0,
+        path = 4,
+        shorting_target = 40,
       },
     }
   end,

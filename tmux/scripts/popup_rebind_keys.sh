@@ -60,6 +60,10 @@ bind_close_script() {
 
 unbind_default_keys
 
+# Match the parent tmux copy-mode navigation so h/j/k/l work in popup copy mode.
+tmux_popup set-window-option -g mode-keys vi
+tmux_popup bind-key -T copy-mode-vi y send -X copy-pipe-and-cancel 'wl-copy'
+
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --bind-format)
@@ -88,8 +92,8 @@ tmux_popup bind-key -n M-[ run-shell -b "$PARENT_NAV_SCRIPT prev-window"
 tmux_popup bind-key -n M-] run-shell -b "$PARENT_NAV_SCRIPT next-window"
 tmux_popup bind-key -n M-{ run-shell -b "$PARENT_NAV_SCRIPT prev-session"
 tmux_popup bind-key -n M-} run-shell -b "$PARENT_NAV_SCRIPT next-session"
-tmux_popup bind-key -n PPage if-shell -F '#{pane_in_mode}' 'send-keys -X halfpage-up' 'copy-mode -e; send-keys -X halfpage-up'
-tmux_popup bind-key -n NPage if-shell -F '#{pane_in_mode}' 'send-keys -X halfpage-down' 'copy-mode -e; send-keys -X halfpage-down'
+tmux_popup bind-key -n PPage if-shell -F '#{==:#{@popup_tool},opencode}' 'if-shell -F "#{pane_in_mode}" "send-keys -X halfpage-up" "send-keys PPage"' 'if-shell -F "#{pane_in_mode}" "send-keys -X halfpage-up" "copy-mode -e; send-keys -X halfpage-up"'
+tmux_popup bind-key -n NPage if-shell -F '#{==:#{@popup_tool},opencode}' 'if-shell -F "#{pane_in_mode}" "send-keys -X halfpage-down" "send-keys NPage"' 'if-shell -F "#{pane_in_mode}" "send-keys -X halfpage-down" "copy-mode -e; send-keys -X halfpage-down"'
 tmux_popup bind-key -n M-w new-window
 tmux_popup bind-key -n M-q kill-pane
 tmux_popup bind-key -n M-0 select-window -t 0
