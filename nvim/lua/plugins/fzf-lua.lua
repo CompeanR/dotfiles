@@ -4,6 +4,22 @@ return {
     local actions = require("fzf-lua.actions")
 
     require("fzf-lua").setup({
+      keymap = {
+        builtin = {
+          ["<c-f>"] = false,
+          ["<c-b>"] = false,
+          ["<c-d>"] = "preview-page-down",
+          ["<c-u>"] = "preview-page-up",
+        },
+        fzf = {
+          ["ctrl-f"] = false,
+          ["ctrl-b"] = false,
+          ["ctrl-d"] = "preview-page-down",
+          ["ctrl-u"] = "preview-page-up",
+          ["ctrl-h"] = "execute-silent(tmux select-pane -L)",
+          ["ctrl-l"] = "execute-silent(tmux select-pane -R)",
+        },
+      },
       files = {
         hidden = false,
         fd_opts = "--color=never --type f --type l --exclude .git",

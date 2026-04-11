@@ -6,6 +6,7 @@ return {
         pattern = "VeryLazy",
         once = true,
         callback = function()
+          local numeric_marks = require("config.numeric_marks")
           local ok, statuscolumn = pcall(require, "snacks.statuscolumn")
           if not ok or statuscolumn._numeric_mark_patch then return end
 
@@ -21,21 +22,32 @@ return {
             return false
           end
 
+          ---@param items table[]
+          ---@param text string
+          local function remove_mark(items, text)
+            for index = #items, 1, -1 do
+              if items[index].type == "mark" and items[index].text == text then table.remove(items, index) end
+            end
+          end
+
           statuscolumn.buf_signs = function(buf, wanted)
             local signs = original_buf_signs(buf, wanted)
             if not wanted.mark then return signs end
 
             local marks = vim.fn.getmarklist(buf)
-            vim.list_extend(marks, vim.fn.getmarklist())
 
             for _, mark in ipairs(marks) do
-              if mark.pos[1] == buf and mark.mark:match("^'[0-9]$") then
+              local mark_name = mark.mark:sub(2)
+              local digit = numeric_marks.digit_by_mark[mark_name]
+
+              if mark.pos[1] == buf and digit then
                 local lnum = mark.pos[2]
-                local text = mark.mark:sub(2)
                 signs[lnum] = signs[lnum] or {}
-                if not has_mark(signs[lnum], text) then
+                remove_mark(signs[lnum], mark_name)
+
+                if not has_mark(signs[lnum], digit) then
                   table.insert(signs[lnum], {
-                    text = text,
+                    text = digit,
                     texthl = "SnacksStatusColumnMark",
                     type = "mark",
                   })

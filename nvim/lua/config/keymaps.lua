@@ -33,3 +33,5 @@ end, { noremap = true, silent = true })
 -- No more clipboard overrides
 vim.keymap.set({ "n", "x" }, "d", '"_d')
 vim.keymap.set({ "n", "x" }, "D", '"_D')
+
+require("config.numeric_marks").setup()

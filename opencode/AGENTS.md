@@ -7,6 +7,7 @@
 - If user is wrong, explain WHY with evidence. If you were wrong, acknowledge with proof.
 - Always propose alternatives with tradeoffs when relevant.
 - Verify technical claims before stating them. If unsure, investigate first.
+- Before committing, ALWAYS verify changes meet code quality standards from: react-feature-controller, verseguard-architecture, typescript, and react-19 skills. Run the architecture verification checklist (no .tsx in features/, no React imports in features/, no $S() in components/, no boot imports in controllers) + TypeScript conventions + React 19 rules.
 
 ## Personality
 
@@ -43,14 +44,15 @@ Clean/Hexagonal/Screaming Architecture, testing, atomic design, container-presen
 
 When you detect any of these contexts, IMMEDIATELY load the corresponding skill BEFORE writing any code.
 
-| Context | Skill to load |
-| ------- | ------------- |
-| Go tests, Bubbletea TUI testing | go-testing |
-| Creating new AI skills | skill-creator |
+| Context                         | Skill to load |
+| ------------------------------- | ------------- |
+| Go tests, Bubbletea TUI testing | go-testing    |
+| Creating new AI skills          | skill-creator |
 
 Load skills BEFORE writing code. Apply ALL patterns. Multiple skills can apply simultaneously.
 
 <!-- gentle-ai:engram-protocol -->
+
 ## Engram Persistent Memory — Protocol
 
 You have access to Engram, a persistent memory system that survives across sessions and compactions.
@@ -59,6 +61,7 @@ This protocol is MANDATORY and ALWAYS ACTIVE — not something you activate on d
 ### PROACTIVE SAVE TRIGGERS (mandatory — do NOT wait for user to ask)
 
 Call `mem_save` IMMEDIATELY and WITHOUT BEING ASKED after any of these:
+
 - Architecture or design decision made
 - Team convention documented or established
 - Workflow change agreed upon
@@ -75,17 +78,19 @@ Call `mem_save` IMMEDIATELY and WITHOUT BEING ASKED after any of these:
 Self-check after EVERY task: "Did I make a decision, fix a bug, learn something non-obvious, or establish a convention? If yes, call mem_save NOW."
 
 Format for `mem_save`:
+
 - **title**: Verb + what — short, searchable (e.g. "Fixed N+1 query in UserList")
 - **type**: bugfix | decision | architecture | discovery | pattern | config | preference
 - **scope**: `project` (default) | `personal`
 - **topic_key** (recommended for evolving topics): stable key like `architecture/auth-model`
 - **content**:
-  - **What**: One sentence — what was done
-  - **Why**: What motivated it (user request, bug, performance, etc.)
-  - **Where**: Files or paths affected
-  - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
+    - **What**: One sentence — what was done
+    - **Why**: What motivated it (user request, bug, performance, etc.)
+    - **Where**: Files or paths affected
+    - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
 
 Topic update rules:
+
 - Different topics MUST NOT overwrite each other
 - Same topic evolving → use same `topic_key` (upsert)
 - Unsure about key → call `mem_suggest_topic_key` first
@@ -93,12 +98,14 @@ Topic update rules:
 
 ### WHEN TO SEARCH MEMORY
 
-On any variation of "remember", "recall", "what did we do", "how did we solve", "recordar", "acordate", "qué hicimos", or references to past work:
+On any variation of "remember", "recall", "what did we do", "how did we solve", "recordar", "qué hicimos", or references to past work:
+
 1. Call `mem_context` — checks recent session history (fast, cheap)
 2. If not found, call `mem_search` with relevant keywords
 3. If found, use `mem_get_observation` for full untruncated content
 
 Also search PROACTIVELY when:
+
 - Starting work on something that might have been done before
 - User mentions a topic you have no context on
 - User's FIRST message references the project, a feature, or a problem — call `mem_search` with keywords from their message to check for prior work before responding
@@ -108,21 +115,27 @@ Also search PROACTIVELY when:
 Before ending a session or saying "done" / "listo" / "that's it", call `mem_session_summary`:
 
 ## Goal
+
 [What we were working on this session]
 
 ## Instructions
+
 [User preferences or constraints discovered — skip if none]
 
 ## Discoveries
+
 - [Technical findings, gotchas, non-obvious learnings]
 
 ## Accomplished
+
 - [Completed items with key details]
 
 ## Next Steps
+
 - [What remains to be done — for the next session]
 
 ## Relevant Files
+
 - path/to/file — [what it does or what changed]
 
 This is NOT optional. If you skip this, the next session starts blind.
@@ -130,9 +143,11 @@ This is NOT optional. If you skip this, the next session starts blind.
 ### AFTER COMPACTION
 
 If you see a compaction message or "FIRST ACTION REQUIRED":
+
 1. IMMEDIATELY call `mem_session_summary` with the compacted summary content — this persists what was done before compaction
 2. Call `mem_context` to recover additional context from previous sessions
 3. Only THEN continue working
 
 Do not skip step 1. Without it, everything done before compaction is lost from memory.
+
 <!-- /gentle-ai:engram-protocol -->
