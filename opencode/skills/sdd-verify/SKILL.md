@@ -1,12 +1,12 @@
 ---
 name: sdd-verify
 description: >
-  Validate that implementation matches specs, design, and tasks.
-  Trigger: When the orchestrator launches you to verify a completed (or partially completed) change.
+    Validate that implementation matches specs, design, and tasks.
+    Trigger: When the orchestrator launches you to verify a completed (or partially completed) change.
 license: MIT
 metadata:
-  author: gentleman-programming
-  version: "3.0"
+    author: gentleman-programming
+    version: "3.0"
 ---
 
 ## Purpose
@@ -18,6 +18,7 @@ Static analysis alone is NOT enough. You must execute the code.
 ## What You Receive
 
 From the orchestrator:
+
 - Change name
 - Artifact store mode (`engram | openspec | hybrid | none`)
 
@@ -33,6 +34,7 @@ From the orchestrator:
 ## What to Do
 
 ### Step 1: Load Skills
+
 Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
 
 ### Step 2: Read Testing Capabilities and Resolve TDD Mode
@@ -197,6 +199,37 @@ IF coverage tool NOT available:
 
 If Strict TDD is active, follow the instructions in `strict-tdd-verify.md` Step 5e.
 
+### Step 6f: Code Style & Architecture Conventions
+
+Verify that changed files follow the project's code style conventions. Load the project's architecture skill (e.g., `.agent/skills/verseguard-architecture/SKILL.md` or equivalent) and check every file that was modified or created by this change.
+
+```
+FOR EACH changed/created file:
+├── Comment policy:
+│   ├── No section dividers (// ─── Section ───, // --- Phase 1 ---, etc.)
+│   ├── No labeling comments (// Title, // Footer, // Dot Grid)
+│   ├── No module-level JSDoc headers describing what the file does
+│   └── Comments only exist for genuinely non-obvious code
+│
+├── Component structure:
+│   ├── No unnecessary sub-components extracted in the same file
+│   │   (a thin wrapper that loops and renders <View> is NOT a component)
+│   ├── Screens use the project's generic controller hook (e.g. useController)
+│   │   instead of bespoke hooks duplicating the same lifecycle pattern
+│   └── features/ files contain ZERO React imports (except hook wrappers if pattern allows)
+│
+├── Architecture boundaries:
+│   ├── No .tsx files in features/
+│   ├── No React imports in features/ controllers
+│   ├── No $S() calls in components/
+│   ├── No boot imports in controllers
+│   └── Controllers receive dependencies via constructor, not imports
+│
+└── Flag: WARNING for each violation found (not CRITICAL unless egregious)
+```
+
+If the project has a verification checklist in its architecture skill, RUN those exact commands and report the output.
+
 ### Step 7: Spec Compliance Matrix (Behavioral Validation)
 
 This is the most important step. Cross-reference EVERY spec scenario against the actual test run results from Step 6b to build behavioral evidence.
@@ -227,6 +260,7 @@ If Strict TDD is active, follow the instructions in `strict-tdd-verify.md` (Step
 ### Step 8: Persist Verification Report
 
 Follow **Section C** from `skills/_shared/sdd-phase-common.md`.
+
 - artifact: `verify-report`
 - topic_key: `sdd/{change-name}/verify-report`
 - type: `architecture`
@@ -245,11 +279,12 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 ---
 
 ### Completeness
-| Metric | Value |
-|--------|-------|
-| Tasks total | {N} |
-| Tasks complete | {N} |
-| Tasks incomplete | {N} |
+
+| Metric           | Value |
+| ---------------- | ----- |
+| Tasks total      | {N}   |
+| Tasks complete   | {N}   |
+| Tasks incomplete | {N}   |
 
 {List incomplete tasks if any}
 
@@ -259,12 +294,16 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 
 **Build**: ✅ Passed / ❌ Failed
 ```
+
 {build command output or error if failed}
+
 ```
 
 **Tests**: ✅ {N} passed / ❌ {N} failed / ⚠️ {N} skipped
 ```
+
 {failed test names and errors if any}
+
 ```
 
 **Coverage**: {N}% / threshold: {N}% → ✅ Above threshold / ⚠️ Below threshold / ➖ Not available
@@ -286,6 +325,18 @@ Return to the orchestrator the same content you wrote to `verify-report.md`:
 | {REQ-02: name} | {Scenario name} | `{test file} > {test name}` | ⚠️ PARTIAL |
 
 **Compliance summary**: {N}/{total} scenarios compliant
+
+---
+
+### Code Style & Architecture
+| Check | Status | Files |
+|-------|--------|-------|
+| No section dividers | ✅ / ❌ | {files with violations} |
+| No labeling comments | ✅ / ❌ | {files with violations} |
+| No unnecessary sub-components | ✅ / ❌ | {files with violations} |
+| Uses generic useController hook | ✅ / ❌ | {files with bespoke hooks} |
+| features/ zero React | ✅ / ❌ | {files with violations} |
+| No .tsx in features/ | ✅ / ❌ | {files if any} |
 
 ---
 

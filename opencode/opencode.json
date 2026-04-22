@@ -99,7 +99,7 @@
         "sdd-orchestrator": {
             "description": "Agent Teams Orchestrator - coordinates sub-agents, never does work inline",
             "mode": "primary",
-            "model": "anthropic/claude-opus-4-6",
+            "model": "anthropic/claude-opus-4-7",
             "permission": {
                 "question": "allow",
                 "task": {
@@ -233,6 +233,6 @@
     "plugin": [
         "opencode-gemini-auth@latest",
         "file:///home/compean/.config/opencode/plugins/notify.ts",
-        "file:///home/compean/.config/opencode/opencode-claude-auth-pinned.ts"
+        "@ex-machina/opencode-anthropic-auth"
     ]
 }
