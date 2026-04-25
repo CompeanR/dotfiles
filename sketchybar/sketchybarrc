@@ -39,13 +39,13 @@ sketchybar --bar \
     padding_right=8 \
     color=$TRANSPARENT \
     corner_radius=0 \
-    y_offset=-10 \
+    y_offset=-5 \
     margin=0 \
     notch_width=188 \
     notch_offset=0
 
 # Startup animation - slide down from top
-sketchybar --animate sin 12 --bar y_offset=-50 y_offset=2
+sketchybar --animate sin 12 --bar y_offset=-50 y_offset=0
 
 # ─────────────────────────────────────────────────────────────────────────────────
 # DEFAULT VALUES
