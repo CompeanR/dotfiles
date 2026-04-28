@@ -63,6 +63,12 @@ return {
       })
     end,
     opts = function(_, opts)
+      -- Snacks smooth scroll triggers CursorMoved during its animation.
+      -- That clears gitsigns inline hunk previews immediately after ]h/[h navigation.
+      opts.scroll = vim.tbl_deep_extend("force", opts.scroll or {}, {
+        enabled = false,
+      })
+
       local preview_fn = function(ctx)
         Snacks.picker.preview.preview(ctx)
         Snacks.util.wo(ctx.win, {
