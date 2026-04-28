@@ -26,5 +26,25 @@ return {
     -- You may want these if you stick with the opinionated "<C-a>" and "<C-x>" above — otherwise consider "<leader>o".
     vim.keymap.set("n", "+", "<C-a>", { desc = "Increment", noremap = true })
     vim.keymap.set("n", "<leader>o-", "<C-x>", { desc = "Decrement", noremap = true })
+
+    -- Fix: Override tmux-navigator terminal mappings inside the opencode terminal buffer.
+    -- Without this, <C-h/j/k/l> fire TmuxNavigate* instead of being sent to the TUI,
+    -- and <Esc> requires <C-\><C-n> to exit terminal insert mode.
+    vim.api.nvim_create_autocmd("TermOpen", {
+      pattern = "term://*opencode*",
+      callback = function(ev)
+        local buf = ev.buf
+        local topts = { buffer = buf, silent = true }
+
+        -- Pass <C-h/j/k/l> through to the terminal (overrides vim-tmux-navigator)
+        vim.keymap.set("t", "<C-h>", "<C-h>", topts)
+        vim.keymap.set("t", "<C-j>", "<C-j>", topts)
+        vim.keymap.set("t", "<C-k>", "<C-k>", topts)
+        vim.keymap.set("t", "<C-l>", "<C-l>", topts)
+
+        -- Allow jk to exit terminal insert mode
+        vim.keymap.set("t", "jk", "<C-\\><C-n>", topts)
+      end,
+    })
   end,
 }
