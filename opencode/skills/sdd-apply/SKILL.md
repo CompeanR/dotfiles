@@ -6,7 +6,7 @@ description: >
 license: MIT
 metadata:
   author: gentleman-programming
-  version: "3.0"
+  version: "3.1"
 ---
 
 ## Purpose
@@ -53,6 +53,44 @@ Before starting work, check for existing apply-progress:
 5. When saving your apply-progress in Step 6, MERGE: include all previously completed tasks PLUS your newly completed tasks in a single combined artifact
 
 **CRITICAL**: If the orchestrator told you previous progress exists, you MUST read it. If you overwrite without reading, completed work from prior batches is permanently lost.
+
+#### Step 2c: Validate Against Project Conventions (MANDATORY)
+
+Before writing ANY code, cross-check the design's file structure against the project's established conventions. **Project conventions ALWAYS win over SDD design documents.**
+
+```
+1. GATHER CONVENTIONS (use the first available source):
+   ├── Project Standards block injected by the orchestrator (preferred)
+   ├── AGENTS.md in the project root
+   ├── Project-local skills under .agent/skills/
+   └── If none found → skip this step (no conventions to enforce)
+
+2. FOR EACH FILE the design says to CREATE:
+   ├── Extract the file suffix (e.g., .entity.ts, .service.ts, .rules.ts)
+   ├── Check: does this suffix exist in the project's known architecture?
+   │   ├── Known suffixes come from the conventions (decision tree, folder structure, file naming)
+   │   └── If the suffix does NOT exist → STOP. Report in return summary:
+   │       "CONVENTION CONFLICT: Design specifies {file} with suffix {.xyz.ts}
+   │        which does not exist in project conventions. Skipped file creation."
+   ├── Check: does the LOGIC assigned to this file match its architectural role?
+   │   ├── Use the project's decision tree to validate placement
+   │   ├── Example violations:
+   │   │   ├── Orchestration functions in an .entity.ts file (entities = types + constants)
+   │   │   ├── Business logic in a .controller.ts file (controllers = UI state derivation)
+   │   │   ├── React imports in a features/ .ts file
+   │   │   └── Direct service instantiation outside boot.ts
+   │   └── If logic doesn't match the file's role → STOP. Report:
+   │       "CONVENTION CONFLICT: Design places {logic description} in {file},
+   │        but per project conventions this belongs in a {correct-suffix} file."
+   └── If both checks pass → proceed with implementation
+
+3. FOR EACH FILE the design says to MODIFY:
+   ├── Read the existing file first
+   ├── Verify the new logic matches the file's established role
+   └── If it doesn't → report the conflict, same as above
+```
+
+**This gate is NON-NEGOTIABLE.** An SDD design document is a proposal — the project's architecture conventions are the law. When they conflict, conventions win and the conflict is reported so the orchestrator or user can correct the design.
 
 ### Step 3: Read Testing Capabilities and Resolve Mode
 
@@ -172,8 +210,10 @@ If none, say "None."}
 ## Rules
 
 - ALWAYS read specs before implementing — specs are your acceptance criteria
-- ALWAYS follow the design decisions — don't freelance a different approach
+- ALWAYS follow the design decisions — but if the design conflicts with project conventions, conventions WIN. Report the conflict in your return summary.
 - ALWAYS match existing code patterns and conventions in the project
+- NEVER create a file with a suffix that doesn't exist in the project's architecture. If the design says to create `foo.rules.ts` but the project has no `.rules.ts` convention, STOP and report — do NOT invent new architectural layers.
+- NEVER place logic in a file that doesn't match its architectural role per the project's decision tree (e.g., orchestration functions in an entity file, business logic in a controller). Report the mismatch.
 - In `openspec` mode, mark tasks complete in `tasks.md` AS you go, not at the end
 - If you discover the design is wrong or incomplete, NOTE IT in your return summary — don't silently deviate
 - If a task is blocked by something unexpected, STOP and report back

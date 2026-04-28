@@ -98,7 +98,7 @@ Topic update rules:
 
 ### WHEN TO SEARCH MEMORY
 
-On any variation of "remember", "recall", "what did we do", "how did we solve", "recordar", "qué hicimos", or references to past work:
+On any variation of "remember", "recall", "what did we do", "how did we solve", or references to past work:
 
 1. Call `mem_context` — checks recent session history (fast, cheap)
 2. If not found, call `mem_search` with relevant keywords
