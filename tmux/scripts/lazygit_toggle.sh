@@ -121,7 +121,7 @@ tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @popup_tool "$TOOL"
 tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @popup_close_script "$POPUP_CLOSE_SCRIPT"
 tmux -L "$POPUP_SOCKET" set-option -q -t "$POPUP_SESSION" @parent_nav_script "$PARENT_NAV_SCRIPT"
 
-"$POPUP_REBIND_SCRIPT" "$POPUP_SOCKET" "$PARENT_NAV_SCRIPT" --bind-format prefix C-d --bind-script root q "$POPUP_CLOSE_SCRIPT"
+"$POPUP_REBIND_SCRIPT" "$POPUP_SOCKET" "$PARENT_NAV_SCRIPT" --bind-format prefix C-d --bind-script root C-q "$POPUP_CLOSE_SCRIPT"
 
 printf -v ATTACH_CMD '%q ' "$POPUP_ATTACH_SCRIPT" "$POPUP_SOCKET" "$POPUP_SESSION" "$PARENT_SOCKET" "$PARENT_CLIENT" "$PARENT_SESSION_ID" "$PARENT_WINDOW_ID" "$TOOL"
 ATTACH_CMD=${ATTACH_CMD% }

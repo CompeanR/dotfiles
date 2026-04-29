@@ -22,6 +22,7 @@ unbind_default_keys() {
     tmux_popup unbind -n Down 2>/dev/null || true
     tmux_popup unbind -n M-c 2>/dev/null || true
     tmux_popup unbind -n M-x 2>/dev/null || true
+    tmux_popup unbind -n q 2>/dev/null || true
 }
 
 unbind_custom_key() {
