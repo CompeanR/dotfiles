@@ -3,6 +3,29 @@ return {
   opts = function(_, opts)
     local original_on_attach = opts.on_attach
 
+    local function apply_inline_preview_highlights()
+      local highlights = {
+        GitSignsAddInline = { fg = "#ffffff", bg = "#166534", bold = true },
+        GitSignsChangeInline = { fg = "#ffffff", bg = "#92400e", bold = true },
+        GitSignsDeleteInline = { fg = "#ffffff", bg = "#7f1d1d", bold = true, strikethrough = true },
+        GitSignsAddVirtLnInline = { fg = "#ffffff", bg = "#166534", bold = true },
+        GitSignsChangeVirtLnInline = { fg = "#ffffff", bg = "#92400e", bold = true },
+        GitSignsDeleteVirtLnInline = { fg = "#ffffff", bg = "#7f1d1d", bold = true, strikethrough = true },
+        GitSignsDeleteVirtLnInLine = { fg = "#ffffff", bg = "#7f1d1d", bold = true, strikethrough = true },
+      }
+
+      for group, highlight in pairs(highlights) do
+        vim.api.nvim_set_hl(0, group, highlight)
+      end
+    end
+
+    apply_inline_preview_highlights()
+
+    vim.api.nvim_create_autocmd("ColorScheme", {
+      group = vim.api.nvim_create_augroup("gitsigns_inline_preview_highlights", { clear = true }),
+      callback = apply_inline_preview_highlights,
+    })
+
     opts.on_attach = function(buffer)
       if original_on_attach then original_on_attach(buffer) end
 
