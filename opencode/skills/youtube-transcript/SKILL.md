@@ -2,7 +2,7 @@
 name: youtube-transcript
 description: >
   Extract transcripts from YouTube videos using the global `yt-transcript` CLI.
-  Trigger: When the user wants the transcript of a YouTube video, asks to extract captions, summarize a video by URL, or batch-process YouTube links. Also when the user says "transcripcion de youtube", "transcribe este video", or pastes a youtube.com / youtu.be URL with intent to read or analyze its content.
+  Trigger: When the user wants the transcript of a YouTube video, asks to extract captions, summarize a video by URL, or batch-process YouTube links. Also when the user pastes a youtube.com / youtu.be URL with intent to read or analyze its content.
 license: Apache-2.0
 metadata:
   author: gentleman-programming

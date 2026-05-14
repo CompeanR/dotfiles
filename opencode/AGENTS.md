@@ -112,7 +112,7 @@ Also search PROACTIVELY when:
 
 ### SESSION CLOSE PROTOCOL (mandatory)
 
-Before ending a session or saying "done" / "listo" / "that's it", call `mem_session_summary`:
+Before ending a session or saying "done" / "that's it", call `mem_session_summary`:
 
 ## Goal
 

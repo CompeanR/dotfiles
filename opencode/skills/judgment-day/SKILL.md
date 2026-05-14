@@ -4,8 +4,7 @@ description: >
   Parallel adversarial review protocol that launches two independent blind judge sub-agents
   simultaneously to review the same target, synthesizes their findings, applies fixes,
   and re-judges until both pass or escalates after 2 iterations.
-  Trigger: When user says "judgment day", "judgment-day", "review adversarial", "dual review",
-  "doble review", "juzgar", "que lo juzguen".
+  Trigger: When user says "judgment day", "judgment-day", "review adversarial", "dual review".
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -78,7 +77,7 @@ WARNING (theoretical) → Requires a contrived scenario, corrupted input, or con
 
 1. If **confirmed CRITICALs or real WARNINGs** exist → delegate a **Fix Agent** (separate delegation)
 2. After Fix Agent completes → re-launch **both judges in parallel** (same blind protocol, fresh delegates)
-3. **After 2 fix iterations**, if issues remain → present findings to user and ASK: "¿Querés que siga iterando? / Should I continue iterating?" If YES → continue fix+judge cycle. If NO → JUDGMENT: ESCALATED.
+3. **After 2 fix iterations**, if issues remain → present findings to user and ASK: "Should I continue iterating?" If YES → continue fix+judge cycle. If NO → JUDGMENT: ESCALATED.
 4. If both judges return clean → JUDGMENT: APPROVED ✅
 
 ### Pattern 5: Convergence Threshold

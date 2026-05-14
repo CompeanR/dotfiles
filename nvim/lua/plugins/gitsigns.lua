@@ -84,6 +84,24 @@ return {
         vim.defer_fn(restore_scroll, 500)
       end
 
+      local function has_inline_preview()
+        local ok, preview = pcall(require, "gitsigns.actions.preview")
+        return ok and preview.has_preview_inline(buffer)
+      end
+
+      local function recenter_without_scroll_animation(command)
+        local normal_command = vim.v.count > 0 and (vim.v.count .. command) or command
+
+        if vim.v.count > 0 or not has_inline_preview() then
+          vim.cmd.normal({ normal_command, bang = true })
+          return
+        end
+
+        local restore_scroll = pause_snacks_scroll()
+        vim.cmd.normal({ normal_command, bang = true })
+        restore_scroll()
+      end
+
       local function map_hunk_nav(lhs, direction, diff_motion, desc)
         vim.keymap.set("n", lhs, function()
           if vim.wo.diff then
@@ -99,6 +117,12 @@ return {
       -- but is paused for this path because it clears inline previews via CursorMoved.
       map_hunk_nav("]h", "next", "]c", "Next Hunk")
       map_hunk_nav("[h", "prev", "[c", "Prev Hunk")
+
+      for _, command in ipairs({ "zt", "zb", "zz" }) do
+        vim.keymap.set("n", command, function()
+          recenter_without_scroll_animation(command)
+        end, { buffer = buffer, desc = "Recenter without clearing hunk preview", silent = true })
+      end
     end
   end,
 }
