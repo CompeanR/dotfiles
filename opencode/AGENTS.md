@@ -84,10 +84,10 @@ Format for `mem_save`:
 - **scope**: `project` (default) | `personal`
 - **topic_key** (recommended for evolving topics): stable key like `architecture/auth-model`
 - **content**:
-    - **What**: One sentence — what was done
-    - **Why**: What motivated it (user request, bug, performance, etc.)
-    - **Where**: Files or paths affected
-    - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
+  - **What**: One sentence — what was done
+  - **Why**: What motivated it (user request, bug, performance, etc.)
+  - **Where**: Files or paths affected
+  - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
 
 Topic update rules:
 

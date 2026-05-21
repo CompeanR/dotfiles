@@ -2,6 +2,9 @@ return {
   "ibhagwan/fzf-lua",
   config = function()
     local actions = require("fzf-lua.actions")
+    -- Default git_diff actions; we move "git hunks" off <ctrl-d> so that key
+    -- scrolls the preview instead (see keymap.fzf below).
+    local git_diff_defaults = require("fzf-lua.defaults").defaults.git.diff.actions
 
     require("fzf-lua").setup({
       keymap = {
@@ -23,6 +26,15 @@ return {
       files = {
         hidden = false,
         fd_opts = "--color=never --type f --type l --exclude .git",
+      },
+      git = {
+        diff = {
+          actions = {
+            -- Free <ctrl-d>/<ctrl-u> for preview scrolling; reach "git hunks" via <alt-d>.
+            ["ctrl-d"] = false,
+            ["alt-d"] = git_diff_defaults["ctrl-d"],
+          },
+        },
       },
       actions = {
         files = {

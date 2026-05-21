@@ -1,9 +1,12 @@
 {
-    "$schema": "https://opencode.ai/tui.json",
-    "theme": "system",
-    "keybinds": {
-        "leader": "ctrl+o",
-        "editor_open": "<leader>e",
-        "theme_list": "<leader>t"
-    }
+  "$schema": "https://opencode.ai/tui.json",
+  "keybinds": {
+    "leader": "ctrl+o",
+    "editor_open": "\u003cleader\u003ee",
+    "theme_list": "\u003cleader\u003et"
+  },
+  "plugin": [
+    "opencode-subagent-statusline"
+  ],
+  "theme": "system"
 }
