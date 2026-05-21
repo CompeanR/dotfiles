@@ -6,7 +6,7 @@ description: >
     Trigger: When the user says they downloaded a zip of screenshots/references and wants
     the agent to unzip and inspect them. Common phrases: "I downloaded a zip",
     "the last file in my Downloads is a zip", "extract the latest zip",
-    "add the screenshots".
+    "descargue un zip", "agrega los screenshots".
 license: Apache-2.0
 metadata:
     author: gentleman-programming

@@ -11,6 +11,16 @@
                 "write": true
             }
         },
+        "learning": {
+            "description": "Collaborative learn-by-doing partner - teaches with insights and hands strategic code to the user via TODO(human) markers",
+            "mode": "primary",
+            "model": "deepseek/deepseek-v4-pro",
+            "prompt": "{file:./prompts/learning.md}",
+            "tools": {
+                "edit": true,
+                "write": true
+            }
+        },
         "plan": {
             "mode": "primary",
             "permission": {
@@ -49,7 +59,7 @@
             "description": "Create technical design from proposals",
             "hidden": true,
             "mode": "subagent",
-            "model": "deepseek/deepseek-v4-pro",
+            "model": "anthropic/claude-opus-4-7",
             "prompt": "{file:./prompts/sdd/sdd-design.md}",
             "tools": {
                 "bash": true,
@@ -130,7 +140,7 @@
             "description": "Create change proposals from explorations",
             "hidden": true,
             "mode": "subagent",
-            "model": "deepseek/deepseek-v4-pro",
+            "model": "anthropic/claude-opus-4-7",
             "prompt": "{file:./prompts/sdd/sdd-propose.md}",
             "tools": {
                 "bash": true,
@@ -143,7 +153,7 @@
             "description": "Write detailed specifications from proposals",
             "hidden": true,
             "mode": "subagent",
-            "model": "deepseek/deepseek-v4-pro",
+            "model": "anthropic/claude-opus-4-7",
             "prompt": "{file:./prompts/sdd/sdd-spec.md}",
             "tools": {
                 "bash": true,
@@ -205,11 +215,8 @@
             "url": "https://mcp.context7.com/mcp"
         },
         "engram": {
-            "command": [
-                "engram",
-                "mcp",
-                "--tools=agent"
-            ],
+            "command": ["engram", "mcp", "--tools=agent"],
+            "enabled": true,
             "type": "local"
         },
         "playwright": {

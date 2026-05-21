@@ -99,10 +99,30 @@ if tmux -L "$POPUP_SOCKET" list-clients -t "$POPUP_SESSION" 2>/dev/null | grep -
 fi
 
 if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do cyc || /opt/homebrew/bin/claude; done"
+    if command -v claude >/dev/null 2>&1; then
+        CLAUDE_BIN=$(command -v claude)
+    elif [ -x "$HOME/.local/bin/claude" ]; then
+        CLAUDE_BIN="$HOME/.local/bin/claude"
+    elif [[ "$OSTYPE" == "darwin"* ]] && [ -x /opt/homebrew/bin/claude ]; then
+        CLAUDE_BIN="/opt/homebrew/bin/claude"
     else
-        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "cd '$CURRENT_DIR' && while true; do /home/compean/.nvm/versions/node/v22.17.1/bin/claude --dangerously-skip-permissions; done"
+        CLAUDE_BIN="claude"
+    fi
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        CLAUDE_ARGS=()
+    else
+        CLAUDE_ARGS=(--dangerously-skip-permissions)
+    fi
+
+    printf -v CLAUDE_CMD '%q ' "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}"
+    CLAUDE_CMD=${CLAUDE_CMD% }
+    printf -v CURRENT_DIR_QUOTED '%q' "$CURRENT_DIR"
+
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "if [ -f \"\$HOME/.zshrc\" ]; then source \"\$HOME/.zshrc\"; fi; cd -- $CURRENT_DIR_QUOTED && while true; do cyc || $CLAUDE_CMD; done"
+    else
+        tmux -L "$POPUP_SOCKET" -f /dev/null new-session "${POPUP_ENV_ARGS[@]}" -d -s "$POPUP_SESSION" -c "$CURRENT_DIR" "if [ -f \"\$HOME/.zshrc\" ]; then source \"\$HOME/.zshrc\"; fi; cd -- $CURRENT_DIR_QUOTED && while true; do $CLAUDE_CMD; done"
     fi
     tmux -L "$POPUP_SOCKET" set-option -s -t "$POPUP_SESSION" status off
     tmux -L "$POPUP_SOCKET" set -g prefix C-c
