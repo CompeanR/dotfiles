@@ -9,5 +9,5 @@
   "plugin": [
     "opencode-subagent-statusline"
   ],
-  "theme": "system"
+  "theme": "system-nvim"
 }
