@@ -16,6 +16,7 @@
 -- - Y       yank entry/selection (copy)   | works in normal + visual
 -- - X       cut entry/selection (move)     | works in normal + visual
 -- - P       paste from register into dir   | normal mode
+-- - M       cut entry/selection for move   | paste with gp in target Oil dir
 --
 -- System clipboard (Finder ↔ Oil):
 -- - gy      copy to system clipboard       | works in normal + visual (macOS multi-path)
@@ -218,6 +219,18 @@ return {
       yank_register.entries = entries
       yank_register.mode = "cut"
       vim.notify(string.format("Yanked %d item(s) for cut (move)", #entries))
+    end
+
+    --- Cut entries for move, then paste with gp in target Oil dir.
+    local function oil_mark_entries_for_move()
+      local entries, err = collect_oil_entries()
+      if err then
+        vim.notify(err, vim.log.levels.WARN)
+        return
+      end
+      yank_register.entries = entries
+      yank_register.mode = "cut"
+      vim.notify(string.format("Cut %d item(s); use gp in target Oil dir", #entries))
     end
 
     --- Paste from internal register into current oil directory.
@@ -468,6 +481,9 @@ return {
         vim.keymap.set("n", "P", oil_paste_entries, vim.tbl_extend("force", buf_opts, {
           desc = "Oil: paste from register into current dir",
         }))
+        vim.keymap.set({ "n", "v" }, "M", oil_mark_entries_for_move, vim.tbl_extend("force", buf_opts, {
+          desc = "Oil: cut entries for move; paste with gp",
+        }))
 
         -- System clipboard (macOS multi-path aware)
         vim.keymap.set({ "n", "v" }, "gy", function()
@@ -480,6 +496,11 @@ return {
           desc = "Oil: copy to system clipboard",
         }))
         vim.keymap.set("n", "gp", function()
+          if yank_register.mode == "cut" and #yank_register.entries > 0 then
+            oil_paste_entries()
+            return
+          end
+
           if vim.fn.has("mac") == 1 then
             -- Upstream «class furl» breaks with multi-file clipboard (-1700).
             -- Use our direct-fs merge instead.

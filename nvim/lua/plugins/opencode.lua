@@ -12,6 +12,81 @@ return {
       -- Your configuration, if any — see `lua/opencode/config.lua`, or "goto definition".
     }
 
+    local function opencode_cmd()
+      local opencode_nvim_config = vim.fn.stdpath("config") .. "/opencode-nvim"
+      return "env OPENCODE_CONFIG_DIR="
+        .. vim.fn.shellescape(opencode_nvim_config)
+        .. " OPENCODE_TUI_CONFIG="
+        .. vim.fn.shellescape(opencode_nvim_config .. "/tui.json")
+        .. " opencode --port"
+    end
+
+    local function opencode_should_open_horizontal()
+      return vim.o.columns < 140
+    end
+
+    local function opencode_win_opts()
+      if opencode_should_open_horizontal() then
+        return {
+          split = "below",
+          height = math.floor(vim.o.lines * 0.5),
+        }
+      end
+
+      return {
+        split = "right",
+        width = math.floor(vim.o.columns * 0.5),
+      }
+    end
+
+    local function opencode_win()
+      for _, win in ipairs(vim.api.nvim_list_wins()) do
+        if vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(win)):match("^term://.*opencode") then
+          return win
+        end
+      end
+    end
+
+    local function resize_opencode()
+      local win = opencode_win()
+      if not win then
+        return
+      end
+
+      local previous_win = vim.api.nvim_get_current_win()
+      vim.api.nvim_set_current_win(win)
+      if opencode_should_open_horizontal() then
+        vim.cmd("wincmd J")
+        vim.cmd("resize " .. math.floor(vim.o.lines * 0.5))
+      else
+        vim.cmd("wincmd L")
+        vim.cmd("vertical resize " .. math.floor(vim.o.columns * 0.5))
+      end
+      if vim.api.nvim_win_is_valid(previous_win) then
+        vim.api.nvim_set_current_win(previous_win)
+      end
+    end
+
+    ---@type opencode.Opts
+    local opencode_server_opts = {
+      start = function()
+        require("opencode.terminal").open(opencode_cmd(), opencode_win_opts())
+      end,
+      stop = function()
+        require("opencode.terminal").close()
+      end,
+      toggle = function()
+        require("opencode.terminal").toggle(opencode_cmd(), opencode_win_opts())
+      end,
+    }
+
+    vim.g.opencode_opts.server = opencode_server_opts
+
+    local ok, opencode_config = pcall(require, "opencode.config")
+    if ok then
+      opencode_config.opts.server = opencode_server_opts
+    end
+
     -- Required for `opts.auto_reload`.
     vim.o.autoread = true
 
@@ -56,18 +131,24 @@ return {
     -- Fix: Override tmux-navigator terminal mappings inside the opencode terminal buffer.
     -- Without this, <C-h/j/k/l> fire TmuxNavigate* instead of being sent to the TUI,
     -- and <Esc> requires <C-\><C-n> to exit terminal insert mode.
+    vim.api.nvim_create_autocmd("VimResized", {
+      callback = function()
+        vim.schedule(resize_opencode)
+      end,
+    })
+
     vim.api.nvim_create_autocmd("TermOpen", {
       pattern = "term://*opencode*",
       callback = function(ev)
         local buf = ev.buf
         local topts = { buffer = buf, silent = true }
 
-        -- Let <C-h> leave the opencode terminal and move to the left window.
+        -- Let tmux-style nav leave the opencode terminal in the matching direction.
+        -- <C-l> still passes through: from a left nvim window it enters opencode,
+        -- and BufEnter below starts terminal insert mode automatically.
         vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", topts)
-
-        -- Pass the remaining tmux navigation keys through to the terminal.
-        vim.keymap.set("t", "<C-j>", "<C-j>", topts)
-        vim.keymap.set("t", "<C-k>", "<C-k>", topts)
+        vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", topts)
+        vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", topts)
         vim.keymap.set("t", "<C-l>", "<C-l>", topts)
       end,
     })
