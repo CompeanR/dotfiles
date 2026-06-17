@@ -144,10 +144,19 @@ return {
         local topts = { buffer = buf, silent = true }
 
         -- Let tmux-style nav leave the opencode terminal in the matching direction.
+        -- <C-j> keeps window-nav when a lower split exists; otherwise it is
+        -- passed through to opencode so the TUI can insert a newline.
         -- <C-l> still passes through: from a left nvim window it enters opencode,
         -- and BufEnter below starts terminal insert mode automatically.
         vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", topts)
-        vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", topts)
+        vim.keymap.set("t", "<C-j>", function()
+          if vim.fn.winnr("j") == vim.fn.winnr() then
+            vim.api.nvim_chan_send(vim.b.terminal_job_id, "\n")
+            return
+          end
+
+          vim.api.nvim_feedkeys(vim.keycode("<C-\\><C-n><C-w>j"), "n", false)
+        end, topts)
         vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", topts)
         vim.keymap.set("t", "<C-l>", "<C-l>", topts)
       end,
