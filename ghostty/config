@@ -9,7 +9,7 @@ shell-integration-features = sudo,no-title
 cursor-style = block
 cursor-style-blink = false
 adjust-cell-height = 0
-background-opacity = 0.80
+background-opacity = 0.77
 quick-terminal-autohide = true
 background-blur = true
 
