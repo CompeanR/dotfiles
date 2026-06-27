@@ -35,7 +35,7 @@ return {
 
       return {
         split = "right",
-        width = math.floor(vim.o.columns * 0.5),
+        width = math.floor(vim.o.columns * 0.45),
       }
     end
 

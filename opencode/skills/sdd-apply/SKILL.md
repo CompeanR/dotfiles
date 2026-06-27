@@ -1,13 +1,31 @@
 ---
 name: sdd-apply
-description: >
-  Implement tasks from the change, writing actual code following the specs and design.
-  Trigger: When the orchestrator launches you to implement one or more tasks from a change.
+description: "Implement SDD tasks from specs and design. Trigger: orchestrator launches apply for one or more change tasks."
+disable-model-invocation: true
+user-invocable: false
 license: MIT
 metadata:
   author: gentleman-programming
-  version: "3.1"
+  version: "3.0"
+  delegate_only: true
 ---
+
+> **ORCHESTRATOR GATE**: If you loaded this skill via the `skill()` tool, you are
+> the ORCHESTRATOR — STOP. Do NOT execute these instructions inline. Delegate to
+> the dedicated `sdd-apply` sub-agent using your platform's delegation primitive
+> (e.g., `task(...)`, sub-agent invocation, etc.). This skill is for EXECUTORS
+> only.
+
+## Executor Override
+
+If you ARE the `sdd-apply` sub-agent (NOT the orchestrator), the gate above does NOT apply to you. Continue with the phase work below. Do NOT delegate. Do NOT call the Skill tool. You are the executor — execute.
+
+
+## Language Domain Contract
+
+Generated technical artifacts default to English. Do not inherit the user's conversational language for SDD artifacts unless the user explicitly requests another artifact language or the project convention requires it.
+
+Public/contextual comments follow the target context language by default unless the user explicitly requests another language.
 
 ## Purpose
 
@@ -19,6 +37,8 @@ From the orchestrator:
 - Change name
 - The specific task(s) to implement (e.g., "Phase 1, tasks 1.1-1.3")
 - Artifact store mode (`engram | openspec | hybrid | none`)
+- Structured status from `skills/_shared/sdd-status-contract.md`: `schemaName`, `planningHome`, `changeRoot`, `artifactPaths`, `contextFiles`, `applyState`, task progress, dependency states, and `actionContext`
+- Delivery strategy and resolved workload decision (`ask-on-risk | auto-chain | single-pr | exception-ok`, plus PR slice or `size:exception` when applicable)
 
 ## Execution and Persistence Contract
 
@@ -29,6 +49,17 @@ From the orchestrator:
 - **hybrid**: Follow BOTH conventions — persist progress to Engram (`mem_update` for tasks) AND update `tasks.md` with `[x]` marks on filesystem.
 - **none**: Return progress only. Do not update project artifacts.
 
+## Status and Workspace Guard
+
+Before reading implementation files or writing code, consume the structured status provided by the orchestrator or build the equivalent status from artifacts.
+
+- If `applyState` is `blocked`, STOP and return `blocked` with the missing artifacts or unsafe context.
+- If `applyState` is `all_done`, do not edit. Return `success` with `next_recommended: sdd-verify` or `sdd-archive` based on dependency state.
+- If `applyState` is `ready`, proceed only on the assigned pending tasks.
+- Read context from `contextFiles` / `artifactPaths` instead of assuming fixed filenames. For spec-driven OpenSpec, these normally map to proposal, specs, design, and tasks.
+- If `actionContext.mode` is `workspace-planning` and `allowedEditRoots` is empty, STOP before editing. Treat linked repos and folders as read-only planning context.
+- If `allowedEditRoots` is present, edit only files under those roots. If a needed edit is outside the allowed roots, STOP and report the unsafe path.
+
 ## What to Do
 
 ### Step 1: Load Skills
@@ -37,10 +68,34 @@ Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
 ### Step 2: Read Context
 
 Before writing ANY code:
-1. Read the specs — understand WHAT the code must do
-2. Read the design — understand HOW to structure the code
-3. Read existing code in affected files — understand current patterns
-4. Check the project's coding conventions from `config.yaml`
+1. Read the structured status and confirm `applyState: ready`
+2. Read every applicable artifact path/topic in `contextFiles`
+3. Read the specs — understand WHAT the code must do
+4. Read the design — understand HOW to structure the code
+5. Read existing code in affected files — understand current patterns
+6. Check the project's coding conventions from `config.yaml`
+
+#### Step 2a: Enforce Review Workload Decision
+
+Before implementing, inspect the tasks artifact for `Review Workload Forecast`.
+
+If the forecast says any of the following:
+
+- `400-line budget risk: High`
+- `Chained PRs recommended: Yes`
+- `Decision needed before apply: Yes`
+
+Then you MUST confirm the orchestrator/user provided a resolved delivery path:
+
+1. **`auto-chain` or chosen chained/stacked PR mode**: implement only the assigned work-unit slice, keep scope autonomous, and report the intended PR boundary. Follow the `Chain strategy` from the tasks artifact (`stacked-to-main` or `feature-branch-chain`) for branch targeting.
+2. **`exception-ok` or single PR with exception**: continue only if the prompt explicitly says the maintainer accepts `size:exception`.
+3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
+
+Also check for `Chain strategy` in the tasks artifact. If present and not `pending`, follow it consistently:
+- `stacked-to-main`: each PR targets the previous PR's branch (or `main` after the previous merges).
+- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly.
+
+If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main, feature-branch-chain, or size-exception).`
 
 #### Step 2b: Read Previous Apply-Progress (if exists)
 
@@ -53,44 +108,6 @@ Before starting work, check for existing apply-progress:
 5. When saving your apply-progress in Step 6, MERGE: include all previously completed tasks PLUS your newly completed tasks in a single combined artifact
 
 **CRITICAL**: If the orchestrator told you previous progress exists, you MUST read it. If you overwrite without reading, completed work from prior batches is permanently lost.
-
-#### Step 2c: Validate Against Project Conventions (MANDATORY)
-
-Before writing ANY code, cross-check the design's file structure against the project's established conventions. **Project conventions ALWAYS win over SDD design documents.**
-
-```
-1. GATHER CONVENTIONS (use the first available source):
-   ├── Project Standards block injected by the orchestrator (preferred)
-   ├── AGENTS.md in the project root
-   ├── Project-local skills under .agent/skills/
-   └── If none found → skip this step (no conventions to enforce)
-
-2. FOR EACH FILE the design says to CREATE:
-   ├── Extract the file suffix (e.g., .entity.ts, .service.ts, .rules.ts)
-   ├── Check: does this suffix exist in the project's known architecture?
-   │   ├── Known suffixes come from the conventions (decision tree, folder structure, file naming)
-   │   └── If the suffix does NOT exist → STOP. Report in return summary:
-   │       "CONVENTION CONFLICT: Design specifies {file} with suffix {.xyz.ts}
-   │        which does not exist in project conventions. Skipped file creation."
-   ├── Check: does the LOGIC assigned to this file match its architectural role?
-   │   ├── Use the project's decision tree to validate placement
-   │   ├── Example violations:
-   │   │   ├── Orchestration functions in an .entity.ts file (entities = types + constants)
-   │   │   ├── Business logic in a .controller.ts file (controllers = UI state derivation)
-   │   │   ├── React imports in a features/ .ts file
-   │   │   └── Direct service instantiation outside boot.ts
-   │   └── If logic doesn't match the file's role → STOP. Report:
-   │       "CONVENTION CONFLICT: Design places {logic description} in {file},
-   │        but per project conventions this belongs in a {correct-suffix} file."
-   └── If both checks pass → proceed with implementation
-
-3. FOR EACH FILE the design says to MODIFY:
-   ├── Read the existing file first
-   ├── Verify the new logic matches the file's established role
-   └── If it doesn't → report the conflict, same as above
-```
-
-**This gate is NON-NEGOTIABLE.** An SDD design document is a proposal — the project's architecture conventions are the law. When they conflict, conventions win and the conflict is reported so the orchestrator or user can correct the design.
 
 ### Step 3: Read Testing Capabilities and Resolve Mode
 
@@ -136,7 +153,7 @@ FOR EACH TASK:
 ├── Read the design decisions (these constrain your approach)
 ├── Read existing code patterns (match the project's style)
 ├── Write the code
-├── Mark task as complete [x] in tasks.md
+├── Mark task as complete [x] in the persisted tasks artifact immediately
 └── Note any issues or deviations
 ```
 
@@ -171,6 +188,8 @@ When saving apply-progress:
 
 ### Step 7: Return Summary
 
+Before returning, re-read the persisted tasks artifact and confirm every task you report as completed is marked `[x]` there. If the artifact still shows a completed task as `- [ ]`, fix the checkbox before returning. Do not report `Ready for verify` while completed work is only reflected in internal todos or apply-progress.
+
 Return to the orchestrator:
 
 ```markdown
@@ -203,6 +222,12 @@ If none, say "None."}
 - [ ] {next task}
 - [ ] {next task}
 
+### Workload / PR Boundary
+- Mode: {single PR | chained PR slice | stacked PR slice | size:exception}
+- Current work unit: {unit name or "N/A"}
+- Boundary: {what this apply batch starts from and ends with}
+- Estimated review budget impact: {brief note}
+
 ### Status
 {N}/{total} tasks complete. {Ready for next batch / Ready for verify / Blocked by X}
 ```
@@ -210,13 +235,17 @@ If none, say "None."}
 ## Rules
 
 - ALWAYS read specs before implementing — specs are your acceptance criteria
-- ALWAYS follow the design decisions — but if the design conflicts with project conventions, conventions WIN. Report the conflict in your return summary.
+- ALWAYS follow the design decisions — don't freelance a different approach
 - ALWAYS match existing code patterns and conventions in the project
-- NEVER create a file with a suffix that doesn't exist in the project's architecture. If the design says to create `foo.rules.ts` but the project has no `.rules.ts` convention, STOP and report — do NOT invent new architectural layers.
-- NEVER place logic in a file that doesn't match its architectural role per the project's decision tree (e.g., orchestration functions in an entity file, business logic in a controller). Report the mismatch.
+- ALWAYS consume or produce structured status before implementation; do not infer readiness from conversation alone
+- STOP on `applyState: blocked` and do not edit; STOP on unsafe `actionContext` or edit roots
 - In `openspec` mode, mark tasks complete in `tasks.md` AS you go, not at the end
+- Before returning, re-read the persisted tasks artifact and ensure completed tasks are visibly marked `[x]`; internal todos are not completion evidence
 - If you discover the design is wrong or incomplete, NOTE IT in your return summary — don't silently deviate
 - If a task is blocked by something unexpected, STOP and report back
+- If workload forecast requires a decision and none was provided, STOP before writing code
+- When applying a chained/stacked PR slice, keep the batch autonomous: one deliverable scope, verification included, and clear rollback boundary
+- When applying `size:exception`, state it explicitly in apply-progress and the return summary
 - NEVER implement tasks that weren't assigned to you
 - Skill loading is handled in Step 1 — follow any loaded skills strictly when writing code
 - Apply any `rules.apply` from `openspec/config.yaml`

@@ -1,0 +1,1 @@
+/home/compean/ponytail/.opencode/command/ponytail.md

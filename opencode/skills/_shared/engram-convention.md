@@ -12,7 +12,10 @@ topic_key: sdd/{change-name}/{artifact-type}
 type:      architecture
 project:   {detected or current project name}
 scope:     project
+capture_prompt: false
 ```
+
+Set `capture_prompt: false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ### Artifact Types
 
@@ -28,7 +31,7 @@ scope:     project
 | `archive-report` | sdd-archive | Archive closure with lineage |
 | `state` | orchestrator | DAG state for recovery after compaction |
 
-Exception: `sdd-init` uses `sdd-init/{project-name}` as both title and topic_key.
+
 
 ### State Artifact
 
@@ -38,6 +41,7 @@ mem_save(
   topic_key: "sdd/{change-name}/state",
   type: "architecture",
   project: "{project}",
+  capture_prompt: false,
   content: "change: {change-name}\nphase: {last-phase}\nartifact_store: engram\nartifacts:\n  proposal: true\n  specs: true\n  design: false\n  tasks: false\ntasks_progress:\n  completed: []\n  pending: []\nlast_updated: {ISO date}"
 )
 ```
@@ -45,6 +49,14 @@ mem_save(
 Recovery: `mem_search("sdd/{change-name}/state")` → `mem_get_observation(id)` → parse YAML → restore state.
 
 ## Recovery Protocol (2 steps)
+
+Memory lifecycle rule (when Engram exposes lifecycle metadata/tooling):
+- At session start or before architecture-sensitive work, call `mem_review` with action `list` for the current project when the tool is available.
+- If `mem_review` is unavailable, do not fail the task. Continue with normal `mem_context`/`mem_search`, and still apply lifecycle metadata from any returned observations when present.
+- `active` memories may be used normally.
+- `needs_review` memories are stale context, not trusted facts.
+- Surface `needs_review` context and verify it against current evidence before relying on it.
+- Do NOT call `mem_review` with action `mark_reviewed` automatically. Only call `mark_reviewed` after explicit user confirmation or through a dedicated memory maintenance command.
 
 ```
 Step 1: mem_search(query: "sdd/{change-name}/{artifact-type}", project: "{project}") → truncated preview + ID
@@ -80,6 +92,7 @@ mem_save(
   topic_key: "sdd/{change-name}/{artifact-type}",
   type: "architecture",
   project: "{project}",
+  capture_prompt: false,
   content: "{full markdown content}"
 )
 ```
@@ -91,9 +104,12 @@ mem_save(
   topic_key: "sdd/add-dark-mode/proposal",
   type: "architecture",
   project: "my-app",
+  capture_prompt: false,
   content: "## Proposal\n\nAdd dark mode toggle..."
 )
 ```
+
+`capture_prompt: false` is REQUIRED for SDD artifacts when the Engram tool schema supports it. Engram v1.15.3 captures user prompts by default for human/proactive saves, but SDD artifacts are automated pipeline outputs. Do not infer this from `type` because both SDD artifacts and human architecture decisions use `architecture`. If an older schema rejects or does not expose `capture_prompt`, omit it rather than failing.
 
 Update existing artifact (when you have the observation ID):
 ```
