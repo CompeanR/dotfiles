@@ -1,0 +1,11 @@
+{
+    "mode": "claude",
+    "default_model": "cursor/composer-2.5",
+    "default_effort": "medium",
+    "session_resources": "lean",
+    "timeout_ms": 600000,
+    "stall_timeout_ms": 120000,
+    "max_concurrency": 5,
+    "debug": false,
+    "model_profiles": {}
+}

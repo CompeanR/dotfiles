@@ -12,3 +12,14 @@
 /opencode/kv.json
 /opencode/model.json
 /opencode/prompt-history.jsonl
+
+# Local-only pi agent files
+/pi/auth.json
+/pi/mcp-cache.json
+/pi/cursor-sdk-model-list.json
+/pi/cursor-sdk-context-windows.json
+/pi/npm/node_modules/
+/pi/sessions/
+/pi/state/
+/pi/intercom/
+/pi/pi-pretty/

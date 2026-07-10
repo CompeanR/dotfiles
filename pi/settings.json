@@ -1,0 +1,27 @@
+{
+  "defaultModel": "gpt-5.6-terra",
+  "defaultProvider": "openai-codex",
+  "defaultThinkingLevel": "medium",
+  "enabledModels": [
+    "cursor/composer-2.5",
+    "zai/glm-5.2",
+    "cursor/grok-4.5",
+    "openai-codex/gpt-5.6-sol"
+  ],
+  "hideThinkingBlock": true,
+  "lastChangelogVersion": "0.80.6",
+  "packages": [
+    "npm:pi-web-access",
+    "npm:gentle-engram",
+    "npm:pi-subagents-j0k3r",
+    "npm:pi-intercom",
+    "npm:@juicesharp/rpiv-ask-user-question",
+    "npm:@juicesharp/rpiv-todo",
+    "npm:pi-btw",
+    "npm:pi-mcp-adapter",
+    "npm:gentle-engram@0.1.8",
+    "npm:pi-cursor-sdk",
+    "npm:pi-undo-redo"
+  ],
+  "theme": "matte-black"
+}
