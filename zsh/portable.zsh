@@ -41,7 +41,7 @@ unset _bat
 
 # zoxide (optional)
 if command -v zoxide >/dev/null 2>&1; then
-  eval "$(zoxide init zsh)"
+  eval "$(zoxide init zsh --cmd cd)"
 fi
 
 # fzf (optional): prefer fzf --zsh, else common distro paths
