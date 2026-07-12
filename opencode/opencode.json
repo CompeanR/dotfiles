@@ -82,7 +82,7 @@
         "learning": {
             "description": "Collaborative learn-by-doing partner - teaches with insights and hands strategic code to the user via TODO(human) markers",
             "mode": "primary",
-            "model": "deepseek/deepseek-v4-pro",
+            "model": "cursor/composer-2.5",
             "prompt": "{file:./prompts/learning.md}",
             "tools": {
                 "edit": true,
