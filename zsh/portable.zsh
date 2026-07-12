@@ -3,6 +3,11 @@
 # Prefer user-local binaries without hard-coding a username.
 export PATH="$HOME/.local/bin:$PATH"
 
+# mise (optional)
+if command -v mise >/dev/null 2>&1; then
+  eval "$(mise activate zsh)"
+fi
+
 # History
 setopt appendhistory
 setopt hist_ignore_dups
