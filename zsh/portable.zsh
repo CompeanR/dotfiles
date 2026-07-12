@@ -1,7 +1,7 @@
 # Portable interactive Zsh settings (no desktop/Omarchy coupling).
 
 # Prefer user-local binaries without hard-coding a username.
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
 
 # mise (optional)
 if command -v mise >/dev/null 2>&1; then
