@@ -32,6 +32,7 @@ install_desktop() {
   ln -sfn "$ROOT/pi/gentle-ai" ~/.pi/agent/gentle-ai
   ln -sf "$ROOT/pi/npm/package.json" ~/.pi/agent/npm/package.json
   ln -sf "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json
+  ln -sf "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc
 
   # Herdr config (durable files only; runtime state stays local)
   mkdir -p ~/.config/herdr/agent-detection
@@ -95,6 +96,7 @@ install_server() {
   safe_link "$ROOT/pi/gentle-ai" ~/.pi/agent/gentle-ai || status=1
   safe_link "$ROOT/pi/npm/package.json" ~/.pi/agent/npm/package.json || status=1
   safe_link "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json || status=1
+  safe_link "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc || status=1
 
   # Herdr durable files only
   mkdir -p ~/.config/herdr/agent-detection
