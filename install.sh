@@ -74,6 +74,7 @@ safe_link() {
 install_server() {
   local status=0
 
+  safe_link "$ROOT/zsh/.zshrc" "$HOME/.zshrc" || status=1
   safe_link "$ROOT/nvim" ~/.config/nvim || status=1
   safe_link "$ROOT/opencode" ~/.config/opencode || status=1
   safe_link "$ROOT/tmux/.tmux.conf" ~/.tmux.conf || status=1
