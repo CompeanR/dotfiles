@@ -1,0 +1,1 @@
+/home/compean/dotfiles/nvim/init.vim

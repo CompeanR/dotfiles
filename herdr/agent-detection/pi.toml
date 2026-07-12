@@ -1,0 +1,35 @@
+id = "pi"
+version = "2026.07.10.2"
+min_engine_version = 1
+updated_at = "2026-07-10T00:00:00Z"
+aliases = ["herdr:pi"]
+
+# Local override: match live question UI at the bottom of the pane.
+# Prefer bottom regions so older "Type something." scrollback does not stick blocked.
+
+[[rules]]
+id = "ask_user_question_blocked"
+state = "blocked"
+priority = 400
+region = "bottom_non_empty_lines(24)"
+visible_blocker = true
+contains = ["Type something.", "Chat about this"]
+
+[[rules]]
+id = "pi_select_dialog_blocked"
+state = "blocked"
+priority = 390
+region = "bottom_non_empty_lines(16)"
+visible_blocker = true
+any = [
+  { contains = ["enter to select", "esc to cancel"] },
+  { contains = ["Enter to select", "Esc to cancel"] },
+]
+
+[[rules]]
+id = "working_literal"
+state = "working"
+priority = 100
+region = "whole_recent"
+visible_working = true
+contains = ["Working..."]

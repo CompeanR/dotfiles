@@ -1,0 +1,25 @@
+onboarding = false
+[theme]
+name = "terminal"
+auto_switch = false
+
+[theme.custom]
+panel_bg = "reset"
+accent = "#fabd2f"
+yellow = "#fabd2f"
+# terminal theme leaves surface0=reset, so workspace-nav selection has no row bg
+surface0 = "#515151"
+
+[ui]
+accent = "#fabd2f"
+agent_panel_sort = "priority"
+
+[keys]
+prefix = "ctrl+space"
+next_agent = "prefix+shift+j"
+previous_agent = "prefix+shift+k"
+
+# Notify when a background Pi session is waiting for user input.
+[ui.toast]
+delivery = "system"
+delay_seconds = 1

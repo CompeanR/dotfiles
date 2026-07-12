@@ -25,5 +25,11 @@ ln -sfn ~/dotfiles/pi/gentle-ai ~/.pi/agent/gentle-ai
 ln -sf ~/dotfiles/pi/npm/package.json ~/.pi/agent/npm/package.json
 ln -sf ~/dotfiles/pi/npm/package-lock.json ~/.pi/agent/npm/package-lock.json
 
+# Herdr config (durable files only; runtime state stays local)
+mkdir -p ~/.config/herdr/agent-detection
+ln -sf ~/dotfiles/herdr/config.toml ~/.config/herdr/config.toml
+ln -sf ~/dotfiles/herdr/.gitignore ~/.config/herdr/.gitignore
+ln -sf ~/dotfiles/herdr/agent-detection/pi.toml ~/.config/herdr/agent-detection/pi.toml
+
 echo "Dotfiles have been symlinked!"
 

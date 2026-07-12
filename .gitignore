@@ -1,3 +1,6 @@
+# Generated project-local skill registry
+/.atl/
+
 # Local-only opencode files
 /opencode/.gitignore
 /opencode/node_modules/
