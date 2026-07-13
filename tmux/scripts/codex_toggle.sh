@@ -111,7 +111,7 @@ if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
     if [[ "$OSTYPE" == "darwin"* ]]; then
         CODEX_ARGS=(--full-auto)
     else
-        CODEX_ARGS=(--dangerously-bypass-approvals-and-sandbox)
+        CODEX_ARGS=(-s workspace-write -a on-request)
     fi
 
     printf -v CODEX_CMD '%q ' "$CODEX_BIN" "${CODEX_ARGS[@]}"
