@@ -1,0 +1,21 @@
+[Unit]
+Description=VerseGuard Expo Metro (dev client)
+Documentation=https://docs.expo.dev/more/expo-cli/
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/development/VerseGuard
+Environment=PATH=%h/.local/bin:%h/.local/share/mise/shims:/usr/bin:/bin
+Environment=EXPO_PACKAGER_PROXY_URL=https://dev-vps.tailba0c60.ts.net
+Environment=CI=1
+# Resolve user-installed mise via PATH; mise exec picks Node from project/tool config (no version pin).
+ExecStart=/bin/sh -c 'exec mise exec -- npx expo start --dev-client --host localhost'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -110,6 +110,9 @@ install_server() {
   safe_link "$ROOT/herdr/.gitignore" ~/.config/herdr/.gitignore || status=1
   safe_link "$ROOT/herdr/agent-detection/pi.toml" ~/.config/herdr/agent-detection/pi.toml || status=1
 
+  # VerseGuard Metro user unit (link only; do not enable/start)
+  safe_link "$ROOT/systemd/user/verseguard-metro.service" "$HOME/.config/systemd/user/verseguard-metro.service" || status=1
+
   if (( status == 0 )); then
     echo "Server dotfiles have been symlinked!"
   fi
