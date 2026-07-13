@@ -1,7 +1,5 @@
 # Portable interactive Zsh settings (no desktop/Omarchy coupling).
-
-# Prefer user-local binaries without hard-coding a username.
-export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+# PATH lives in .zshenv so non-interactive zsh (e.g. ssh 'cmd') sees user bins.
 
 # mise (optional)
 if command -v mise >/dev/null 2>&1; then
