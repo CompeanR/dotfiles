@@ -18,6 +18,10 @@ install_desktop() {
   ln -sf "$ROOT/ideavimrc" ~/.ideavimrc
   ln -sf "$ROOT/ghostty" ~/.config/ghostty
 
+  # Lazygit config
+  mkdir -p ~/.config/lazygit
+  ln -sf "$ROOT/lazygit/config.yml" ~/.config/lazygit/config.yml
+
   # Pi agent config
   mkdir -p ~/.pi/agent/npm
   ln -sf "$ROOT/pi/settings.json" ~/.pi/agent/settings.json
@@ -82,6 +86,7 @@ install_server() {
   safe_link "$ROOT/tmux/.tmux.conf" ~/.tmux.conf || status=1
   safe_link "$ROOT/tmux/.config/tmux" ~/.config/tmux || status=1
   safe_link "$ROOT/tmux/scripts" ~/scripts || status=1
+  safe_link "$ROOT/lazygit/config.yml" ~/.config/lazygit/config.yml || status=1
 
   # Pi durable files/dirs (runtime state stays local)
   mkdir -p ~/.pi/agent/npm
