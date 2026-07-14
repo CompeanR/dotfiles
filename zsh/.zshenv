@@ -5,6 +5,7 @@ typeset -U path
 path=(
   "$HOME/.local/bin"
   "$HOME/.opencode/bin"
+  "$HOME/.local/opt/npm-ai/bin"
   "$HOME/.local/share/mise/shims"
   /usr/local/sbin
   /usr/local/bin

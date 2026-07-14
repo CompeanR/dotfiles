@@ -3,7 +3,17 @@
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
-  echo "Usage: $(basename "$0") [server]" >&2
+  cat <<EOF
+Usage: $(basename "$0") [server [bootstrap|doctor|sandbox|help] [options]]
+
+  (no args)                         Desktop force-link profile
+  server                            Safe server symlink profile only
+  server bootstrap [--dry-run] [--yes]
+  server doctor [--json]
+  server sandbox [--dry-run|--apply]
+  server help
+  help
+EOF
 }
 
 # Desktop: force-link map (unchanged destinations; sources resolved from script location).
@@ -119,20 +129,20 @@ install_server() {
   return "$status"
 }
 
-case $# in
-  0)
+case "${1:-}" in
+  "" )
     install_desktop
     ;;
-  1)
-    case "$1" in
-      server)
-        install_server
-        ;;
-      *)
-        usage
-        exit 1
-        ;;
-    esac
+  help|-h|--help)
+    usage
+    ;;
+  server)
+    shift
+    if (($# == 0)); then
+      install_server
+    else
+      exec "$ROOT/server/bootstrap.sh" "$@"
+    fi
     ;;
   *)
     usage

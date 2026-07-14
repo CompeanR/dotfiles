@@ -102,11 +102,11 @@ if tmux -L "$POPUP_SOCKET" list-clients -t "$POPUP_SESSION" 2>/dev/null | grep -
 fi
 
 if ! tmux -L "$POPUP_SOCKET" has-session -t "$POPUP_SESSION" 2>/dev/null; then
-    if command -v codex >/dev/null 2>&1; then
-        CODEX_BIN=$(command -v codex)
-    else
-        CODEX_BIN="/home/compean/.nvm/versions/node/v22.17.1/bin/codex"
+    if ! command -v codex >/dev/null 2>&1; then
+        echo "codex not found in PATH; install Codex or fix PATH before opening the popup" >&2
+        exit 1
     fi
+    CODEX_BIN=$(command -v codex)
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         CODEX_ARGS=(--full-auto)

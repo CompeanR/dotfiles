@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubuntu VPS Development Environment Runbook</title>
+<meta name="description" content="Standalone rebuild and operations runbook for a Tailscale-only Ubuntu 24.04 amd64 development VPS.">
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --bg-elev: #fffdf8;
+    --ink: #1a1d21;
+    --muted: #4a5560;
+    --line: #d5d0c6;
+    --accent: #0b5f4b;
+    --accent-ink: #073f32;
+    --warn-bg: #fff4df;
+    --warn-ink: #6a4a00;
+    --danger-bg: #fdeceb;
+    --danger-ink: #7a1f1a;
+    --ok-bg: #e8f6ef;
+    --ok-ink: #0b5f4b;
+    --info-bg: #eaf2fb;
+    --info-ink: #1d3f66;
+    --code-bg: #f0ece4;
+    --sidebar-w: 17.5rem;
+    --radius: 0.5rem;
+    --shadow: 0 1px 0 rgba(26,29,33,0.04);
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: "Source Sans 3", "Segoe UI", Candara, Calibri, sans-serif;
+    --display: "Fraunces", Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 500px at 10% -10%, #e7efe9 0%, transparent 55%),
+      radial-gradient(900px 400px at 100% 0%, #efe8da 0%, transparent 50%),
+      var(--bg);
+    font-family: var(--sans);
+    line-height: 1.55;
+    font-size: 1.02rem;
+  }
+
+  a { color: var(--accent-ink); }
+  a:hover { text-decoration-thickness: 2px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 3px solid #2a8f76;
+    outline-offset: 2px;
+  }
+
+  .skip {
+    position: absolute;
+    left: -999px;
+    top: 0;
+    background: var(--ink);
+    color: #fff;
+    padding: 0.5rem 0.75rem;
+    z-index: 100;
+  }
+  .skip:focus { left: 0.5rem; top: 0.5rem; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+    gap: 0;
+    min-height: 100vh;
+  }
+
+  .toc {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow: auto;
+    padding: 1.25rem 1rem 2rem;
+    border-right: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg-elev) 92%, #e8efe9);
+  }
+  .toc h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--sans);
+    font-weight: 700;
+  }
+  .toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .toc > ol > li { margin: 0.15rem 0; }
+  .toc a {
+    display: block;
+    text-decoration: none;
+    color: var(--ink);
+    padding: 0.28rem 0.45rem;
+    border-radius: 0.35rem;
+    font-size: 0.92rem;
+  }
+  .toc a:hover, .toc a[aria-current="true"] {
+    background: #e4efe9;
+    color: var(--accent-ink);
+  }
+  .toc .sub {
+    margin: 0.1rem 0 0.35rem 0.65rem;
+    padding: 0;
+  }
+  .toc .sub a { font-size: 0.84rem; color: var(--muted); }
+
+  main {
+    padding: 1.5rem clamp(1rem, 3vw, 2.5rem) 4rem;
+    max-width: 58rem;
+  }
+
+  .hero {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: calc(var(--radius) + 0.15rem);
+    padding: 1.35rem 1.4rem 1.2rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+  }
+  .hero .eyebrow {
+    margin: 0 0 0.35rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  h1 {
+    margin: 0 0 0.5rem;
+    font-family: var(--display);
+    font-weight: 650;
+    font-size: clamp(1.7rem, 3vw, 2.35rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+  }
+  .lede { margin: 0; color: var(--muted); max-width: 46rem; }
+
+  h2 {
+    margin: 2.4rem 0 0.7rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--display);
+    font-size: 1.55rem;
+    letter-spacing: -0.015em;
+  }
+  h3 {
+    margin: 1.5rem 0 0.45rem;
+    font-size: 1.12rem;
+    color: var(--accent-ink);
+  }
+  h4 {
+    margin: 1.1rem 0 0.35rem;
+    font-size: 1rem;
+  }
+  p { margin: 0.55rem 0; }
+  ul, ol { margin: 0.4rem 0 0.8rem 1.2rem; padding: 0; }
+  li { margin: 0.25rem 0; }
+  strong { font-weight: 700; }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin: 1rem 0 0;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--line);
+    background: #f3efe6;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .callout {
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: var(--radius);
+    padding: 0.75rem 0.9rem;
+    margin: 0.9rem 0;
+    background: var(--bg-elev);
+  }
+  .callout.info { border-left-color: #2f6fad; background: var(--info-bg); color: var(--info-ink); }
+  .callout.warn { border-left-color: #c48a12; background: var(--warn-bg); color: var(--warn-ink); }
+  .callout.danger { border-left-color: #b33a32; background: var(--danger-bg); color: var(--danger-ink); }
+  .callout.ok { border-left-color: #1f8a63; background: var(--ok-bg); color: var(--ok-ink); }
+  .callout .label {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .cmd {
+    margin: 0.85rem 0 1.05rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-elev);
+    overflow: hidden;
+  }
+  .cmd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.4rem 0.65rem;
+    background: #ece7dc;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .cmd-head .where { font-weight: 700; color: var(--ink); }
+  .cmd pre {
+    margin: 0;
+    padding: 0.85rem 0.9rem;
+    overflow-x: auto;
+    background: var(--code-bg);
+    font-family: var(--mono);
+    font-size: 0.86rem;
+    line-height: 1.45;
+  }
+  .cmd code, p code, li code, td code, th code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+  }
+  p code, li code, td code, th code {
+    background: var(--code-bg);
+    padding: 0.08rem 0.28rem;
+    border-radius: 0.25rem;
+  }
+  .copy-btn {
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    border-radius: 0.35rem;
+    padding: 0.18rem 0.5rem;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: #f7f3ea; }
+  .copy-btn[data-copied="true"] { background: var(--ok-bg); color: var(--ok-ink); border-color: #9dceb8; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0 1.1rem;
+    font-size: 0.95rem;
+    background: var(--bg-elev);
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 0.55rem 0.65rem;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #ece7dc;
+    font-weight: 700;
+  }
+  tr:nth-child(even) td { background: #fcfaf5; }
+
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 0.55rem;
+    margin: 0.8rem 0 1rem;
+  }
+  .legend div {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.55rem 0.7rem;
+    background: var(--bg-elev);
+  }
+  .legend code { display: block; margin-bottom: 0.2rem; font-weight: 700; }
+
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li {
+    display: grid;
+    grid-template-columns: 1.2rem 1fr;
+    gap: 0.5rem;
+    align-items: start;
+    margin: 0.4rem 0;
+  }
+  .checklist input { margin-top: 0.3rem; }
+
+  footer.doc-foot {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .toc-toggle {
+    display: none;
+    margin-bottom: 0.85rem;
+  }
+
+  @media (max-width: 920px) {
+    .layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static;
+      height: auto;
+      max-height: none;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .toc[hidden] { display: none !important; }
+    .toc-toggle { display: inline-flex; }
+  }
+
+  @media print {
+    body { background: #fff; color: #000; font-size: 11pt; }
+    .toc, .toc-toggle, .copy-btn, .skip { display: none !important; }
+    .layout { display: block; }
+    main { max-width: none; padding: 0; }
+    .hero, .cmd, .callout, table { break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    pre { white-space: pre-wrap; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#content">Skip to content</a>
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="Table of contents">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#scope">Document scope</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#prereqs">Prerequisites &amp; placeholders</a></li>
+      <li><a href="#rebuild">Ubuntu rebuild &amp; SSH</a></li>
+      <li><a href="#tailscale">Tailscale, UFW, access</a></li>
+      <li><a href="#installer">Repository &amp; installer</a></li>
+      <li><a href="#shell">Shell toolchain</a></li>
+      <li><a href="#editors-agents">Neovim &amp; agents</a></li>
+      <li><a href="#tmux-herdr">tmux &amp; Herdr</a></li>
+      <li><a href="#sandbox">Codex sandbox / AppArmor</a></li>
+      <li><a href="#clients">Client terminals</a></li>
+      <li><a href="#git-tools">Lazygit / Delta</a></li>
+      <li><a href="#verseguard">VerseGuard Metro</a></li>
+      <li><a href="#validation">Validation checklist</a></li>
+      <li><a href="#troubleshoot">Troubleshooting</a></li>
+      <li><a href="#maintain">Maintenance &amp; rebuild</a></li>
+    </ol>
+  </nav>
+
+  <main id="content">
+    <button type="button" class="toc-toggle copy-btn" id="tocToggle" aria-controls="toc" aria-expanded="true">Hide contents</button>
+
+    <header class="hero">
+      <p class="eyebrow">Dotfiles runbook</p>
+      <h1>Ubuntu VPS Development Environment</h1>
+      <p class="lede">
+        Rebuild and operate a persistent Ubuntu&nbsp;24.04 amd64 development VPS reachable
+        only over Tailscale from Linux, Mac, and iPhone. Private keys stay on clients;
+        the server hosts the outer tmux workspace, inner Herdr agent UI, and a manual Metro
+        window for VerseGuard.
+      </p>
+      <div class="meta" aria-label="Document metadata">
+        <span class="pill">Generated guide · 2026-07-14</span>
+        <span class="pill">Aligned to <code>install.sh</code> + <code>server/bootstrap.sh</code></span>
+        <span class="pill">Placeholders only · no live secrets</span>
+      </div>
+    </header>
+
+    <section id="scope" aria-labelledby="scope-h">
+      <h2 id="scope-h">1. Document scope</h2>
+      <div class="callout info">
+        <span class="label">Generated / scope note</span>
+        This standalone HTML documents the VPS session architecture and the current
+        repository CLI. It is not a dump of live host state. Commands use placeholders
+        such as <code>YOUR_VPS_USER</code>. Do not paste public IPs, Tailscale MagicDNS
+        hostnames, OAuth codes, fingerprints, or personal usernames into committed copies
+        of this file.
+      </div>
+      <ul>
+        <li><strong>In scope:</strong> rebuild order, Tailscale-only access, installer modes, shell/editor/agents, tmux/Herdr, AppArmor sandbox, client terminfo, VerseGuard Metro over Tailscale Serve, validation and troubleshooting.</li>
+        <li><strong>Out of scope:</strong> provider account creation, DNS for the public internet, Docker/Lazydocker, automatic Metro systemd enablement (unit is optional and intentionally manual).</li>
+        <li><strong>Security posture:</strong> the final state has no public SSH exposure and never exposes Metro beyond the tailnet. Keep any provider-console or temporary provisioning access only until Tailscale is verified.</li>
+      </ul>
+    </section>
+
+    <section id="architecture" aria-labelledby="arch-h">
+      <h2 id="arch-h">2. Architecture / mental model</h2>
+      <p>Think of the VPS as a private workshop, not a public server.</p>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Role</th><th>Why</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tailscale</td>
+            <td>Only trusted path to SSH, Mosh, and Expo HTTPS</td>
+            <td>Removes the need for public SSH and public Metro ports</td>
+          </tr>
+          <tr>
+            <td>Client private keys</td>
+            <td>Live on Linux / Mac / iPhone only</td>
+            <td>VPS stores authorized public keys; never your private keys</td>
+          </tr>
+          <tr>
+            <td>Outer <code>tmux</code> session <code>main</code></td>
+            <td>Survives disconnects; shared across devices</td>
+            <td>One persistent workspace for every client</td>
+          </tr>
+          <tr>
+            <td>Inner Herdr</td>
+            <td>Agent UI / session browser inside tmux</td>
+            <td>Prefix <code>Ctrl+Space</code>; nests inside outer tmux (prefix <code>Ctrl-c</code>)</td>
+          </tr>
+          <tr>
+            <td>Manual Metro in tmux window <code>metro</code></td>
+            <td>Expo packager for VerseGuard</td>
+            <td>Interactive logs preferred; systemd unit exists but stays disabled</td>
+          </tr>
+          <tr>
+            <td>Tailscale Serve HTTPS</td>
+            <td>Fronts localhost Metro for iOS</td>
+            <td>iOS App Transport Security rejects plain HTTP to Tailscale IPs</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <span class="label">Boundary</span>
+        Bootstrap installs tools and safe symlinks. It does <strong>not</strong> enroll
+        Tailscale, rewrite UFW/SSH policy, run OAuth, clone VerseGuard, enable systemd Metro,
+        or install Ghostty terminfo on clients.
+      </div>
+    </section>
+
+    <section id="prereqs" aria-labelledby="prereqs-h">
+      <h2 id="prereqs-h">3. Prerequisites &amp; placeholder legend</h2>
+      <h3>Prerequisites</h3>
+      <ul>
+        <li>Ubuntu&nbsp;24.04 LTS amd64 VPS (fresh or rebuildable).</li>
+        <li>Tailscale account with MagicDNS enabled.</li>
+        <li>Client machines: Linux workstation, Mac, iPhone (Moshi or equivalent SSH/Mosh client).</li>
+        <li>Git access to this dotfiles repository and to VerseGuard.</li>
+        <li>Provider accounts for agents you actually use (Pi / OpenCode / Codex / Cursor) — auth stays on the VPS home directory, never in git.</li>
+      </ul>
+      <h3>Placeholder legend</h3>
+      <div class="legend">
+        <div><code>YOUR_VPS_USER</code>Non-root sudo account on the VPS</div>
+        <div><code>YOUR_VPS_TAILSCALE_HOST</code>MagicDNS short name of the VPS</div>
+        <div><code>YOUR_TAILNET_DOMAIN</code>Your <code>*.ts.net</code> tailnet domain</div>
+        <div><code>YOUR_REPOSITORY_URL</code>Git URL for this dotfiles repo</div>
+        <div><code>YOUR_EXPO_HTTPS_URL</code>Tailscale Serve HTTPS URL for Metro</div>
+        <div><code>YOUR_CLIENT_USER</code>Local account on Linux/Mac client</div>
+      </div>
+      <div class="callout danger">
+        <span class="label">Hygiene</span>
+        Replace placeholders locally when running commands. Do not commit filled-in values,
+        <code>~/.config/verseguard-metro.env</code>, OAuth tokens, or <code>authorized_keys</code> dumps.
+      </div>
+    </section>
+
+    <section id="rebuild" aria-labelledby="rebuild-h">
+      <h2 id="rebuild-h">4. Ubuntu rebuild, sudo user, SSH hardening</h2>
+      <p>
+        Goal: a non-root daily user, key-only SSH, and a lockout-safe hardening order.
+        Keep one console/VNC or temporary public SSH session open until Tailscale access is proven.
+      </p>
+
+      <h3>4.1 Create the sudo user (as root / recovery console)</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · root/console</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>adduser YOUR_VPS_USER
+usermod -aG sudo YOUR_VPS_USER
+mkdir -p /home/YOUR_VPS_USER/.ssh
+chmod 700 /home/YOUR_VPS_USER/.ssh
+# paste the client's public key only:
+nano /home/YOUR_VPS_USER/.ssh/authorized_keys
+chmod 600 /home/YOUR_VPS_USER/.ssh/authorized_keys
+chown -R YOUR_VPS_USER:YOUR_VPS_USER /home/YOUR_VPS_USER/.ssh</code></pre>
+      </div>
+      <p><strong>Why:</strong> daily work must not run as root. Public keys authenticate clients; private keys never leave the client.</p>
+
+      <h3>4.2 Generate / register keys on each client</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Client · Linux/Mac</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_vps -C "YOUR_CLIENT_USER@client-to-vps"
+# Copy only the .pub line into the VPS authorized_keys file.
+# Keep the private key on this client (or in the client OS keychain / Moshi key store).</code></pre>
+      </div>
+      <p>
+        <strong>Why private keys are not “shared” with the VPS:</strong> SSH proves possession of the
+        private key via challenge-response. The VPS only stores the matching public key.
+      </p>
+
+      <h3>4.3 Lockout-safe SSH hardening sequence</h3>
+      <ol>
+        <li>Confirm you can log in as <code>YOUR_VPS_USER</code> with the new key (even if temporarily over public IP).</li>
+        <li>Install and enroll Tailscale (next section) and confirm <code>ssh YOUR_VPS_USER@YOUR_VPS_TAILSCALE_HOST</code>.</li>
+        <li>Restrict UFW so SSH is allowed only on <code>tailscale0</code>.</li>
+        <li>Only then disable password/root login and remove any temporary public SSH exposure.</li>
+      </ol>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · after Tailscale login works</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>sudo tee /etc/ssh/sshd_config.d/99-hardening.conf &gt;/dev/null &lt;&lt;'EOF'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+EOF
+sudo sshd -t &amp;&amp; sudo systemctl reload ssh</code></pre>
+      </div>
+      <div class="callout danger">
+        <span class="label">Do not</span>
+        Do not disable password/root login before you have a working Tailscale SSH session
+        from a second device. Keep a recovery path until verification succeeds.
+      </div>
+    </section>
+
+    <section id="tailscale" aria-labelledby="tail-h">
+      <h2 id="tail-h">5. Tailscale, UFW, Mosh, Expo ports</h2>
+
+      <h3>5.1 Install &amp; enroll</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># Follow current Tailscale Ubuntu install docs, then:
+sudo tailscale up
+tailscale status
+tailscale ip -4
+# MagicDNS name should resolve as YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN</code></pre>
+      </div>
+      <p><strong>Why:</strong> MagicDNS gives stable hostnames inside the tailnet without publishing DNS to the internet.</p>
+
+      <h3>5.2 UFW — allow services only on <code>tailscale0</code></h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · keep an active session</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow in on tailscale0 to any port 22 proto tcp comment 'SSH via Tailscale'
+sudo ufw allow in on tailscale0 to any port 60000:61000 proto udp comment 'Mosh via Tailscale'
+sudo ufw allow in on tailscale0 to any port 8081 proto tcp comment 'Expo Metro via Tailscale (optional direct)'
+# Prefer Tailscale Serve for HTTPS to iOS; keep 8081 private to the tailnet if opened at all.
+sudo ufw enable
+sudo ufw status verbose</code></pre>
+      </div>
+      <div class="callout warn">
+        <span class="label">Verify before removing public SSH</span>
+        From a client already on the tailnet: <code>tailscale ping YOUR_VPS_TAILSCALE_HOST</code>,
+        then <code>ssh YOUR_VPS_USER@YOUR_VPS_TAILSCALE_HOST</code> and/or Mosh. Only after that
+        succeed, remove temporary public <code>22/tcp</code> allow rules if any existed.
+      </div>
+
+      <h3>5.3 Client SSH config (optional convenience)</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Client ~/.ssh/config</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>Host YOUR_VPS_TAILSCALE_HOST
+  HostName YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN
+  User YOUR_VPS_USER
+  IdentityFile ~/.ssh/id_ed25519_vps
+  IdentitiesOnly yes</code></pre>
+      </div>
+
+      <h3>5.4 Mosh</h3>
+      <p>Mosh is installed by bootstrap apt packages on the VPS. On clients, install Mosh separately. UDP <code>60000:61000</code> must be open on <code>tailscale0</code> only.</p>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Client</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>mosh YOUR_VPS_USER@YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN -- tmux attach -t main</code></pre>
+      </div>
+    </section>
+
+    <section id="installer" aria-labelledby="inst-h">
+      <h2 id="inst-h">6. Repository clone &amp; installer modes</h2>
+
+      <h3>6.1 Clone</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · as YOUR_VPS_USER</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>mkdir -p ~/development
+git clone YOUR_REPOSITORY_URL ~/dotfiles
+cd ~/dotfiles</code></pre>
+      </div>
+
+      <h3>6.2 Exact CLI (from <code>install.sh</code>)</h3>
+      <table>
+        <thead>
+          <tr><th>Command</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>./install.sh</code></td>
+            <td>Desktop force-link profile (workstation). Overwrites links with <code>ln -sf</code>.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server</code></td>
+            <td>Safe link-only server profile. Creates parents; refuses unexpected existing files/wrong links. Does not enable services.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server bootstrap --dry-run</code></td>
+            <td>Print plan; zero mutation (no apt/sudo/network/downloads).</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server bootstrap --yes</code></td>
+            <td>Non-interactive bootstrap (required when stdin is not a TTY). Interactive mode asks you to type <code>YES</code>.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server doctor</code></td>
+            <td>Read-only health checks; exit non-zero if any <code>fail</code>.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server doctor --json</code></td>
+            <td>Same checks as machine-readable JSON.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server sandbox --dry-run</code></td>
+            <td>Show AppArmor bwrap profile install plan without changes.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server sandbox --apply</code></td>
+            <td>Install tracked restricted <code>/usr/bin/bwrap</code> profile after typing <code>APPLY SANDBOX</code>.</td>
+          </tr>
+          <tr>
+            <td><code>./install.sh server help</code></td>
+            <td>Server subcommand help.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · recommended first pass</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>./install.sh server bootstrap --dry-run
+./install.sh server bootstrap --yes
+./install.sh server doctor
+./install.sh server sandbox --dry-run
+./install.sh server sandbox --apply</code></pre>
+      </div>
+
+      <h3>6.3 What bootstrap automates</h3>
+      <ol>
+        <li>apt packages from <code>server/versions.env</code> (<code>APT_PACKAGES</code>), including zsh, mosh, bubblewrap, delta, etc.</li>
+        <li><code>./install.sh server</code> safe links.</li>
+        <li><code>zsh/bootstrap.sh</code> (Oh My Zsh + Powerlevel10k + autosuggestions).</li>
+        <li>mise + Node pinned versions; Neovim, tmux&nbsp;3.6b, lazygit, engram, herdr, opencode, gentle-ai (checksum verified).</li>
+        <li>Pi and Codex in the bootstrap-owned npm prefix <code>~/.local/opt/npm-ai</code>; TPM plugins; <code>npm ci</code> in <code>~/.pi/agent/npm</code>.</li>
+      </ol>
+
+      <h3>6.4 Automation / manual boundary</h3>
+      <table>
+        <thead><tr><th>Automated</th><th>Manual (print-only next steps)</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Tool install + checksums + safe links</td>
+            <td>Tailscale enrollment, UFW/SSH hardening</td>
+          </tr>
+          <tr>
+            <td>TPM plugin install</td>
+            <td>OAuth / device pairing</td>
+          </tr>
+          <tr>
+            <td>gentle-ai doctor during bootstrap</td>
+            <td>VerseGuard clone, Tailscale Serve, Metro enablement</td>
+          </tr>
+          <tr>
+            <td>Refuse unknown installs / wrong symlinks</td>
+            <td>Ghostty client terminfo; first interactive Neovim launch</td>
+          </tr>
+          <tr>
+            <td>—</td>
+            <td>AppArmor sandbox is a <em>separate</em> confirmed command</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.5 Version / checksum manifest</h3>
+      <p>
+        Pins live in <code>server/versions.env</code> (examples current as of this guide):
+        Neovim&nbsp;0.12.4, tmux&nbsp;3.6b, Node&nbsp;22.23.1, mise&nbsp;2026.5.15, Engram&nbsp;1.18.0,
+        Herdr&nbsp;0.7.3, OpenCode&nbsp;1.17.18, Gentle AI&nbsp;1.43.4, Lazygit&nbsp;0.62.1,
+        Pi npm package <code>@earendil-works/pi-coding-agent@0.80.6</code>,
+        Codex npm <code>@openai/codex@0.144.1</code>. Digests are verified on download.
+      </p>
+      <div class="callout info">
+        <span class="label">Platform guard</span>
+        Bootstrap refuses root, non-Ubuntu, non-24.04, and non-amd64/x86_64 hosts.
+      </div>
+    </section>
+
+    <section id="shell" aria-labelledby="shell-h">
+      <h2 id="shell-h">7. Shell: Zsh, Oh My Zsh, P10k, mise, Node</h2>
+      <p>
+        Server profile safe-links <code>zsh/.zshenv</code> → <code>~/.zshenv</code> and
+        <code>zsh/.zshrc</code> → <code>~/.zshrc</code>. <code>.zshenv</code> owns portable PATH
+        for both interactive and non-interactive Zsh (for example <code>ssh host 'cmd'</code>).
+      </p>
+      <div class="callout danger">
+        <span class="label">Zsh scalar <code>path</code> warning</span>
+        In Zsh, <code>path</code> is a special array tied to <code>PATH</code>. Assigning a
+        scalar string to <code>path</code> (for example <code>path=/something</code>) corrupts
+        <code>PATH</code>. Always use array form:
+        <code>typeset -U path</code> and <code>path=(... $path)</code>, then
+        <code>export PATH</code>. If commands “vanish” after editing shell files, inspect
+        <code>echo $PATH</code> and <code>typeset -p path</code> first.
+      </div>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · sanity</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>zsh -lic 'command -v mise; command -v node; command -v pi; command -v codex; echo $PATH'
+# Expect ~/.local/bin, ~/.opencode/bin, ~/.local/opt/npm-ai/bin,
+# and mise shims early in PATH.</code></pre>
+      </div>
+    </section>
+
+    <section id="editors-agents" aria-labelledby="agents-h">
+      <h2 id="agents-h">8. Neovim &amp; agent stack</h2>
+
+      <h3>8.1 First interactive Neovim launch</h3>
+      <p>
+        Bootstrap installs Neovim but does <strong>not</strong> run Lazy sync. First launch
+        finishes plugin/Mason setup interactively.
+      </p>
+      <div class="callout warn">
+        <span class="label">Mason async caveat</span>
+        Headless or interrupted Mason installs can abort mid-download. Prefer one interactive
+        <code>nvim</code> session, wait for Lazy/Mason to settle, then quit cleanly.
+      </div>
+
+      <h3>8.2 Agents present after bootstrap</h3>
+      <table>
+        <thead><tr><th>Tool</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Pi</td><td>Coding agent; config linked under <code>~/.pi/agent</code>; Engram extension can auto-start memory server</td></tr>
+          <tr><td>OpenCode</td><td>Binary under <code>~/.opencode/bin</code>; config linked from repo</td></tr>
+          <tr><td>Codex</td><td>npm global; tmux popup uses <code>workspace-write</code> + <code>on-request</code> (not sandbox bypass)</td></tr>
+          <tr><td>Gentle AI</td><td>CLI + <code>gentle-ai doctor</code> during bootstrap</td></tr>
+          <tr><td>Engram</td><td>Persistent memory binary in <code>~/.local/bin</code></td></tr>
+          <tr><td>Herdr</td><td>Agent-session UI inside outer tmux; durable config linked; runtime state local</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.3 OAuth through SSH local forwarding</h3>
+      <p>
+        Some provider logins open a localhost callback URL on the VPS. From a client, forward
+        that port so the browser on your laptop can complete the flow. Exact ports and URLs
+        are provider-specific — do not record secrets here.
+      </p>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Client · pattern only</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># Replace LOCAL_CALLBACK_PORT with the port the tool prints during login:
+ssh -L LOCAL_CALLBACK_PORT:127.0.0.1:LOCAL_CALLBACK_PORT \
+  YOUR_VPS_USER@YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN
+# Keep this SSH session open while completing browser OAuth on the client.</code></pre>
+      </div>
+      <div class="callout info">
+        <span class="label">Auth storage</span>
+        Doctor only checks for auth <em>paths</em> (for example under <code>~/.pi/agent</code> or
+        <code>~/.codex</code>). Never commit those files.
+      </div>
+    </section>
+
+    <section id="tmux-herdr" aria-labelledby="tmux-h">
+      <h2 id="tmux-h">9. tmux 3.6b, TPM, outer/inner workflow</h2>
+      <p>
+        Ubuntu&nbsp;24.04 ships tmux&nbsp;3.4, which lacks features used by this repo’s config
+        (for example <code>extended-keys-format</code>). Bootstrap builds tmux&nbsp;3.6b into
+        <code>~/.local</code>. PATH must prefer <code>~/.local/bin/tmux</code>.
+      </p>
+
+      <h3>9.1 Create / attach persistent <code>main</code></h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>tmux -V   # expect 3.6b
+tmux has-session -t main 2&gt;/dev/null || tmux new-session -d -s main
+tmux attach -t main</code></pre>
+      </div>
+
+      <h3>9.2 Prefix map (nesting)</h3>
+      <table>
+        <thead><tr><th>Layer</th><th>Prefix</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Outer tmux</td><td><code>Ctrl-c</code></td><td>Tracked in <code>tmux/.config/tmux/base.conf</code>; <code>Ctrl-c Ctrl-c</code> sends literal to pane</td></tr>
+          <tr><td>Inner Herdr</td><td><code>Ctrl+Space</code></td><td>Configured in <code>herdr/config.toml</code> as <code>prefix = "ctrl+space"</code></td></tr>
+        </tbody>
+      </table>
+      <p>
+        Workflow: attach outer <code>main</code> → run Herdr inside a pane/window → use Herdr
+        for agent sessions → keep a dedicated window for Metro.
+      </p>
+
+      <h3>9.3 Restoring from Mac / iPhone / Linux</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Any client on the tailnet</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>ssh YOUR_VPS_TAILSCALE_HOST -t 'tmux attach -t main'
+# or
+mosh YOUR_VPS_USER@YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN -- tmux attach -t main</code></pre>
+      </div>
+      <p>
+        TPM plugins (<code>tpm</code>, <code>vim-tmux-navigator</code>, <code>tmux-resurrect</code>,
+        <code>tmux-continuum</code>) are installed by bootstrap. Resurrect helps recover layouts
+        after reboots; still verify <code>main</code> exists after major upgrades.
+      </p>
+    </section>
+
+    <section id="sandbox" aria-labelledby="sand-h">
+      <h2 id="sand-h">10. Codex bubblewrap / AppArmor</h2>
+      <p>
+        Ubuntu can keep <code>kernel.apparmor_restrict_unprivileged_userns=1</code>. Codex’s
+        sandbox needs bubblewrap; without a restricted AppArmor profile for
+        <code>/usr/bin/bwrap</code>, sandboxed runs fail. The tracked profile allows bwrap to
+        operate under that global restriction without turning the restriction off.
+      </p>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>./install.sh server sandbox --dry-run
+./install.sh server sandbox --apply
+# Confirmation phrase: APPLY SANDBOX
+cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns   # must remain 1
+/usr/bin/bwrap --unshare-user --uid 65534 --gid 65534 --ro-bind / / --dev /dev --proc /proc -- /bin/true</code></pre>
+      </div>
+      <div class="callout warn">
+        <span class="label">Profile scope</span>
+        This AppArmor profile attaches to <code>/usr/bin/bwrap</code>, so it affects every user invoking that executable—not only Codex. Review the tracked profile before applying it.
+      </div>
+      <ul>
+        <li>Profile source: <code>server/apparmor/bwrap-userns-restrict</code> → <code>/etc/apparmor.d/bwrap-userns-restrict</code>.</li>
+        <li>Dry-run is a no-op if the destination already matches; <code>--apply</code> reloads the identical profile to verify it is active and refuses to overwrite a differing foreign profile.</li>
+        <li>Codex tmux popup uses <code>-s workspace-write -a on-request</code> (see <code>tmux/scripts/codex_toggle.sh</code>), not a full sandbox bypass.</li>
+      </ul>
+    </section>
+
+    <section id="clients" aria-labelledby="clients-h">
+      <h2 id="clients-h">11. Client terminals: Ghostty, macOS, Moshi</h2>
+
+      <h3>11.1 Ghostty terminfo (client → server recipe)</h3>
+      <p>
+        If the client sets <code>TERM=xterm-ghostty</code> (or <code>ghostty</code>) but the VPS
+        lacks that terminfo entry, colors collapse to gray, Alt/meta chords misbehave, and keys
+        can appear to repeat. Install terminfo on the <strong>server</strong> from the client’s
+        known-good entry, or fix TERM on the client.
+      </p>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Preferred · from Ghostty client</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># On the Ghostty client, export terminfo to the VPS:
+infocmp -x xterm-ghostty | ssh YOUR_VPS_TAILSCALE_HOST tic -x -o ~/.terminfo -
+# Verify on VPS:
+ssh YOUR_VPS_TAILSCALE_HOST 'infocmp xterm-ghostty | head'</code></pre>
+      </div>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Fallback</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># One connection with a broadly available TERM value:
+TERM=xterm-256color ssh -t YOUR_VPS_TAILSCALE_HOST
+# Mosh fallback:
+TERM=xterm-256color mosh YOUR_VPS_TAILSCALE_HOST
+# Tradeoff: loses some Ghostty-specific keys/capabilities.</code></pre>
+      </div>
+      <p>Doctor warns (does not fail) when Ghostty terminfo is missing on the server.</p>
+
+      <h3>11.2 macOS <code>Ctrl+Space</code> conflict</h3>
+      <p>
+        Herdr’s prefix is <code>Ctrl+Space</code>. macOS often binds that to “Select previous
+        input source”. Disable or rebind the OS shortcut (System Settings → Keyboard →
+        Keyboard Shortcuts → Input Sources) so Herdr receives the chord inside the terminal.
+      </p>
+
+      <h3>11.3 Moshi / iPhone</h3>
+      <ol>
+        <li>Install Tailscale on the phone; join the same tailnet.</li>
+        <li>Generate or import an SSH key in Moshi; add only the public key to VPS <code>authorized_keys</code>.</li>
+        <li>Host: <code>YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN</code>, user <code>YOUR_VPS_USER</code>.</li>
+        <li>Transport: Auto or Mosh; remote command or post-login: attach <code>tmux main</code>.</li>
+      </ol>
+    </section>
+
+    <section id="git-tools" aria-labelledby="git-h">
+      <h2 id="git-h">12. Lazygit &amp; Delta</h2>
+      <p>
+        Lazygit is installed by bootstrap; config is safe-linked to
+        <code>~/.config/lazygit/config.yml</code> and uses <code>delta --paging=never</code>
+        for colored diffs in the popup. Delta itself comes from apt during bootstrap.
+      </p>
+      <div class="callout info">
+        <span class="label">Lazydocker</span>
+        Lazydocker remains unavailable until Docker exists on the VPS. This setup intentionally
+        does not install Docker as part of bootstrap.
+      </div>
+    </section>
+
+    <section id="verseguard" aria-labelledby="vg-h">
+      <h2 id="vg-h">13. VerseGuard + Expo Metro</h2>
+
+      <h3>13.1 Clone &amp; install</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>mkdir -p ~/development
+git clone YOUR_REPOSITORY_URL_FOR_VERSEGUARD ~/development/VerseGuard
+cd ~/development/VerseGuard
+# Use the project's documented Node toolchain (mise/npm). Typical lockfile install:
+npm ci</code></pre>
+      </div>
+
+      <h3>13.2 Manual Metro (preferred)</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · tmux window named metro</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>cd ~/development/VerseGuard
+export EXPO_PACKAGER_PROXY_URL=YOUR_EXPO_HTTPS_URL
+# YOUR_EXPO_HTTPS_URL looks like: https://YOUR_VPS_TAILSCALE_HOST.YOUR_TAILNET_DOMAIN
+mise exec -- npx expo start --dev-client --host localhost</code></pre>
+      </div>
+      <p>
+        Create/rename a tmux window to <code>metro</code> so every client finds the same pane.
+        Keep Metro bound to localhost; publish HTTPS through Tailscale Serve, not the public internet.
+      </p>
+
+      <h3>13.3 Tailscale Serve + iOS ATS</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># HTTPS front for local Metro (port may be 8081 — confirm Expo's listening port):
+sudo tailscale serve --bg https / http://127.0.0.1:8081
+tailscale serve status
+# Point the iOS dev client at YOUR_EXPO_HTTPS_URL (HTTPS, not http://100.x.y.z).</code></pre>
+      </div>
+      <div class="callout warn">
+        <span class="label">ATS rationale</span>
+        iOS App Transport Security blocks cleartext HTTP to Tailscale IP literals. Serve provides
+        a trusted HTTPS URL on the tailnet so the Expo dev client can load the bundle.
+      </div>
+
+      <h3>13.4 Fast Refresh vs cold bundle</h3>
+      <ul>
+        <li><strong>Cold:</strong> first bundle can take on the order of a minute for a large app; progress may show “Downloading…”.</li>
+        <li><strong>Warm:</strong> Fast Refresh and cached bundles are typically sub-second.</li>
+        <li>Intermittent re-download behavior is usually Metro/dev-client cache lifecycle, not Tailscale failure — check Metro logs in the <code>metro</code> window.</li>
+      </ul>
+
+      <h3>13.5 Optional systemd unit (intentionally disabled)</h3>
+      <p>
+        <code>systemd/user/verseguard-metro.service</code> is safe-linked by
+        <code>./install.sh server</code> but bootstrap never enables it. Manual tmux remains the
+        default for interactive Expo logs.
+      </p>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">VPS · optional only</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code># Create env file locally (do not commit):
+cat &gt; ~/.config/verseguard-metro.env &lt;&lt;'EOF'
+EXPO_PACKAGER_PROXY_URL=YOUR_EXPO_HTTPS_URL
+EOF
+chmod 600 ~/.config/verseguard-metro.env
+# Only if you truly want always-on Metro:
+# systemctl --user daemon-reload
+# systemctl --user enable --now verseguard-metro.service
+# Doctor warns if the unit is enabled.</code></pre>
+      </div>
+    </section>
+
+    <section id="validation" aria-labelledby="val-h">
+      <h2 id="val-h">14. Validation checklist</h2>
+      <ul class="checklist">
+        <li><input type="checkbox"> <span><code>tailscale status</code> shows VPS and clients; MagicDNS resolves <code>YOUR_VPS_TAILSCALE_HOST</code></span></li>
+        <li><input type="checkbox"> <span>SSH and/or Mosh work over Tailscale only; public SSH closed</span></li>
+        <li><input type="checkbox"> <span><code>ufw status verbose</code> shows SSH/Mosh/(optional 8081) on <code>tailscale0</code> only</span></li>
+        <li><input type="checkbox"> <span><code>./install.sh server doctor</code> → <code>summary: fail=0</code> (warnings OK if expected)</span></li>
+        <li><input type="checkbox"> <span><code>tmux -V</code> → <code>3.6b</code>; session <code>main</code> attachable from each device</span></li>
+        <li><input type="checkbox"> <span>Herdr opens; <code>Ctrl+Space</code> works (macOS input-source conflict resolved)</span></li>
+        <li><input type="checkbox"> <span>Agent auth present as needed; OAuth completed via forwarded localhost if required</span></li>
+        <li><input type="checkbox"> <span>Sandbox applied; userns restriction still <code>1</code>; bwrap smoke test passes</span></li>
+        <li><input type="checkbox"> <span>VerseGuard <code>npm ci</code> clean; Metro in tmux; Serve HTTPS reachable from iPhone</span></li>
+      </ul>
+
+      <h3>14.1 Interpreting doctor</h3>
+      <table>
+        <thead><tr><th>Level</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>ok</code></td><td>Expected state</td></tr>
+          <tr><td><code>warn</code></td><td>Manual/optional gap (Tailscale missing, Ghostty terminfo, Metro env, sandbox not applied, etc.)</td></tr>
+          <tr><td><code>fail</code></td><td>Broken pin, missing link, missing required binary — doctor exits non-zero</td></tr>
+        </tbody>
+      </table>
+
+      <h3>14.2 Secret-hygiene grep (on the workstation copy)</h3>
+      <div class="cmd" data-copy>
+        <div class="cmd-head"><span class="where">Workstation · before commit</span><button type="button" class="copy-btn">Copy</button></div>
+        <pre><code>cd /path/to/dotfiles
+# Adjust patterns to your real markers; placeholders should not match:
+rg -n -E '([0-9]{1,3}\.){3}[0-9]{1,3}' docs/vps-development-environment.html || true
+rg -n -i 'ts\.net|auth\.json|client_secret|\bsk-[a-z0-9]|oauth.*code' \
+  docs/vps-development-environment.html || true
+git status
+git diff --check</code></pre>
+      </div>
+    </section>
+
+    <section id="troubleshoot" aria-labelledby="trouble-h">
+      <h2 id="trouble-h">15. Troubleshooting</h2>
+      <table>
+        <thead>
+          <tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>SSH timeout from internet café / LTE without Tailscale</td>
+            <td>Public SSH closed by design</td>
+            <td>Enable Tailscale on the client; use MagicDNS host</td>
+          </tr>
+          <tr>
+            <td>Mosh fails, SSH works</td>
+            <td>UDP 60000–61000 not allowed on <code>tailscale0</code></td>
+            <td>Add UFW UDP range; confirm client Mosh installed</td>
+          </tr>
+          <tr>
+            <td>Gray colors / weird Alt / Delete / repeating keys</td>
+            <td>Missing Ghostty terminfo or bad TERM</td>
+            <td>Install <code>xterm-ghostty</code> via <code>infocmp | tic</code>; or fallback <code>TERM=xterm-256color</code></td>
+          </tr>
+          <tr>
+            <td>Herdr prefix ignored on Mac</td>
+            <td>macOS Input Sources owns Ctrl+Space</td>
+            <td>Disable/rebind OS shortcut</td>
+          </tr>
+          <tr>
+            <td>Keys go to wrong layer (tmux vs Herdr)</td>
+            <td>Nested prefixes</td>
+            <td>Outer <code>Ctrl-c</code>, inner <code>Ctrl+Space</code>; send-prefix as configured</td>
+          </tr>
+          <tr>
+            <td>iPhone cannot load Metro over <code>http://100…</code></td>
+            <td>ATS blocks cleartext</td>
+            <td>Use Tailscale Serve HTTPS + <code>EXPO_PACKAGER_PROXY_URL</code></td>
+          </tr>
+          <tr>
+            <td>Expo stuck “Downloading…” then succeeds later</td>
+            <td>Cold bundle / cache lifecycle</td>
+            <td>Watch Metro logs; wait out cold build; warm Fast Refresh should be fast</td>
+          </tr>
+          <tr>
+            <td>Codex sandbox / bwrap denial</td>
+            <td>AppArmor profile missing or userns restriction conflict</td>
+            <td><code>./install.sh server sandbox --apply</code>; keep userns=1; smoke-test bwrap</td>
+          </tr>
+          <tr>
+            <td>OAuth browser never returns</td>
+            <td>Localhost callback on VPS not reachable</td>
+            <td>SSH <code>-L</code> forward of the printed port; keep tunnel up</td>
+          </tr>
+          <tr>
+            <td><code>npm ci</code> fails on lock mismatch</td>
+            <td>Node version or lock/package drift</td>
+            <td>Confirm Node pin via mise; use <code>npm ci</code> not ad-hoc installs for locked trees</td>
+          </tr>
+          <tr>
+            <td>Commands missing after shell edit</td>
+            <td>Zsh scalar <code>path</code> assignment corrupted PATH</td>
+            <td>Fix <code>~/.zshenv</code> array form; open new shell; <code>typeset -p path</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="maintain" aria-labelledby="maint-h">
+      <h2 id="maint-h">16. Maintenance, rollback, rebuild checklist</h2>
+
+      <h3>16.1 Updates</h3>
+      <ul>
+        <li>Bump pins in <code>server/versions.env</code> with new URLs and sha256 digests, then re-run <code>./install.sh server bootstrap --yes</code> (idempotent skips when versions match).</li>
+        <li>Re-run <code>./install.sh server doctor</code> after upgrades.</li>
+        <li>Re-run sandbox apply after profile changes or to reload/verify the tracked profile after parser issues.</li>
+      </ul>
+
+      <h3>16.2 Rollback</h3>
+      <div class="callout warn">
+        <span class="label">Not transactional</span>
+        Bootstrap is idempotent but does not maintain an automatic rollback journal. Snapshot the VPS before major upgrades.
+      </div>
+      <ul>
+        <li>For dotfile configuration, check out the last known-good Git revision and re-run the safe link profile.</li>
+        <li>For pinned binaries, restore a VPS snapshot or review the previous manifest and downgrade deliberately; do not assume every package manager can roll back.</li>
+        <li>Safe-link mode refuses to clobber unknown files—rename conflicts intentionally after inspecting them.</li>
+        <li>Do not delete live auth directories or private runtime state when rolling back tracked configuration.</li>
+      </ul>
+
+      <h3>16.3 What not to commit</h3>
+      <ul>
+        <li>Filled placeholders, public IPs, MagicDNS hostnames, OAuth material, <code>auth.json</code>, private keys.</li>
+        <li><code>~/.config/verseguard-metro.env</code> and any env files with Serve URLs if treated as sensitive in your threat model.</li>
+        <li>Runtime state under Herdr / Pi that is gitignored by design.</li>
+      </ul>
+
+      <h3>16.4 Optional future work</h3>
+      <ul>
+        <li>Enable <code>verseguard-metro.service</code> if you want Metro across reboots without tmux.</li>
+        <li>Bundle optimization (tighter icon/font imports, lazy data) to shrink cold Metro times.</li>
+        <li>Docker + Lazydocker only if container workflows become required.</li>
+      </ul>
+
+      <h3>16.5 Concise rebuild checklist</h3>
+      <ol>
+        <li>Provision Ubuntu&nbsp;24.04 amd64; create <code>YOUR_VPS_USER</code>; install client public keys.</li>
+        <li>Enroll Tailscale; verify MagicDNS; UFW allow SSH/Mosh/(optional 8081) on <code>tailscale0</code> only.</li>
+        <li>Harden SSH; remove public SSH after Tailscale proof.</li>
+        <li>Clone dotfiles → <code>./install.sh server bootstrap --dry-run</code> → <code>--yes</code>.</li>
+        <li><code>./install.sh server sandbox --apply</code>; first interactive <code>nvim</code>; agent OAuth via <code>ssh -L</code> as needed.</li>
+        <li>Create tmux <code>main</code>; start Herdr; fix Ghostty terminfo / macOS Ctrl+Space on clients.</li>
+        <li>Clone VerseGuard; <code>npm ci</code>; Metro in tmux; Tailscale Serve HTTPS; point iOS at <code>YOUR_EXPO_HTTPS_URL</code>.</li>
+        <li><code>./install.sh server doctor</code>; attach from Linux, Mac, and iPhone.</li>
+      </ol>
+    </section>
+
+    <footer class="doc-foot">
+      <p>
+        Source of truth for commands: <code>install.sh</code>, <code>server/bootstrap.sh</code>,
+        <code>server/versions.env</code>, <code>systemd/user/verseguard-metro.service</code>.
+        This HTML is documentation only; it does not execute installs.
+      </p>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.querySelectorAll(".cmd[data-copy]").forEach(function (block) {
+    var btn = block.querySelector(".copy-btn");
+    var pre = block.querySelector("pre code") || block.querySelector("pre");
+    if (!btn || !pre) return;
+    btn.addEventListener("click", function () {
+      var text = pre.textContent || "";
+      var done = function () {
+        btn.setAttribute("data-copied", "true");
+        btn.textContent = "Copied";
+        setTimeout(function () {
+          btn.removeAttribute("data-copied");
+          btn.textContent = "Copy";
+        }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+          fallbackCopy(text, done);
+        });
+      } else {
+        fallbackCopy(text, done);
+      }
+    });
+  });
+
+  function fallbackCopy(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  var toc = document.getElementById("toc");
+  var toggle = document.getElementById("tocToggle");
+  if (toc && toggle) {
+    toggle.addEventListener("click", function () {
+      var hidden = toc.hasAttribute("hidden");
+      if (hidden) {
+        toc.removeAttribute("hidden");
+        toggle.setAttribute("aria-expanded", "true");
+        toggle.textContent = "Hide contents";
+      } else {
+        toc.setAttribute("hidden", "");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.textContent = "Show contents";
+      }
+    });
+  }
+
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc a[href^='#']"));
+  var sections = links.map(function (a) {
+    return document.querySelector(a.getAttribute("href"));
+  }).filter(Boolean);
+
+  function setCurrent() {
+    var y = window.scrollY + 100;
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= y) current = sections[i];
+    }
+    links.forEach(function (a) {
+      var on = current && a.getAttribute("href") === "#" + current.id;
+      if (on) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+  if (!reduce) {
+    window.addEventListener("scroll", setCurrent, { passive: true });
+    setCurrent();
+  }
+})();
+</script>
+</body>
+</html>
