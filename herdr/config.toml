@@ -12,14 +12,85 @@ surface0 = "#515151"
 
 [ui]
 accent = "#fabd2f"
-agent_panel_sort = "priority"
+agent_panel_sort = "spaces"
+# Create tabs immediately with generated names (no name prompt).
+prompt_new_tab_name = false
+# prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
+# hidden = zero width. Flip mode with prefix+shift+b.
+sidebar_collapsed_mode = "compact"
 
+show_agent_labels_on_pane_borders = false
 [keys]
 prefix = "ctrl+space"
-next_agent = "prefix+shift+j"
-previous_agent = "prefix+shift+k"
+toggle_sidebar = "prefix+b"
+# Agent cycle (attention order): prefix+shift keeps old muscle memory;
+# ctrl+shift is the instant no-prefix twin of that chord.
+next_agent = ["prefix+shift+j", "ctrl+shift+j"]
+previous_agent = ["prefix+shift+k", "ctrl+shift+k"]
+
+# Navigate mode: j/k move the Spaces list (arrows still work).
+# Pane vertical in navigate mode: ctrl+k only — bare ctrl+j stays newline for Pi/shells.
+navigate_workspace_up = ["k", "up"]
+navigate_workspace_down = ["j", "down"]
+navigate_pane_up = "ctrl+k"
+
+# Tabs ≈ tmux windows. Keep prefix+n/p; add alt+] / alt+[ as instant twins.
+next_tab = ["prefix+n", "alt+]"]
+previous_tab = ["prefix+p", "alt+["]
+# New tab with generated name (no prompt). alt+w instant twin of prefix+c.
+new_tab = ["prefix+c", "alt+w"]
+# Close focused pane. alt+q instant twin of prefix+x.
+close_pane = ["prefix+x", "alt+q"]
+
+# Spaces (workspaces): shift+alt+] / [ — vertical list, same family as tab brackets.
+next_workspace = "shift+alt+]"
+previous_workspace = "shift+alt+["
+
+# vim-herdr-navigation: Ctrl-h/k/l only. Bare ctrl+j is newline (Pi/readline); use
+# prefix+j or nvim edge handoff for pane-down.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "vim-herdr-navigation.left"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "vim-herdr-navigation.up"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "vim-herdr-navigation.right"
+description = "navigate right (vim/herdr)"
+
+# tmux-style popup: lazygit in the calling pane’s cwd (terminal.new_cwd = follow).
+[[keys.command]]
+key = "alt+g"
+type = "popup"
+command = "lazygit"
+width = "90%"
+height = "90%"
+description = "lazygit popup"
 
 # Notify when a background Pi session is waiting for user input.
 [ui.toast]
-delivery = "system"
+# In-app toasts only — no OS desktop notifications (sidebar already shows agent state).
+delivery = "herdr"
 delay_seconds = 1
+
+# herdr-floax:keybind
+[[keys.command]]
+key = "prefix+f"
+type = "plugin_action"
+command = "herdr-floax.toggle"
+description = "Toggle floating pane"
+
+# Flip collapsed sidebar look: compact (thin rail) ↔ hidden (fully gone).
+[[keys.command]]
+key = "prefix+shift+b"
+type = "shell"
+command = "bash \"$HOME/dotfiles/herdr/scripts/flip_sidebar_collapsed_mode.sh\""
+description = "Flip sidebar collapse mode (compact/hidden)"

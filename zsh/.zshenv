@@ -16,3 +16,4 @@ path=(
   $path
 )
 export PATH
+[[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"

@@ -53,6 +53,14 @@ install_desktop() {
   ln -sf "$ROOT/herdr/config.toml" ~/.config/herdr/config.toml
   ln -sf "$ROOT/herdr/.gitignore" ~/.config/herdr/.gitignore
   ln -sf "$ROOT/herdr/agent-detection/pi.toml" ~/.config/herdr/agent-detection/pi.toml
+  # Ctrl-hjkl across herdr panes + nvim splits (idempotent)
+  if command -v herdr >/dev/null 2>&1; then
+    herdr plugin install paulbkim-dev/vim-herdr-navigation -y >/dev/null 2>&1 || true
+    # tmux-floax style persistent floating shell (needs cargo + tmux/dtach/abduco)
+    if command -v cargo >/dev/null 2>&1; then
+      herdr plugin install Tyru5/herdr-floax -y >/dev/null 2>&1 || true
+    fi
+  fi
 
   echo "Dotfiles have been symlinked!"
 }
