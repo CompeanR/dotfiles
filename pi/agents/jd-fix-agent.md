@@ -4,7 +4,7 @@ description: Judgment Day surgical fix agent for confirmed findings. Can edit co
 tools:
   - read
   - grep
-  - glob
+  - find
   - edit
   - write
   - bash

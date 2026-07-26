@@ -4,7 +4,7 @@ description: Design a routine implementation directly from an inline brief.
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
   - mem_search
   - mem_get_observation

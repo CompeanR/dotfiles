@@ -4,7 +4,7 @@ description: R1 Risk reviewer — security, privilege boundaries, data exposure,
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 

@@ -1,26 +1,136 @@
 {
   "defaultModel": "gpt-5.6-sol",
   "defaultProvider": "openai-codex",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "max",
   "enabledModels": [
     "cursor/composer-2.5",
-    "zai/glm-5.2",
     "cursor/grok-4.5",
     "openai-codex/gpt-5.6-sol"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.80.6",
+  "lastChangelogVersion": "0.82.1",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
-    "npm:pi-subagents-j0k3r",
+    "npm:pi-subagents",
     "npm:pi-intercom",
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-btw",
     "npm:pi-mcp-adapter",
     "npm:pi-cursor-sdk",
-    "npm:pi-undo-redo"
+    "npm:pi-undo-redo",
+    {
+      "source": "git:github.com/DietrichGebert/ponytail",
+      "extensions": [
+        "-pi-extension/index.js"
+      ],
+      "skills": [
+        "-skills/ponytail/SKILL.md",
+        "-skills/ponytail-audit/SKILL.md",
+        "-skills/ponytail-debt/SKILL.md",
+        "-skills/ponytail-gain/SKILL.md",
+        "-skills/ponytail-help/SKILL.md"
+      ]
+    }
+  ],
+  "subagents": {
+    "disableBuiltins": true,
+    "defaultModel": "cursor/composer-2.5",
+    "globalConcurrencyLimit": 5,
+    "agentOverrides": {
+      "jd-fix-agent": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "writer"
+      },
+      "jd-judge-a": {
+        "model": "cursor/grok-4.5",
+        "thinking": "medium",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "jd-judge-b": {
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "review-readability": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "review-reliability": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "review-resilience": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "review-risk": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "work-apply": {
+        "model": "cursor/grok-4.5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "writer"
+      },
+      "work-design": {
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "work-explore": {
+        "model": "cursor/composer-2.5",
+        "thinking": "medium",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "work-verify": {
+        "model": "openai-codex/gpt-5.6-sol",
+        "thinking": "medium",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      }
+    }
+  },
+  "skills": [
+    "~/.config/opencode/skills/youtube-transcript"
   ],
   "theme": "matte-black"
 }

@@ -4,7 +4,7 @@ description: Independently verify a routine change against its inline requiremen
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 

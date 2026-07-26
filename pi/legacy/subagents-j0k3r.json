@@ -1,0 +1,40 @@
+{
+  "mode": "claude",
+  "default_model": "cursor/composer-2.5",
+  "default_effort": "medium",
+  "session_resources": "lean",
+  "timeout_ms": 600000,
+  "stall_timeout_ms": 120000,
+  "max_concurrency": 5,
+  "debug": false,
+  "model_profiles": {
+    "sdd-design": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "effort": "high"
+    },
+    "sdd-verify": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "effort": "medium"
+    },
+    "sdd-apply": {
+      "model": "cursor/grok-4.5",
+      "effort": "medium"
+    },
+    "work-explore": {
+      "model": "cursor/composer-2.5:fast",
+      "effort": "medium"
+    },
+    "work-design": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "effort": "high"
+    },
+    "work-apply": {
+      "model": "cursor/grok-4.5",
+      "effort": "medium"
+    },
+    "work-verify": {
+      "model": "openai-codex/gpt-5.6-sol",
+      "effort": "medium"
+    }
+  }
+}

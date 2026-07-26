@@ -4,7 +4,7 @@ description: Judgment Day blind adversarial reviewer B. Read-only; independently
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 

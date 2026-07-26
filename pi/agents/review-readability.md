@@ -4,7 +4,7 @@ description: R2 Readability reviewer — naming, complexity, intention, maintain
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 

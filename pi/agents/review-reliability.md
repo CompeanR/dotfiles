@@ -4,7 +4,7 @@ description: R3 Reliability reviewer — behavior-first tests, coverage value, e
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 

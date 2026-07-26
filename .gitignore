@@ -17,6 +17,7 @@
 /opencode/prompt-history.jsonl
 
 # Local-only pi agent files
+/.pi-subagents/
 /pi/auth.json
 /pi/mcp-cache.json
 /pi/cursor-sdk-model-list.json

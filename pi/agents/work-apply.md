@@ -4,7 +4,7 @@ description: Implement a routine scoped edit without requiring SDD artifacts.
 tools:
   - read
   - grep
-  - glob
+  - find
   - edit
   - write
   - bash

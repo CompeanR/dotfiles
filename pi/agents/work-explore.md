@@ -4,7 +4,7 @@ description: Investigate a routine coding task without requiring SDD artifacts.
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
   - web_search
   - fetch_content

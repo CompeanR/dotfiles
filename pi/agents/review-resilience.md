@@ -4,7 +4,7 @@ description: R4 Resilience reviewer — fallbacks, retry/backoff, graceful degra
 tools:
   - read
   - grep
-  - glob
+  - find
   - bash
 ---
 
