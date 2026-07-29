@@ -12,7 +12,7 @@ surface0 = "#515151"
 
 [ui]
 accent = "#fabd2f"
-agent_panel_sort = "spaces"
+agent_panel_sort = "priority"
 # Create tabs immediately with generated names (no name prompt).
 prompt_new_tab_name = false
 # prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
