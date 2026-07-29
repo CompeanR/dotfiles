@@ -6,6 +6,7 @@
 // @ts-nocheck
 
 import net from "node:net";
+import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
 
 const HERDR_ENV = process.env.HERDR_ENV;
 const socketPath = process.env.HERDR_SOCKET_PATH;
@@ -61,14 +62,8 @@ type QueuedState = {
   seq: number;
 };
 
-let reportSeq = Date.now() * 1000;
 let currentAgentSessionId: string | undefined;
 let currentAgentSessionPath: string | undefined;
-
-function nextReportSeq(): number {
-  reportSeq += 1;
-  return reportSeq;
-}
 
 function updateSessionRef(ctx: any): void {
   try {
@@ -120,14 +115,18 @@ function reportSession(sessionStartSource?: string): Promise<void> {
       pane_id: paneId,
       source,
       agent: "pi",
-      seq: nextReportSeq(),
+      seq: nextHerdrReportSequence(),
       session_start_source: sessionStartSource,
       ...sessionRef,
     },
   });
 }
 
-function sendState(state: AgentState, message?: string, seq = nextReportSeq()): Promise<void> {
+function sendState(
+  state: AgentState,
+  message?: string,
+  seq = nextHerdrReportSequence(),
+): Promise<void> {
   return sendRequest({
     id: `${source}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     method: "pane.report_agent",
@@ -150,7 +149,7 @@ function releaseAgent(): Promise<void> {
       pane_id: paneId,
       source,
       agent: "pi",
-      seq: nextReportSeq(),
+      seq: nextHerdrReportSequence(),
     },
   });
 }
@@ -169,7 +168,7 @@ let sendInFlight = false;
 let queuedState: QueuedState | undefined;
 
 function queueState(state: AgentState, message?: string): void {
-  queuedState = { state, message, seq: nextReportSeq() };
+  queuedState = { state, message, seq: nextHerdrReportSequence() };
   if (!sendInFlight) {
     void drainStateQueue();
   }

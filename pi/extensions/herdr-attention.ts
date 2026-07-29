@@ -1,5 +1,6 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import net from "node:net";
+import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
 
 const ATTENTION_TOOLS = new Set(["cursor_ask_question", "ask_user_question"]);
 const MAX_LABEL_LENGTH = 120;
@@ -54,14 +55,6 @@ function herdrEnabled(): boolean {
   return HERDR_ENV === "1" && !!socketEndpoint && !!paneId;
 }
 
-// Keep seq ahead of herdr-agent-state's Date.now()*1000 counter so blocked wins races.
-let reportSeq = Date.now() * 1000 + 1_000_000;
-
-function nextReportSeq(): number {
-  reportSeq += 1;
-  return reportSeq;
-}
-
 function reportAgent(state: "blocked" | "working", message?: string): void {
   if (!herdrEnabled()) return;
   const request = {
@@ -73,7 +66,7 @@ function reportAgent(state: "blocked" | "working", message?: string): void {
       agent: "pi",
       state,
       message,
-      seq: nextReportSeq(),
+      seq: nextHerdrReportSequence(),
     },
   };
   const payload = `${JSON.stringify(request)}\n`;
