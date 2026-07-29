@@ -41,7 +41,16 @@ return {
       -- Set dark background for current line number
       vim.g.gruvbox_material_current_word = "bold"
 
-      vim.g.gruvbox_material_transparent_background = 1
+      -- 2 (not 1) so floating windows are transparent too — at 1 only the main
+      -- editor is, which leaves popups (pi review, pickers, hover) on a gray
+      -- background instead of the terminal's.
+      vim.g.gruvbox_material_transparent_background = 2
+
+      -- Float background is chosen by float_style, independently of the setting
+      -- above: the default branch paints floats bg3 (#3c3836) even when the rest
+      -- of the UI is transparent. 'blend' links NormalFloat to Normal instead,
+      -- so popups actually inherit the terminal background.
+      vim.g.gruvbox_material_float_style = "blend"
 
       -- Set the theme
       vim.cmd("colorscheme gruvbox-material")
