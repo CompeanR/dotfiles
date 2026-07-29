@@ -1,7 +1,7 @@
 {
-  "defaultModel": "gpt-5.6-sol",
-  "defaultProvider": "openai-codex",
-  "defaultThinkingLevel": "max",
+  "defaultModel": "claude-opus-5",
+  "defaultProvider": "anthropic",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
     "cursor/composer-2.5",
     "cursor/grok-4.5",
@@ -32,7 +32,8 @@
         "-skills/ponytail-gain/SKILL.md",
         "-skills/ponytail-help/SKILL.md"
       ]
-    }
+    },
+    "npm:pi-claude-auth"
   ],
   "subagents": {
     "disableBuiltins": true,
