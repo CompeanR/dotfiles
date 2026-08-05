@@ -1,14 +1,61 @@
 {
+  "env": {
+    "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS": "2000"
+  },
   "permissions": {
     "allow": [
-      "mcp__plugin_engram_engram__*"
+      "mcp__plugin_engram_engram__*",
+      "mcp__pi__*"
+    ],
+    "deny": [
+      "Agent"
     ],
     "defaultMode": "auto"
   },
-  "model": "opus",
+  "model": "claude-opus-4-6",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/dotfiles/claude/scripts/guard-default-branch.sh",
+            "if": "Bash(git *)",
+            "timeout": 10,
+            "statusMessage": "Checking branch..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$HOME/dotfiles/claude/scripts/pi-routing-reminder.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/home/compean/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
     "engram@engram": true,
-    "mattpocock-skills@claude-plugins-official": true
+    "mattpocock-skills@claude-plugins-official": true,
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "engram": {
