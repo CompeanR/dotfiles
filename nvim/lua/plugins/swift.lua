@@ -5,14 +5,14 @@ return {
     opts = {
       servers = {
         sourcekit = {
-          cmd = { "xcrun", "sourcekit-lsp" },
+          cmd = { "sourcekit-lsp" },
           single_file_support = true,
           root_dir = function(bufnr, on_dir)
             local fname = vim.api.nvim_buf_get_name(bufnr)
             local util = require("lspconfig.util")
-            on_dir(util.root_pattern("Package.swift", ".git")(fname)
-              or util.root_pattern("*.xcodeproj", "*.xcworkspace")(fname)
-              or vim.fs.dirname(fname)) -- fallback for standalone swift files
+            on_dir(
+              util.root_pattern("Package.swift", ".git")(fname) or util.root_pattern("*.xcodeproj", "*.xcworkspace")(fname) or vim.fs.dirname(fname)
+            ) -- fallback for standalone swift files
           end,
         },
       },

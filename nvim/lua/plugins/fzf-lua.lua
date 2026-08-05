@@ -28,7 +28,25 @@ return {
         fd_opts = "--color=never --type f --type l --exclude .git",
       },
       git = {
+        commits = {
+          actions = {
+            -- LazyVim <leader>gc/<leader>gl → FzfLua git_commits. Enter used to
+            -- checkout; prefer single-commit Diffview review instead.
+            ["enter"] = function(selected)
+              local utils = require("fzf-lua.utils")
+              local line = utils.strip_ansi_coloring(selected[1] or "")
+              local sha = line:match("%w+")
+              if not sha then
+                return
+              end
+              -- ^! = that commit alone (parent..commit), not "everything since".
+              vim.cmd("DiffviewOpen " .. sha .. "^!")
+            end,
+            ["ctrl-s"] = actions.git_checkout,
+          },
+        },
         diff = {
+          winopts = { fullscreen = true },
           actions = {
             -- Free <ctrl-d>/<ctrl-u> for preview scrolling; reach "git hunks" via <alt-d>.
             ["ctrl-d"] = false,

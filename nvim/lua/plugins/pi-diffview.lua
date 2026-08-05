@@ -1,12 +1,14 @@
--- pi popup wired into diffview's diff panes.
+-- pi popup for code questions, with shorter mappings inside diffview panes.
 --
--- <leader>a   ask pi a free-form question about the hunk under the cursor
--- <leader>e   explain the hunk under the cursor
--- <leader>pp  toggle the popup (global);  <C-q> or <C-g> hides it from inside
+-- Global:
+-- <leader>pa  ask pi about a selection or the code around the cursor
+-- <leader>pe  explain a selection or the code around the cursor
+-- <leader>pp  open/toggle the popup;  <C-q> or <C-g> hides it from inside
+--
+-- Diffview:
+-- <leader>a   ask pi about the selected/current hunk
+-- <leader>e   explain the selected/current hunk
 -- <leader>F   diffview's focus_files, rehomed since <leader>e is taken
---
--- <leader>a and <leader>e also work on a visual selection, which wins over the
--- hunk under the cursor.
 --
 -- The hunk is written to a temp file and passed as a pi `@file` argument, so the
 -- prompt itself stays a single line. That matters: it lets a second question be
@@ -16,9 +18,10 @@ local M = {}
 
 local scratch_dir = vim.fn.stdpath("cache") .. "/pi-diffview"
 
--- The global pi default is claude-opus-5; review Q&A runs on grok instead.
--- Must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
-local MODEL = "cursor/grok-4.5"
+-- Keep the lightweight popup independent from the global pi defaults. The model
+-- must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
+local MODEL = "openai-codex/gpt-5.6-terra"
+local THINKING = "medium"
 
 -- pi is not detected by screen scraping — it registers itself through the
 -- herdr-agent-state / herdr-attention extensions, which both enable themselves
@@ -100,7 +103,12 @@ local function capture()
   -- diffview:// buffers hold the base revision; note which side we grabbed.
   -- Their URIs look like diffview:///repo/.git/<object>/path/to/file — strip
   -- through the git object dir to recover the real repo-relative path.
-  local side = name:match("^diffview://") and "BASE (left pane)" or "WORKING (right pane)"
+  local side = "WORKING"
+  if name:match("^diffview://") then
+    side = "BASE (left pane)"
+  elseif vim.wo.diff then
+    side = "WORKING (right pane)"
+  end
   local path = name:gsub("^diffview://", ""):gsub("^.-/%.git/[^/]+/", "")
   path = vim.fn.fnamemodify(path, ":.")
 
@@ -147,6 +155,76 @@ local function pi_term()
   return nil
 end
 
+---Open a new pi popup, optionally with initial arguments.
+---@param args? string[]
+---@return snacks.terminal?
+local function open_pi(args)
+  local ok, terminal = pcall(require, "snacks.terminal")
+  if not ok then
+    vim.notify("[pi-diffview] snacks.terminal unavailable", vim.log.levels.ERROR)
+    return nil
+  end
+
+  -- nice: pi is a Node process that will happily saturate a core. On a 2-CPU box
+  -- that starves the editor; deprioritising it keeps typing responsive while the
+  -- answer streams in (it costs pi some latency, not correctness).
+  --
+  -- -n names the pi session, so it is distinguishable in `pi --resume` too.
+  local cmd = {
+    "nice",
+    "-n",
+    "15",
+    "pi",
+    "--model",
+    MODEL,
+    "--thinking",
+    THINKING,
+    "-n",
+    "nvim popup",
+  }
+  vim.list_extend(cmd, args or {})
+
+  local term = terminal.open(cmd, {
+    win = {
+      position = "float",
+      width = 0.85,
+      height = 0.85,
+      border = "rounded",
+      title = " pi — agent ",
+      title_pos = "center",
+      -- Must live under `win`: terminal.open passes only opts.win to Snacks.win,
+      -- so keys declared at the top level are silently dropped.
+      --
+      -- Avoids herdr's bindings — alt+q is its close_pane, ctrl+h/k/l its pane
+      -- navigation, alt+g its lazygit popup.
+      keys = {
+        pi_hide = {
+          "<C-q>",
+          function(self)
+            self:hide()
+          end,
+          mode = { "t", "n" },
+          desc = "Hide pi popup",
+        },
+        pi_hide_g = {
+          "<C-g>",
+          function(self)
+            self:hide()
+          end,
+          mode = { "t", "n" },
+          desc = "Hide pi popup",
+        },
+      },
+    },
+    env = NO_HERDR_AGENT,
+    interactive = true,
+  })
+  if term and term.buf then
+    vim.b[term.buf].pi_diffview = true
+  end
+  return term
+end
+
 ---Send an already-captured excerpt plus a question to pi, reusing the open
 ---session when there is one.
 ---@param file string path to the excerpt written by capture()
@@ -164,69 +242,9 @@ local function send(file, question)
     end
   end
 
-  local ok, terminal = pcall(require, "snacks.terminal")
-  if not ok then
-    vim.notify("[pi-diffview] snacks.terminal unavailable", vim.log.levels.ERROR)
-    return
-  end
-
   -- `pi [@files...] [messages...]` — the @file must be a separate argv entry, or
   -- pi reads the whole string as one filename.
-  --
-  -- nice: pi is a Node process that will happily saturate a core. On a 2-CPU box
-  -- that starves the editor; deprioritising it keeps typing responsive while the
-  -- answer streams in (it costs pi some latency, not correctness).
-  --
-  -- -n names the pi session, so it is distinguishable in `pi --resume` too.
-  local term = terminal.open({
-    "nice",
-    "-n",
-    "15",
-    "pi",
-    "--model",
-    MODEL,
-    "-n",
-    "nvim review popup",
-    "@" .. file,
-    question,
-  }, {
-    win = {
-      position = "float",
-      width = 0.85,
-      height = 0.85,
-      border = "rounded",
-      title = " pi — review ",
-      title_pos = "center",
-      -- Must live under `win`: terminal.open passes only opts.win to Snacks.win,
-      -- so keys declared at the top level are silently dropped.
-      --
-      -- Avoids herdr's bindings — alt+q is its close_pane, ctrl+h/k/l its pane
-      -- navigation, alt+g its lazygit popup.
-      keys = {
-        pi_hide = {
-          "<C-q>",
-          function(self)
-            self:hide()
-          end,
-          mode = { "t", "n" },
-          desc = "Hide pi review popup",
-        },
-        pi_hide_g = {
-          "<C-g>",
-          function(self)
-            self:hide()
-          end,
-          mode = { "t", "n" },
-          desc = "Hide pi review popup",
-        },
-      },
-    },
-    env = NO_HERDR_AGENT,
-    interactive = true,
-  })
-  if term and term.buf then
-    vim.b[term.buf].pi_diffview = true
-  end
+  open_pi({ "@" .. file, question })
 end
 
 function M.ask()
@@ -237,14 +255,14 @@ function M.ask()
     vim.notify("[pi-diffview] nothing under the cursor to send", vim.log.levels.WARN)
     return
   end
-  vim.ui.input({ prompt = "Ask pi about this hunk: " }, function(answer)
+  vim.ui.input({ prompt = "Ask pi about this code: " }, function(answer)
     if answer and answer ~= "" then
       send(file, answer)
     end
   end)
 end
 
----Hide/show the review popup without losing the session.
+---Open the popup, or hide/show it without losing the session.
 function M.toggle()
   local term = pi_term()
   -- Deliberately buf_valid, not valid(): valid() also requires a live window, so
@@ -253,7 +271,7 @@ function M.toggle()
     term:toggle()
     return
   end
-  vim.notify("[pi-diffview] no pi session yet — <leader>a or <leader>e starts one", vim.log.levels.INFO)
+  open_pi()
 end
 
 function M.explain()
@@ -262,7 +280,7 @@ function M.explain()
     vim.notify("[pi-diffview] nothing under the cursor to send", vim.log.levels.WARN)
     return
   end
-  send(file, "Explain what this change does and why it was likely made. Be concise.")
+  send(file, "Explain this code clearly and concisely. If it is a diff, explain what changed and why.")
 end
 
 package.loaded["pi_diffview"] = M
@@ -277,8 +295,11 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
   end,
 })
 
--- Global, so the popup can be brought back from anywhere — not just a diff pane.
-vim.keymap.set("n", "<leader>pp", M.toggle, { desc = "pi: toggle review popup" })
+-- Namespaced globally to preserve LazyVim's <leader>e explorer mapping. Diffview
+-- keeps the shorter buffer-local <leader>a and <leader>e mappings below.
+vim.keymap.set({ "n", "x" }, "<leader>pa", M.ask, { desc = "pi: ask about this code" })
+vim.keymap.set({ "n", "x" }, "<leader>pe", M.explain, { desc = "pi: explain this code" })
+vim.keymap.set("n", "<leader>pp", M.toggle, { desc = "pi: open/toggle popup" })
 
 return {
   {
