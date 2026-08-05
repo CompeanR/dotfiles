@@ -2,11 +2,10 @@
 // managed by herdr; reinstalling or updating the integration overwrites this file.
 // add custom hooks/plugins beside this file instead of editing it.
 // HERDR_INTEGRATION_ID=pi
-// HERDR_INTEGRATION_VERSION=6
+// HERDR_INTEGRATION_VERSION=8
 // @ts-nocheck
 
 import net from "node:net";
-import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
 
 const HERDR_ENV = process.env.HERDR_ENV;
 const socketPath = process.env.HERDR_SOCKET_PATH;
@@ -62,8 +61,14 @@ type QueuedState = {
   seq: number;
 };
 
+let reportSeq = Date.now() * 1000;
 let currentAgentSessionId: string | undefined;
 let currentAgentSessionPath: string | undefined;
+
+function nextReportSeq(): number {
+  reportSeq += 1;
+  return reportSeq;
+}
 
 function updateSessionRef(ctx: any): void {
   try {
@@ -115,18 +120,14 @@ function reportSession(sessionStartSource?: string): Promise<void> {
       pane_id: paneId,
       source,
       agent: "pi",
-      seq: nextHerdrReportSequence(),
+      seq: nextReportSeq(),
       session_start_source: sessionStartSource,
       ...sessionRef,
     },
   });
 }
 
-function sendState(
-  state: AgentState,
-  message?: string,
-  seq = nextHerdrReportSequence(),
-): Promise<void> {
+function sendState(state: AgentState, message?: string, seq = nextReportSeq()): Promise<void> {
   return sendRequest({
     id: `${source}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     method: "pane.report_agent",
@@ -141,34 +142,11 @@ function sendState(
   });
 }
 
-function releaseAgent(): Promise<void> {
-  return sendRequest({
-    id: `${source}:release:${Date.now()}:${Math.random().toString(36).slice(2)}`,
-    method: "pane.release_agent",
-    params: {
-      pane_id: paneId,
-      source,
-      agent: "pi",
-      seq: nextHerdrReportSequence(),
-    },
-  });
-}
-
-function shouldReleaseOnSessionShutdown(event: any): boolean {
-  // Pi tears down and rebinds extension runtimes for internal lifecycle actions
-  // such as /reload, /new, /resume, and /fork. Those do not mean the pane's
-  // agent process has exited, and releasing hook authority there can suppress
-  // legitimate reports from the replacement runtime. Only a user/process quit
-  // should release Herdr's full-lifecycle authority.
-  const reason = event?.reason;
-  return reason === "quit";
-}
-
 let sendInFlight = false;
 let queuedState: QueuedState | undefined;
 
 function queueState(state: AgentState, message?: string): void {
-  queuedState = { state, message, seq: nextHerdrReportSequence() };
+  queuedState = { state, message, seq: nextReportSeq() };
   if (!sendInFlight) {
     void drainStateQueue();
   }
@@ -226,9 +204,10 @@ export default function (pi) {
     queueState(next.state, next.message);
   }
 
-  // ponytail: apply blocked even before session_start/hasUI — ask tools can
-  // fire during Cursor bridge turns where rootSession lag otherwise drops the signal.
   pi.events.on("herdr:blocked", (data) => {
+    if (!rootSession) {
+      return;
+    }
     if (!data?.active) {
       blockedCount = Math.max(0, blockedCount - 1);
       if (blockedCount === 0) {
@@ -244,7 +223,9 @@ export default function (pi) {
   });
 
   pi.on("session_start", async (event, ctx) => {
-    if (ctx?.hasUI !== true) {
+    // TUI only: RPC/JSON/print modes are headless (no PTY herdr can display),
+    // and RPC still reports hasUI=true, so mode is the reliable gate.
+    if (ctx?.mode !== "tui") {
       return;
     }
     rootSession = true;
@@ -272,14 +253,5 @@ export default function (pi) {
 
     agentActive = false;
     publishState();
-  });
-
-  pi.on("session_shutdown", async (event) => {
-    if (!rootSession) {
-      return;
-    }
-    if (shouldReleaseOnSessionShutdown(event)) {
-      await releaseAgent();
-    }
   });
 }

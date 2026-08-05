@@ -46,6 +46,16 @@ close_pane = ["prefix+x", "alt+q"]
 next_workspace = "shift+alt+]"
 previous_workspace = "shift+alt+["
 
+# Free prefix+tab from default pane cycle so last-workspace can own it.
+cycle_pane_next = ""
+
+# Last-used workspace toggle (single-slot MRU script).
+[[keys.command]]
+key = "prefix+tab"
+type = "shell"
+command = "bash \"$HOME/dotfiles/herdr/scripts/toggle_last_workspace.sh\""
+description = "Toggle last workspace"
+
 # vim-herdr-navigation: Ctrl-h/k/l only. Bare ctrl+j is newline (Pi/readline); use
 # prefix+j or nvim edge handoff for pane-down.
 [[keys.command]]
