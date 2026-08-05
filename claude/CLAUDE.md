@@ -1,20 +1,28 @@
-Use your own judgment and the main model for planning and coordination. For
-anything you can scope into a clean subtask, deploy a subagent rather than
-doing everything yourself in one long turn.
+Answer concisely. Avoid unnecessary code comments. Do not add a
+`Co-authored-by` trailer to commits.
 
-Give each subagent a clear goal, the relevant context, and what to bring
-back. Don't have it invent the plan. Run independent pieces in parallel.
+## Pi MCP subagents
 
-When they return, review the results before you merge anything. If
-something's off, rewrite the brief and spin another — don't silently patch
-over it yourself unless it's trivial.
+The main model coordinates by default: scope work, dispatch, integrate, and
+review results. The native Agent/Task tool is denied; use the `subagent` tool
+on the Pi MCP server for delegation.
 
-## Subagents on a different model
+Delegate clean, independently scoped investigation, design, implementation, or
+verification. Keep trivial edits, tightly coupled work, and work where
+delegation costs more than the task with the main model.
 
-Your built-in Agent/Task tool only spawns Claude models. When a task is
-better suited to a different model — an existing explore/apply/design/verify
-split already tuned for this in the user's Pi setup — use the
-`herdr-subagent` skill instead: it drives a real Pi process through herdr on
-the model/thinking level defined in `~/dotfiles/pi/settings.json`, using the
-role contract in `~/dotfiles/pi/agents/work-<role>.md`. Don't duplicate that
-mapping here; read it from those files.
+Pi workers inherit no project context, conversation, or skills. Make every
+brief self-contained: include the goal, relevant context, explicit constraints
+and allowed files, plus the required output or validation. Choose
+`explore`, `design`, `apply`, or `verify` from the role descriptions in the
+tool; do not read Pi settings or agent files because the tool description
+already provides the authoritative routing guidance. `watch: true` is optional
+and slower, so omit it unless visible execution is needed.
+
+Run independent read-only work in parallel, but allow only one writer in each
+worktree. Independently verify non-trivial work before treating it as complete.
+Review every result. If it is weak, incomplete, or incorrect, clarify the brief
+and re-dispatch; do not silently take the work back unless the remaining
+correction is trivial.
+
+Deploy pi sub-agents with at least 10min timeout
