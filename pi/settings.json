@@ -1,14 +1,13 @@
 {
-  "defaultModel": "claude-opus-5",
-  "defaultProvider": "anthropic",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultProvider": "openai-codex",
   "defaultThinkingLevel": "high",
   "enabledModels": [
-    "cursor/composer-2.5",
-    "cursor/grok-4.5",
+    "openai-codex/gpt-5.6-terra",
     "openai-codex/gpt-5.6-sol"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.82.1",
+  "lastChangelogVersion": "0.83.0",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -37,11 +36,11 @@
   ],
   "subagents": {
     "disableBuiltins": true,
-    "defaultModel": "cursor/composer-2.5",
+    "defaultModel": "openai-codex/gpt-5.6-terra",
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "jd-fix-agent": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -49,7 +48,7 @@
         "acceptanceRole": "writer"
       },
       "jd-judge-a": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -65,7 +64,7 @@
         "acceptanceRole": "read-only"
       },
       "review-readability": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -73,7 +72,7 @@
         "acceptanceRole": "read-only"
       },
       "review-reliability": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -81,7 +80,7 @@
         "acceptanceRole": "read-only"
       },
       "review-resilience": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -89,7 +88,7 @@
         "acceptanceRole": "read-only"
       },
       "review-risk": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -97,7 +96,7 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "cursor/grok-4.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -113,7 +112,7 @@
         "acceptanceRole": "read-only"
       },
       "work-explore": {
-        "model": "cursor/composer-2.5",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
