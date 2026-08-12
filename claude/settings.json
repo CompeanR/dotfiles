@@ -12,7 +12,7 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-opus-4-6",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "PreToolUse": [
       {
@@ -26,6 +26,40 @@
             "statusMessage": "Checking branch..."
           }
         ]
+      },
+      {
+        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|TaskOutput|mcp__pi__subagent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" pre",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|AskUserQuestion|mcp__pi__subagent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" post",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|mcp__pi__subagent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" failure",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
@@ -33,7 +67,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$HOME/dotfiles/claude/scripts/pi-routing-reminder.sh",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" prompt",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" stop",
             "timeout": 5
           }
         ]
@@ -47,6 +92,18 @@
             "type": "command",
             "command": "bash '/home/compean/.claude/hooks/herdr-agent-state.sh' session",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" cleanup",
+            "timeout": 2
           }
         ]
       }

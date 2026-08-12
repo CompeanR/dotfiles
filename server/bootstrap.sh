@@ -625,6 +625,7 @@ cmd_doctor() {
     "$ROOT/tmux/scripts|$HOME/scripts"
     "$ROOT/lazygit/config.yml|$HOME/.config/lazygit/config.yml"
     "$ROOT/pi/settings.json|$HOME/.pi/agent/settings.json"
+    "$ROOT/pi/subagent-tool-description.md|$HOME/.pi/agent/subagent-tool-description.md"
     "$ROOT/pi/mcp.json|$HOME/.pi/agent/mcp.json"
     "$ROOT/pi/subagents.json|$HOME/.pi/agent/subagents.json"
     "$ROOT/pi/cursor-sdk.json|$HOME/.pi/agent/cursor-sdk.json"

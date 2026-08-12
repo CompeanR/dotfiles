@@ -32,9 +32,17 @@ install_desktop() {
   mkdir -p ~/.config/lazygit
   ln -sf "$ROOT/lazygit/config.yml" ~/.config/lazygit/config.yml
 
+  # Omarchy idle/lock config (30-minute automatic lock)
+  mkdir -p ~/.config/hypr
+  ln -sf "$ROOT/hypr/hypridle.conf" ~/.config/hypr/hypridle.conf
+  if command -v omarchy-restart-hypridle >/dev/null 2>&1; then
+    omarchy-restart-hypridle
+  fi
+
   # Pi agent config
   mkdir -p ~/.pi/agent/npm
   ln -sf "$ROOT/pi/AGENTS.md" ~/.pi/agent/AGENTS.md
+  ln -sf "$ROOT/pi/subagent-tool-description.md" ~/.pi/agent/subagent-tool-description.md
   ln -sf "$ROOT/pi/settings.json" ~/.pi/agent/settings.json
   ln -sf "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json
   ln -sf "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json
@@ -109,6 +117,7 @@ install_server() {
   # Pi durable files/dirs (runtime state stays local)
   mkdir -p ~/.pi/agent/npm
   safe_link "$ROOT/pi/AGENTS.md" ~/.pi/agent/AGENTS.md || status=1
+  safe_link "$ROOT/pi/subagent-tool-description.md" ~/.pi/agent/subagent-tool-description.md || status=1
   safe_link "$ROOT/pi/settings.json" ~/.pi/agent/settings.json || status=1
   safe_link "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json || status=1
   safe_link "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json || status=1

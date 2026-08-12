@@ -18,6 +18,7 @@
 
 # Local-only pi agent files
 /.pi-subagents/
+/.pi/subagents/
 /pi/auth.json
 /pi/mcp-cache.json
 /pi/cursor-sdk-model-list.json
@@ -27,3 +28,7 @@
 /pi/state/
 /pi/intercom/
 /pi/pi-pretty/
+
+# Generated Python bytecode
+__pycache__/
+*.py[cod]

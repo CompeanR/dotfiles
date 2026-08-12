@@ -69,6 +69,10 @@ yabai -m rule --add app="^1Password" manage=off
 # SIGNALS - Auto-fix problematic windows
 # ─────────────────────────────────────────────────────────────────────────────────
 
+# Zoom every regular Ghostty window/tab; macOS exposes native tabs as separate windows.
+# Ignore the quick terminal, which uses the AXFloatingWindow subrole.
+yabai -m signal --add app="^Ghostty$" event=window_created action='[ "$(yabai -m query --windows --window "$YABAI_WINDOW_ID" | jq -r .subrole)" = "AXStandardWindow" ] && yabai -m window "$YABAI_WINDOW_ID" --toggle zoom-fullscreen' label="ghostty_zoom_fullscreen"
+
 # Focus next window when one is closed
 yabai -m signal --add event=window_destroyed action="yabai -m window --focus recent || yabai -m window --focus first" label="focus_on_destroy"
 

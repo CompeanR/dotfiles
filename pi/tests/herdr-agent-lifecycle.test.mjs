@@ -97,6 +97,7 @@ test("an answered question settles the Herdr agent back to idle", async (t) => {
   let idle = true;
   const context = {
     hasUI: true,
+    mode: "tui",
     isIdle: () => idle,
     sessionManager: {
       getSessionFile: () => "/tmp/test-session.jsonl",

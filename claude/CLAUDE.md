@@ -1,4 +1,5 @@
-Answer concisely. Avoid unnecessary code comments. Do not add a
+Don't be verbose
+Avoid unnecessary code comments. Do not add a
 `Co-authored-by` trailer to commits.
 
 ## Pi MCP subagents

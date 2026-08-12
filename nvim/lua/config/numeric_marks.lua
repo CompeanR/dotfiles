@@ -1,15 +1,14 @@
 local M = {}
 
--- Reserve q-z as the hidden backing marks for numeric aliases 0-9.
-local mark_sequence = { "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" }
+-- Numbered marks are global, so they can jump across files like A-Z marks.
+local mark_sequence = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }
 
 M.mark_by_digit = {}
 M.digit_by_mark = {}
 
-for index, mark in ipairs(mark_sequence) do
-  local digit = tostring(index - 1)
-  M.mark_by_digit[digit] = mark
-  M.digit_by_mark[mark] = digit
+for _, digit in ipairs(mark_sequence) do
+  M.mark_by_digit[digit] = digit
+  M.digit_by_mark[digit] = digit
 end
 
 local function run_normal(keys)
