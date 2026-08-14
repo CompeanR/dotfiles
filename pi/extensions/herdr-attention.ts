@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import net from "node:net";
 import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
 
@@ -55,19 +55,51 @@ function herdrEnabled(): boolean {
   return HERDR_ENV === "1" && !!socketEndpoint && !!paneId;
 }
 
-function reportAgent(state: "blocked" | "working", message?: string): void {
+function withSessionRef(
+  params: Record<string, unknown>,
+  ctx: ExtensionContext,
+): Record<string, unknown> | undefined {
+  try {
+    const file = ctx?.sessionManager?.getSessionFile?.();
+    if (typeof file === "string" && file.startsWith("/")) {
+      return { ...params, agent_session_path: file };
+    }
+  } catch {
+    // Fall back to the session id when a path is unavailable.
+  }
+
+  try {
+    const id = ctx?.sessionManager?.getSessionId?.();
+    if (typeof id === "string" && id.length > 0) {
+      return { ...params, agent_session_id: id };
+    }
+  } catch {
+    // Ignore and leave lifecycle reporting to herdr-agent-state.
+  }
+
+  return undefined;
+}
+
+function reportAgent(
+  state: "blocked" | "working",
+  message: string | undefined,
+  ctx: ExtensionContext,
+): void {
   if (!herdrEnabled()) return;
+  const params = withSessionRef({
+    pane_id: paneId,
+    source,
+    agent: "pi",
+    state,
+    message,
+    seq: nextHerdrReportSequence(),
+  }, ctx);
+  if (!params) return;
+
   const request = {
     id: `herdr-attention:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     method: "pane.report_agent",
-    params: {
-      pane_id: paneId,
-      source,
-      agent: "pi",
-      state,
-      message,
-      seq: nextHerdrReportSequence(),
-    },
+    params,
   };
   const payload = `${JSON.stringify(request)}\n`;
   try {
@@ -98,7 +130,12 @@ function reportAgent(state: "blocked" | "working", message?: string): void {
 export default function (pi: ExtensionAPI) {
   const activeToolCalls = new Set<string>();
 
-  function markBlocked(toolName: string, toolCallId: string, args: unknown): void {
+  function markBlocked(
+    toolName: string,
+    toolCallId: string,
+    args: unknown,
+    ctx: ExtensionContext,
+  ): void {
     if (!isAttentionTool(toolName) || activeToolCalls.has(toolCallId)) {
       return;
     }
@@ -106,45 +143,49 @@ export default function (pi: ExtensionAPI) {
     const label = attentionLabel(args);
     // Event for herdr-agent-state (blockedCount / restore after ask).
     pi.events.emit("herdr:blocked", { active: true, label });
-    // Direct report: Cursor MCP asks can miss the event-bus path; Herdr CLI
-    // accepts blocked when seq is high enough (verified manually).
-    reportAgent("blocked", label);
+    // Full-lifecycle reports must retain the owning Pi session. A sessionless
+    // blocked report causes Herdr 0.8 to drop the anchor and suppress recovery.
+    reportAgent("blocked", label, ctx);
   }
 
-  function clearBlocked(toolName: string, toolCallId: string): void {
+  function clearBlocked(
+    toolName: string,
+    toolCallId: string,
+    ctx: ExtensionContext,
+  ): void {
     if (!isAttentionTool(toolName) || !activeToolCalls.delete(toolCallId)) {
       return;
     }
     pi.events.emit("herdr:blocked", { active: false });
     if (activeToolCalls.size === 0) {
       // Hand control back; agent-state will settle on working/idle.
-      reportAgent("working");
+      reportAgent("working", undefined, ctx);
     }
   }
 
-  pi.on("tool_call", (event) => {
-    markBlocked(event.toolName, event.toolCallId, event.input);
+  pi.on("tool_call", (event, ctx) => {
+    markBlocked(event.toolName, event.toolCallId, event.input, ctx);
   });
 
-  pi.on("tool_execution_start", (event) => {
-    markBlocked(event.toolName, event.toolCallId, event.args);
+  pi.on("tool_execution_start", (event, ctx) => {
+    markBlocked(event.toolName, event.toolCallId, event.args, ctx);
   });
 
-  pi.on("tool_result", (event) => {
-    clearBlocked(event.toolName, event.toolCallId);
+  pi.on("tool_result", (event, ctx) => {
+    clearBlocked(event.toolName, event.toolCallId, ctx);
   });
 
-  pi.on("tool_execution_end", (event) => {
-    clearBlocked(event.toolName, event.toolCallId);
+  pi.on("tool_execution_end", (event, ctx) => {
+    clearBlocked(event.toolName, event.toolCallId, ctx);
   });
 
-  pi.on("session_shutdown", () => {
+  pi.on("session_shutdown", (_event, ctx) => {
     if (activeToolCalls.size > 0) {
       for (const _id of activeToolCalls) {
         pi.events.emit("herdr:blocked", { active: false });
       }
       activeToolCalls.clear();
-      reportAgent("working");
+      reportAgent("working", undefined, ctx);
     }
   });
 }

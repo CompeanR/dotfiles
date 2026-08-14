@@ -1,0 +1,234 @@
+# Grok/Sol overlay for Rahularya01/pi-cursor @ 7df0085 (1.4.9).
+# Re-apply after replacing ~/.pi/agent/src/pi-cursor:
+#   dotfiles/pi/pi-cursor-overlay/apply.sh
+#
+# Does not include generated src/proto/agent_pb.ts; apply.sh regenerates it.
+diff --git a/proto/agent.proto b/proto/agent.proto
+index 8e9f5a2..90eeb95 100644
+--- a/proto/agent.proto
++++ b/proto/agent.proto
+@@ -1482,6 +1482,7 @@ message ExecServerMessage {
+     RecordScreenArgs record_screen_args = 21;
+     ComputerUseArgs computer_use_args = 22;
+     WriteShellStdinArgs write_shell_stdin_args = 23;
++    SubagentArgs subagent_args = 28;
+   }
+ }
+ 
+@@ -1506,6 +1507,26 @@ message ExecClientMessage {
+     RecordScreenResult record_screen_result = 21;
+     ComputerUseResult computer_use_result = 22;
+     WriteShellStdinResult write_shell_stdin_result = 23;
++    SubagentResult subagent_result = 28;
++  }
++}
++
++message SubagentArgs {
++  string tool_call_id = 1;
++  string subagent_type = 2;
++  string model_id = 3;
++  string prompt = 4;
++  bool readonly = 5;
++}
++
++message SubagentError {
++  optional string agent_id = 1;
++  string error = 2;
++}
++
++message SubagentResult {
++  oneof result {
++    SubagentError error = 2;
+   }
+ }
+ 
+diff --git a/src/stream/request-build.ts b/src/stream/request-build.ts
+index c168840..49abbe4 100644
+--- a/src/stream/request-build.ts
++++ b/src/stream/request-build.ts
+@@ -145,7 +145,17 @@ function slimJsonSchema(value: unknown, depth = 0): unknown {
+   return out;
+ }
+ 
+-function conciseToolDescription(description: string): string {
++function conciseToolDescription(toolName: string, description: string): string {
++  if (toolName === "subagent") {
++    return [
++      "Delegate through Pi child agents.",
++      'For one foreground child call with top-level async:false and workflowScript: return runs.run("main", { agent: "work-explore", task: "..." }).',
++      "Do not put task text in action; action is management-only.",
++      "Use a configured agent such as work-explore.",
++      "Never set model or thinking in the tool arguments or inside runs.run; the configured agent selects them.",
++    ].join(" ");
++  }
++
+   const normalized = description.replace(/\s+/g, " ").trim();
+   if (normalized.length <= 120) return normalized;
+   const firstSentence = normalized.match(/^.{24,117}?[.!?](?:\s|$)/)?.[0]?.trim();
+@@ -165,7 +175,7 @@ export function slimOpenAIToolsForCursor(tools: OpenAIToolDef[]): OpenAIToolDef[
+       ...tool,
+       function: {
+         ...fn,
+-        description: conciseToolDescription(fn.description || ""),
++        description: conciseToolDescription(fn.name, fn.description || ""),
+         ...(parameters ? { parameters } : {}),
+       },
+     };
+diff --git a/src/stream/server-messages.ts b/src/stream/server-messages.ts
+index 887fd43..1833a6a 100644
+--- a/src/stream/server-messages.ts
++++ b/src/stream/server-messages.ts
+@@ -48,6 +48,8 @@ import {
+   ShellRejectedSchema,
+   ShellResultSchema,
+   ShellStreamSchema,
++  SubagentErrorSchema,
++  SubagentResultSchema,
+   WriteRejectedSchema,
+   WriteResultSchema,
+   WriteShellStdinErrorSchema,
+@@ -564,6 +566,22 @@ function handleExecMessageInner(
+     );
+     return true;
+   }
++  if (execCase === "subagentArgs") {
++    sendExecResult(
++      execMsg,
++      "subagentResult",
++      create(SubagentResultSchema, {
++        result: {
++          case: "error",
++          value: create(SubagentErrorSchema, {
++            error: "Cursor-native Task is unavailable. Use the Pi MCP subagent tool instead.",
++          }),
++        },
++      }),
++      sendFrame,
++    );
++    return true;
++  }
+ 
+   // Catch-all: log and attempt a generic rejection so the bridge doesn't hang
+   console.error(`[cursor-provider] UNHANDLED exec case: "${execCase}". Bridge may stall.`);
+diff --git a/tests/native-subagent-rejection.test.ts b/tests/native-subagent-rejection.test.ts
+new file mode 100644
+index 0000000..ad4d76d
+--- /dev/null
++++ b/tests/native-subagent-rejection.test.ts
+@@ -0,0 +1,77 @@
++import { describe, expect, it } from "vitest";
++import { fromBinary } from "@bufbuild/protobuf";
++import { AgentClientMessageSchema, AgentServerMessageSchema } from "../src/proto/agent_pb.js";
++import { processServerMessage } from "../src/stream/server-messages.js";
++import type { StreamState } from "../src/stream/types.js";
++
++function varint(value: number): number[] {
++  const bytes: number[] = [];
++  let remaining = value >>> 0;
++  while (remaining >= 0x80) {
++    bytes.push((remaining & 0x7f) | 0x80);
++    remaining >>>= 7;
++  }
++  bytes.push(remaining);
++  return bytes;
++}
++
++function field(fieldNumber: number, payload: number[]): number[] {
++  return [...varint((fieldNumber << 3) | 2), ...varint(payload.length), ...payload];
++}
++
++function textField(fieldNumber: number, value: string): number[] {
++  return field(fieldNumber, [...new TextEncoder().encode(value)]);
++}
++
++function capturedSubagentExec(): Uint8Array {
++  const subagentArgs = [
++    ...textField(1, "tool-call-1"),
++    ...textField(2, "generalPurpose"),
++    ...textField(3, "grok-4.6"),
++    ...textField(4, "Reply with a smoke-test status."),
++  ];
++  const execServerMessage = [
++    0x08,
++    0x07,
++    ...textField(15, "exec-1"),
++    ...field(28, subagentArgs),
++    ...field(55, []),
++  ];
++  return new Uint8Array(field(2, execServerMessage));
++}
++
++function connectPayload(frame: Uint8Array): Uint8Array {
++  const size = Buffer.from(frame).readUInt32BE(1);
++  return frame.subarray(5, 5 + size);
++}
++
++describe("Cursor-native subagent exec", () => {
++  it("rejects field 28 so the model can fall back to the Pi MCP subagent tool", () => {
++    const serverMessage = fromBinary(AgentServerMessageSchema, capturedSubagentExec());
++    const sentFrames: Uint8Array[] = [];
++    const state: StreamState = {
++      toolCallIndex: 0,
++      pendingExecs: [],
++      outputTokens: 0,
++      totalTokens: 0,
++      turnEnded: false,
++    };
++
++    const handled = processServerMessage(
++      serverMessage,
++      new Map(),
++      [],
++      (frame) => sentFrames.push(frame),
++      state,
++      () => {},
++      () => {},
++    );
++
++    expect(handled).toBe(true);
++    expect(sentFrames).toHaveLength(1);
++    const response = fromBinary(AgentClientMessageSchema, connectPayload(sentFrames[0]!));
++    expect(response.message.case).toBe("execClientMessage");
++    expect((response.message.value as any).message.case).toBe("subagentResult");
++    expect((response.message.value as any).message.value.result.case).toBe("error");
++  });
++});
+diff --git a/tests/request-size.test.ts b/tests/request-size.test.ts
+index 80f5c68..8253d1e 100644
+--- a/tests/request-size.test.ts
++++ b/tests/request-size.test.ts
+@@ -64,6 +64,34 @@ describe("slim tools for Cursor", () => {
+     expect(parameters.required).toEqual(["path"]);
+   });
+ 
++  it("preserves the subagent execution contract for Cursor", () => {
++    const tools: OpenAIToolDef[] = [
++      {
++        type: "function",
++        function: {
++          name: "subagent",
++          description: [
++            "Use direct execution for small work.",
++            "EXECUTION CONTRACT FOR THIS INSTALLED RUNTIME:",
++            "All model-facing execution uses workflowScript.",
++            'Use return runs.run("main", { agent: "work-explore", task: "..." }).',
++            "Do not put task text in action.",
++            "Use top-level async:false when waiting for the child.",
++            "Never set model or thinking; the configured agent selects them.",
++          ].join(" "),
++          parameters: { type: "object", properties: {} },
++        },
++      },
++    ];
++
++    const description = slimOpenAIToolsForCursor(tools)[0]!.function.description || "";
++    expect(description).toContain("workflowScript");
++    expect(description).toContain("return runs.run");
++    expect(description).toContain("Do not put task text in action");
++    expect(description).toContain("top-level async:false");
++    expect(description).toContain("Never set model or thinking");
++  });
++
+   it("materially shrinks MCP schema payload vs raw tools", () => {
+     const raw = fatTools(20);
+     const prev = process.env.PI_CURSOR_SLIM_TOOLS;

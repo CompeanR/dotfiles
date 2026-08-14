@@ -21,6 +21,7 @@ class RoutingGateTest(unittest.TestCase):
         self.env = os.environ | {"CLAUDE_PI_GATE_STATE_DIR": self.tempdir.name}
         self.session = "session-a"
         self.prompt_id = "prompt-a"
+        self.cwd = self.tempdir.name
         self.prompt()
 
     def tearDown(self):
@@ -43,7 +44,7 @@ class RoutingGateTest(unittest.TestCase):
         payload = {
             "session_id": self.session,
             "prompt_id": self.prompt_id,
-            "cwd": str(ROOT),
+            "cwd": self.cwd,
         }
         payload.update(values)
         return payload
@@ -95,7 +96,24 @@ class RoutingGateTest(unittest.TestCase):
             self.complete("Read", f"{prefix}-{index}", {"file_path": f"/tmp/{index}"})
 
     def pi_input(self, role):
-        return {"role": role, "brief": "Self-contained test brief", "cwd": str(ROOT), "timeout_ms": 600000}
+        return {"role": role, "brief": "Self-contained test brief", "cwd": self.cwd, "timeout_ms": 600000}
+
+    def use_clean_git_repo(self):
+        worktree = tempfile.TemporaryDirectory()
+        self.addCleanup(worktree.cleanup)
+        root = Path(worktree.name)
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
+        subprocess.run(["git", "-C", str(root), "config", "user.name", "Routing Gate Test"], check=True)
+        tracked = root / "tracked.txt"
+        tracked.write_text("initial\n")
+        subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
+        subprocess.run(["git", "-C", str(root), "commit", "-qm", "initial"], check=True)
+        self.cwd = str(root)
+        self.session = "session-git"
+        self.prompt_id = "prompt-git"
+        self.prompt()
+        return root
 
     def test_prompt_emits_hidden_routing_context(self):
         output = self.prompt()
@@ -210,18 +228,45 @@ class RoutingGateTest(unittest.TestCase):
         self.complete("Edit", "copy-test-2", expected)
         self.assertIsNone(self.stop())
 
-    def test_verify_started_before_later_change_is_stale(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+    def test_clean_worktree_never_requires_verify(self):
+        root = self.use_clean_git_repo()
+        write = {"file_path": str(root / "tracked.txt"), "content": "x" * 2000}
+        self.complete("Write", "synthetic-large-write", write)
+        self.assertIsNone(self.stop())
+
+    def test_successful_verify_covers_unchanged_diff_across_later_tool_activity(self):
+        root = self.use_clean_git_repo()
+        tracked = root / "tracked.txt"
+        tracked.write_text("x" * 2000)
+        write = {"file_path": str(tracked), "content": "x" * 2000}
         self.complete("Write", "large-write", write)
-        verify = self.pi_input("verify")
-        self.pre(PI_TOOL, "verify-old", verify)
-        self.complete("Bash", "bash-after-verify-start", {"command": "true"})
-        self.finish(PI_TOOL, "verify-old", verify)
         self.assertEqual(self.stop()["decision"], "block")
 
+        verify = self.pi_input("verify")
         self.pre(PI_TOOL, "verify-current", verify)
         self.finish(PI_TOOL, "verify-current", verify)
         self.assertIsNone(self.stop())
+
+        self.prompt("prompt-after-verify")
+        self.complete("Bash", "read-only-bash", {"command": "git status --short"})
+        self.complete_reads(WORK_LIMIT - 1, prefix="after-read-only-bash")
+        self.assertIsNone(self.stop())
+
+    def test_change_after_successful_verify_requires_new_verify(self):
+        root = self.use_clean_git_repo()
+        tracked = root / "tracked.txt"
+        tracked.write_text("x" * 2000)
+        write = {"file_path": str(tracked), "content": "x" * 2000}
+        self.complete("Write", "large-write", write)
+        verify = self.pi_input("verify")
+        self.pre(PI_TOOL, "verify-first-diff", verify)
+        self.finish(PI_TOOL, "verify-first-diff", verify)
+        self.assertIsNone(self.stop())
+
+        tracked.write_text("y" * 2000)
+        edit = {"file_path": str(tracked), "old_string": "x" * 2000, "new_string": "y" * 2000}
+        self.complete("Edit", "changed-after-verify", edit)
+        self.assertEqual(self.stop()["decision"], "block")
 
     def test_large_deletion_requires_verify(self):
         deletion = {"file_path": "/tmp/a", "old_string": "x" * 2000, "new_string": ""}
@@ -354,7 +399,7 @@ class RoutingGateTest(unittest.TestCase):
             "verification_required": True,
             "verified_epoch": 3,
         })
-        self.assertEqual(migrated["version"], 3)
+        self.assertEqual(migrated["version"], 4)
         self.assertEqual(migrated["work_completed"], 10)
         self.assertEqual(migrated["change_epoch"], 4)
         self.assertTrue(migrated["verification_required"])
@@ -376,9 +421,12 @@ class RoutingGateTest(unittest.TestCase):
         self.finish("AskUserQuestion", "question-1", question)
         self.assertEqual(self.stop()["decision"], "block")
 
-    def test_successful_and_failed_apply_both_require_verify(self):
+    def test_successful_and_failed_apply_both_require_verify_when_they_change_files(self):
+        root = self.use_clean_git_repo()
+        tracked = root / "tracked.txt"
         apply_request = self.pi_input("apply")
         self.pre(PI_TOOL, "apply-success", apply_request)
+        tracked.write_text("apply success\n")
         self.finish(PI_TOOL, "apply-success", apply_request)
         self.assertEqual(self.stop()["decision"], "block")
 
@@ -389,18 +437,23 @@ class RoutingGateTest(unittest.TestCase):
 
         self.prompt("prompt-c")
         self.pre(PI_TOOL, "apply-failure", apply_request)
+        tracked.write_text("apply failure\n")
         self.finish(PI_TOOL, "apply-failure", apply_request, succeeded=False)
         self.assertEqual(self.stop()["decision"], "block")
 
-    def test_current_epoch_verify_failure_fails_open_but_later_change_invalidates_it(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+    def test_current_diff_verify_failure_fails_open_but_later_change_invalidates_it(self):
+        root = self.use_clean_git_repo()
+        tracked = root / "tracked.txt"
+        tracked.write_text("x" * 2000)
+        write = {"file_path": str(tracked), "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         verify = self.pi_input("verify")
         self.pre(PI_TOOL, "verify-failure", verify)
         self.finish(PI_TOOL, "verify-failure", verify, succeeded=False)
         self.assertIsNone(self.stop())
 
-        edit = {"file_path": "/tmp/a", "old_string": "a", "new_string": "b"}
+        tracked.write_text("y" * 2000)
+        edit = {"file_path": str(tracked), "old_string": "x", "new_string": "y"}
         self.complete("Edit", "later-edit", edit)
         self.assertEqual(self.stop()["decision"], "block")
 

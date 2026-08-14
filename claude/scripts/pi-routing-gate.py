@@ -5,6 +5,7 @@ import json
 import os
 import posixpath
 import re
+import subprocess
 import sys
 import tempfile
 from contextlib import contextmanager
@@ -92,7 +93,7 @@ REMINDER = (
 
 def initial_state():
     return {
-        "version": 3,
+        "version": 4,
         "prompt_id": "",
         "legacy_prompt_seq": 0,
         "work_completed": 0,
@@ -111,12 +112,14 @@ def initial_state():
         "verification_required": False,
         "verified_epoch": -1,
         "verify_failed_epoch": -1,
+        "verified_snapshot": "",
+        "verify_failed_snapshot": "",
     }
 
 
 def normalized_state(value):
     state = initial_state()
-    if isinstance(value, dict) and value.get("version") in {1, 2, 3}:
+    if isinstance(value, dict) and value.get("version") in {1, 2, 3, 4}:
         for key in state:
             if key == "version":
                 continue
@@ -138,6 +141,69 @@ def session_key(payload):
     if not isinstance(session_id, str) or not session_id:
         return None
     return hashlib.sha256(session_id.encode()).hexdigest()
+
+
+def git_output(cwd, *args):
+    try:
+        result = subprocess.run(
+            ["git", "-C", cwd, *args],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=1.5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def worktree_snapshot(payload):
+    cwd = payload.get("cwd")
+    if not isinstance(cwd, str) or not cwd:
+        return None
+
+    root_output = git_output(cwd, "rev-parse", "--show-toplevel")
+    if root_output is None:
+        return None
+    root = os.fsdecode(root_output.rstrip(b"\n"))
+    status = git_output(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")
+    if status is None:
+        return None
+    if not status:
+        return "clean"
+
+    unstaged = git_output(root, "diff", "--raw", "--full-index")
+    unstaged_paths = git_output(root, "diff", "--name-only", "-z")
+    staged = git_output(root, "diff", "--cached", "--raw", "--full-index")
+    untracked = git_output(root, "ls-files", "--others", "--exclude-standard", "-z")
+    if unstaged is None or unstaged_paths is None or staged is None or untracked is None:
+        return None
+
+    digest = hashlib.sha256()
+    for label, value in ((b"status", status), (b"unstaged", unstaged), (b"staged", staged)):
+        digest.update(label + b"\0" + value + b"\0")
+
+    root_bytes = os.fsencode(root)
+    snapshot_paths = (
+        (b"worktree", relative) for relative in filter(None, unstaged_paths.split(b"\0"))
+    )
+    untracked_paths = (
+        (b"untracked", relative) for relative in filter(None, untracked.split(b"\0"))
+    )
+    for label, relative in (*snapshot_paths, *untracked_paths):
+        digest.update(label + b"\0" + relative + b"\0")
+        path = os.path.join(root_bytes, relative)
+        try:
+            if os.path.islink(path):
+                digest.update(b"symlink\0" + os.readlink(path) + b"\0")
+                continue
+            with open(path, "rb") as stream:
+                while chunk := stream.read(1024 * 1024):
+                    digest.update(chunk)
+        except OSError:
+            digest.update(b"unavailable")
+        digest.update(b"\0")
+    return f"dirty:{digest.hexdigest()}"
 
 
 @contextmanager
@@ -343,6 +409,7 @@ def pre_tool(state, payload):
             state["pi_inflight"][tool_use_id] = {
                 "role": tool_input["role"],
                 "epoch": state["change_epoch"],
+                "snapshot": worktree_snapshot(payload),
             }
         return None
 
@@ -424,6 +491,9 @@ def finish_pi(state, payload, succeeded):
 
     role = call["role"]
     captured_epoch = call["epoch"]
+    captured_snapshot = call.get("snapshot")
+    current_snapshot = worktree_snapshot(payload) if role == "verify" else None
+    unchanged_snapshot = current_snapshot is not None and current_snapshot == captured_snapshot
     if succeeded:
         state["delegated"] = True
         if role not in state["delegated_roles"]:
@@ -434,6 +504,8 @@ def finish_pi(state, payload, succeeded):
             state["verification_required"] = True
         elif role == "verify":
             state["verified_epoch"] = max(state["verified_epoch"], captured_epoch)
+            if unchanged_snapshot:
+                state["verified_snapshot"] = current_snapshot
     else:
         state["delegation_failed"] = True
         if role == "apply":
@@ -442,6 +514,8 @@ def finish_pi(state, payload, succeeded):
             state["verification_required"] = True
         elif role == "verify":
             state["verify_failed_epoch"] = max(state["verify_failed_epoch"], captured_epoch)
+            if unchanged_snapshot:
+                state["verify_failed_snapshot"] = current_snapshot
     mark_processed(state, tool_use_id)
 
 
@@ -486,6 +560,14 @@ def stop_event(state, payload):
     if has_running_pi_task(payload):
         return None
     if not state["verification_required"]:
+        return None
+
+    snapshot = worktree_snapshot(payload)
+    if snapshot == "clean" or snapshot in {
+        state["verified_snapshot"],
+        state["verify_failed_snapshot"],
+    }:
+        state["verification_required"] = False
         return None
 
     epoch = state["change_epoch"]

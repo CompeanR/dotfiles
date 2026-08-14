@@ -2,6 +2,83 @@ return {
   "lewis6991/gitsigns.nvim",
   opts = function(_, opts)
     local original_on_attach = opts.on_attach
+    local hunk_nav = require("config.git_hunk_nav")
+
+    local function abs_path(path)
+      local p = vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
+      return vim.uv.fs_realpath(p) or p
+    end
+
+    local function existing_file(path)
+      local stat = vim.uv.fs_stat(path)
+      return stat and stat.type == "file" and path or nil
+    end
+
+    local function files_from_git_explorer()
+      if not package.loaded["neo-tree"] then return {} end
+      local ok, manager = pcall(require, "neo-tree.sources.manager")
+      if not ok then return {} end
+      local state = manager.get_state("git_status")
+      if not (state and state.tree and state.winid and vim.api.nvim_win_is_valid(state.winid)) then return {} end
+
+      local files = {}
+      local function walk(parent_id)
+        for _, node in ipairs(state.tree:get_nodes(parent_id)) do
+          if node.type == "file" then
+            local path = existing_file(abs_path(node.path or node:get_id()))
+            if path then files[#files + 1] = path end
+          end
+          if node:has_children() then walk(node:get_id()) end
+        end
+      end
+      walk()
+      return files
+    end
+
+    local function files_from_git_status()
+      local name = vim.api.nvim_buf_get_name(0)
+      local start = name ~= "" and name or vim.uv.cwd()
+      local root = start and vim.fs.root(start, ".git")
+      if not root then return {} end
+
+      -- ponytail: porcelain scan is O(dirty files) per file jump; switch to
+      -- gitsigns Repo:files_changed if a 10k-file dirty tree ever hurts.
+      local result = vim.system({ "git", "-C", root, "status", "--porcelain=v1", "-z", "-uall" }, { text = true }):wait()
+      if result.code ~= 0 or not result.stdout then return {} end
+
+      local files = {}
+      local parts = vim.split(result.stdout, "\0", { plain = true, trimempty = true })
+      local i = 1
+      while i <= #parts do
+        local status, file = parts[i]:match("^(..) (.+)$")
+        i = i + 1
+        if status then
+          if status:find("[RC]") then
+            file = parts[i] or file
+            i = i + 1
+          end
+          local path = existing_file(abs_path(root .. "/" .. file))
+          if path then files[#files + 1] = path end
+        end
+      end
+      return files
+    end
+
+    local function changed_files()
+      local files = files_from_git_explorer()
+      if #files > 0 then return files end
+      return files_from_git_status()
+    end
+
+    local function reveal_in_git_explorer(path)
+      if not package.loaded["neo-tree"] then return end
+      local ok_manager, manager = pcall(require, "neo-tree.sources.manager")
+      local ok_renderer, renderer = pcall(require, "neo-tree.ui.renderer")
+      if not (ok_manager and ok_renderer) then return end
+      local state = manager.get_state("git_status")
+      if not (state and renderer.window_exists(state)) then return end
+      renderer.focus_node(state, path, true)
+    end
 
     local function apply_inline_preview_highlights()
       local highlights = {
@@ -26,63 +103,115 @@ return {
       callback = apply_inline_preview_highlights,
     })
 
-    opts.on_attach = function(buffer)
-      if original_on_attach then original_on_attach(buffer) end
+    local scroll_pause = {
+      count = 0,
+      previous_buf_scroll = nil,
+      scroll = nil,
+      was_enabled = false,
+    }
 
-      local gs = package.loaded.gitsigns
-      local scroll_pause = {
-        count = 0,
-        previous_buf_scroll = nil,
-        scroll = nil,
-        was_enabled = false,
-      }
+    local function pause_snacks_scroll()
+      local buffer = vim.api.nvim_get_current_buf()
+      if scroll_pause.count == 0 then
+        local ok, scroll = pcall(require, "snacks.scroll")
 
-      local function pause_snacks_scroll()
-        if scroll_pause.count == 0 then
-          local ok, scroll = pcall(require, "snacks.scroll")
+        scroll_pause.scroll = ok and scroll or nil
+        scroll_pause.was_enabled = ok and scroll.enabled or false
+        scroll_pause.previous_buf_scroll = vim.b[buffer].snacks_scroll
 
-          scroll_pause.scroll = ok and scroll or nil
-          scroll_pause.was_enabled = ok and scroll.enabled or false
-          scroll_pause.previous_buf_scroll = vim.b[buffer].snacks_scroll
+        vim.b[buffer].snacks_scroll = false
 
-          vim.b[buffer].snacks_scroll = false
-
-          if scroll_pause.was_enabled then scroll.disable() end
-        end
-
-        scroll_pause.count = scroll_pause.count + 1
-
-        local restored = false
-        return function()
-          if restored then return end
-          restored = true
-
-          vim.defer_fn(function()
-            scroll_pause.count = math.max(scroll_pause.count - 1, 0)
-            if scroll_pause.count > 0 then return end
-
-            if vim.api.nvim_buf_is_valid(buffer) then vim.b[buffer].snacks_scroll = scroll_pause.previous_buf_scroll end
-
-            if scroll_pause.was_enabled and scroll_pause.scroll and not scroll_pause.scroll.enabled then scroll_pause.scroll.enable() end
-
-            scroll_pause.previous_buf_scroll = nil
-            scroll_pause.scroll = nil
-            scroll_pause.was_enabled = false
-          end, 120)
-        end
+        if scroll_pause.was_enabled then scroll.disable() end
       end
 
-      local function nav_hunk_without_scroll_animation(direction)
-        local restore_scroll = pause_snacks_scroll()
+      scroll_pause.count = scroll_pause.count + 1
 
-        gs.nav_hunk(direction, {}, function()
+      local restored = false
+      return function()
+        if restored then return end
+        restored = true
+
+        vim.defer_fn(function()
+          scroll_pause.count = math.max(scroll_pause.count - 1, 0)
+          if scroll_pause.count > 0 then return end
+
+          if vim.api.nvim_buf_is_valid(buffer) then vim.b[buffer].snacks_scroll = scroll_pause.previous_buf_scroll end
+
+          if scroll_pause.was_enabled and scroll_pause.scroll and not scroll_pause.scroll.enabled then scroll_pause.scroll.enable() end
+
+          scroll_pause.previous_buf_scroll = nil
+          scroll_pause.scroll = nil
+          scroll_pause.was_enabled = false
+        end, 120)
+      end
+    end
+
+    local function land_in_buffer(gs, direction, restore_scroll)
+      local buf = vim.api.nvim_get_current_buf()
+      local hunks = gs and gs.get_hunks(buf) or {}
+      if not gs or #hunks == 0 then
+        -- untracked: gitsigns does not attach, so treat the file as one stop
+        local lnum = direction == "next" and 1 or vim.api.nvim_buf_line_count(buf)
+        pcall(vim.api.nvim_win_set_cursor, 0, { math.max(lnum, 1), 0 })
+        restore_scroll()
+        return
+      end
+      gs.nav_hunk(direction == "next" and "first" or "last", {}, function()
+        gs.preview_hunk_inline()
+        restore_scroll()
+      end)
+    end
+
+    local function nav_hunk_without_scroll_animation(direction)
+      local restore_scroll = pause_snacks_scroll()
+      vim.defer_fn(restore_scroll, 800)
+
+      local buffer = vim.api.nvim_get_current_buf()
+      local gs = package.loaded.gitsigns
+      local hunks = gs and gs.get_hunks(buffer) or {}
+      local cursor = vim.api.nvim_win_get_cursor(0)
+      if gs and hunk_nav.has_hunk(hunks, cursor[1], direction, vim.api.nvim_buf_line_count(buffer)) then
+        gs.nav_hunk(direction, { wrap = false }, function()
           gs.preview_hunk_inline()
           restore_scroll()
         end)
-
-        -- Safety net in case gitsigns returns early and never invokes the callback.
-        vim.defer_fn(restore_scroll, 500)
+        return
       end
+
+      local next_file = hunk_nav.adjacent_path(changed_files(), abs_path(vim.api.nvim_buf_get_name(buffer)), direction)
+      if not next_file then
+        vim.api.nvim_echo({ { "No more hunks", "WarningMsg" } }, false, {})
+        restore_scroll()
+        return
+      end
+
+      vim.cmd.edit(vim.fn.fnameescape(next_file))
+      reveal_in_git_explorer(next_file)
+      if not gs then
+        land_in_buffer(nil, direction, restore_scroll)
+        return
+      end
+      gs.attach({ bufnr = vim.api.nvim_get_current_buf() }, function()
+        land_in_buffer(gs, direction, restore_scroll)
+      end)
+    end
+
+    local function map_hunk_nav(lhs, direction, diff_motion, desc, buffer)
+      vim.keymap.set("n", lhs, function()
+        if vim.wo.diff then
+          vim.cmd.normal({ diff_motion, bang = true })
+        else
+          nav_hunk_without_scroll_animation(direction)
+        end
+      end, { buffer = buffer, desc = desc, silent = true })
+    end
+
+    -- gitsigns skips untracked buffers, so on_attach never maps ]h there.
+    map_hunk_nav("]h", "next", "]c", "Next Hunk or File")
+    map_hunk_nav("[h", "prev", "[c", "Prev Hunk or File")
+
+    opts.on_attach = function(buffer)
+      if original_on_attach then original_on_attach(buffer) end
 
       local function has_inline_preview()
         local ok, preview = pcall(require, "gitsigns.actions.preview")
@@ -102,21 +231,11 @@ return {
         restore_scroll()
       end
 
-      local function map_hunk_nav(lhs, direction, diff_motion, desc)
-        vim.keymap.set("n", lhs, function()
-          if vim.wo.diff then
-            vim.cmd.normal({ diff_motion, bang = true })
-          else
-            nav_hunk_without_scroll_animation(direction)
-          end
-        end, { buffer = buffer, desc = desc, silent = true })
-      end
-
       -- LazyVim defines these mappings inside gitsigns' on_attach.
       -- Re-map only hunk navigation so Snacks smooth scroll stays enabled globally,
       -- but is paused for this path because it clears inline previews via CursorMoved.
-      map_hunk_nav("]h", "next", "]c", "Next Hunk")
-      map_hunk_nav("[h", "prev", "[c", "Prev Hunk")
+      map_hunk_nav("]h", "next", "]c", "Next Hunk or File", buffer)
+      map_hunk_nav("[h", "prev", "[c", "Prev Hunk or File", buffer)
 
       for _, command in ipairs({ "zt", "zb", "zz" }) do
         vim.keymap.set("n", command, function()

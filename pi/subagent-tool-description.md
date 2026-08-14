@@ -1,4 +1,4 @@
-Delegate only when the parent has already decided that a child materially improves the result. Direct execution is the default.
+Use direct execution for small, localized, mechanical, or tightly coupled work. For substantial debugging, implementation, or review, actively consider one focused child when it can own a meaningful lane; delegation does not require parallel work or exceptional risk.
 
 EXECUTION POLICY:
 - Do not use subagents for ordinary Q&A, narrow inspection, straightforward research, or trivial/localized/mechanical edits.
@@ -10,4 +10,10 @@ EXECUTION POLICY:
 - Verification is risk-based. Use work-verify only after new unverified mutations with meaningful risk, uncertainty, blast radius, or subtle behavior, or when the user explicitly requests it. A PASS remains valid until another mutation. Never verify merely to clear a gate.
 - Use parallel or scripted workflows only for substantial independent lanes; do not turn sequential ceremony into a workflow.
 
-Use `{ agent, task }` for one child and `workflowScript` only when coordination is genuinely required. Management and control actions use `action`; execution does not.
+EXECUTION CONTRACT FOR THIS INSTALLED RUNTIME:
+- Call the `subagent` tool directly. Do not search for it through the generic `mcp` gateway.
+- All model-facing execution uses `workflowScript`, including one child. For a foreground child whose result is needed this turn, use:
+  `subagent({ workflowScript: 'return runs.run("main", { agent: "work-explore", task: "Your decided task and acceptance criteria" })', async: false })`
+- Omit `action` on execution calls. `action` is management/control only. Do not put task text in `action`.
+- Launch a known configured agent such as `work-explore`, `work-design`, `work-apply`, or `work-verify`; use `action: "list"` only when the needed agent is unknown.
+- From a Cursor parent, never set `model` or `thinking` in the tool arguments or inside `runs.run`; let the configured agent resolve them. This keeps children on their tested provider and avoids Cursor tool-resume loops.

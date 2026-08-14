@@ -142,14 +142,37 @@ test("explicit user verification bypasses mutation requirement", () => {
   assert.equal(decision.disposition, "allow")
 })
 
-test("substantial work receives a soft delegation reminder", () => {
-  const state = stateFor("Refactor the authentication architecture across multiple modules")
-  assert.match(delegationReminder(state), /state `delegate` or `direct`/i)
+test("substantial debugging implementation and review receive a soft delegation reminder", () => {
+  const prompts = [
+    "Debug why escaped delimiters intermittently fail in the parser",
+    "Diagnose the root cause of dropped retry events",
+    "Implement support for escaped delimiters in the parser",
+    "Review the parser changes for missed edge cases",
+    "Refactor the authentication architecture across multiple modules",
+  ]
+
+  for (const prompt of prompts) {
+    const reminder = delegationReminder(stateFor(prompt))
+    assert.equal(typeof reminder, "string", prompt)
+    assert.match(reminder, /state `delegate` or `direct`/i, prompt)
+    assert.match(reminder, /one focused child/i, prompt)
+    assert.match(reminder, /not a gate/i, prompt)
+  }
 })
 
-test("localized edits and read-only questions do not receive reminders", () => {
-  assert.equal(delegationReminder(stateFor("Update AGENTS.md with one sentence")), undefined)
-  assert.equal(delegationReminder(stateFor("Explain how the authentication module works")), undefined)
+test("explicitly small work and narrow questions do not receive reminders", () => {
+  const prompts = [
+    "Fix a typo in README.md",
+    "Update AGENTS.md with one sentence",
+    "Implement a trivial one-line getter",
+    "Review this one-line wording change",
+    "Inspect this function and answer one narrow question",
+    "Explain how the authentication module works",
+  ]
+
+  for (const prompt of prompts) {
+    assert.equal(delegationReminder(stateFor(prompt)), undefined, prompt)
+  }
 })
 
 test("audit reports direct execution without blocking it", () => {

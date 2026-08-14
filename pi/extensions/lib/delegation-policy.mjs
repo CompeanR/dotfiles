@@ -6,6 +6,8 @@ const RISK_RATIONALE = /\b(concurr(?:ency|ent)|race|deadlock|security|auth(?:ent
 const HIGH_RISK_PATH = /(?:^|[/_.-])(auth|security|permission|credential|secret|payment|billing|migration|schema|database|deploy|release|workflow|lock|settings?|config|agents?|extensions?|subagents?)(?:[/_.-]|$)/i;
 const MUTATING_BASH = /(?:^|[;&|]\s*)(?:rm|mv|cp|install|mkdir|touch|truncate|chmod|chown|ln|sed\s+-i|perl\s+-pi|git\s+(?:apply|checkout|reset|clean|mv|rm)|npm\s+(?:install|uninstall|update)|pnpm\s+(?:add|remove|install|update)|yarn\s+(?:add|remove|install)|cargo\s+(?:add|remove)|pip\s+install)\b|(^|[^>])>{1,2}(?![&])|\btee\b/i;
 const MUTATION_INTENT = /\b(?:implement|build|change|fix|refactor|migrat\w*|redesign|integrat\w*|overhaul|add|remove|update)\b/i;
+const MEANINGFUL_LANE_INTENT = /\b(?:debug\w*|diagnos\w*|root[ -]?cause|implement\w*|build\w*|review\w*|audit\w*)\b/i;
+const EXPLICIT_SMALL_SCOPE = /\b(?:tiny|trivial|mechanical|typo|spelling|formatting|one[- ]line|single[- ]line|one sentence|single sentence|tightly coupled)\b|\b(?:docs?|documentation|comments?|wording)[ -]only\b|\blocali[sz]ed\s+(?:edit|change|rename)\b/i;
 const MULTI_AREA_SCOPE = /\b(?:multiple|several|many|across)\s+(?:files?|modules?|components?|packages?|services?|systems?)\b|\bmulti[ -](?:file|module|component|package|service)\b/i;
 const STRUCTURAL_SCOPE = /\b(?:architecture|architectural|cross[ -]cutting|refactor|migration|integration|overhaul|redesign)\b/i;
 const DIRECT_WORK_TOOLS = new Set([
@@ -153,8 +155,14 @@ export function snapshotHarnessState(state) {
 
 export function beginPrompt(state, prompt) {
   const text = typeof prompt === "string" ? prompt : "";
-  const substantial = MUTATION_INTENT.test(text)
-    && (RISK_RATIONALE.test(text) || MULTI_AREA_SCOPE.test(text) || STRUCTURAL_SCOPE.test(text));
+  const substantial = !EXPLICIT_SMALL_SCOPE.test(text)
+    && (
+      MEANINGFUL_LANE_INTENT.test(text)
+      || (
+        MUTATION_INTENT.test(text)
+        && (RISK_RATIONALE.test(text) || MULTI_AREA_SCOPE.test(text) || STRUCTURAL_SCOPE.test(text))
+      )
+    );
   state.prompt = {
     text,
     explicitDelegation: EXPLICIT_DELEGATION.test(text),
@@ -172,7 +180,7 @@ export function beginPrompt(state, prompt) {
 
 export function delegationReminder(state) {
   if (!state.prompt.audit.reminderRequired) return undefined;
-  return "This request appears substantial. Before acting, explicitly choose whether delegation materially reduces uncertainty, parallelizes independent work, isolates a substantial bounded implementation, or adds valuable independent review. Briefly state `delegate` or `direct` with the reason, then proceed. This is an audit reminder, not a gate.";
+  return "This request appears to involve substantial debugging, implementation, or review. Before acting, briefly state `delegate` or `direct` and why. Actively consider one focused child when it can own a meaningful lane; direct execution remains appropriate for small or tightly coupled work. This is an audit reminder, not a gate.";
 }
 
 export function finishPromptAudit(state) {

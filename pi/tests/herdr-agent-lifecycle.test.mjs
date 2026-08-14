@@ -19,13 +19,14 @@ async function waitFor(predicate, message) {
   }
 }
 
-test("an answered question settles the Herdr agent back to idle", async (t) => {
+test("an answered question keeps its Herdr session anchor and settles to idle", async (t) => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "herdr-agent-lifecycle-"));
   const socketPath = path.join(tempDir, "herdr.sock");
   const sockets = new Set();
   const reports = [];
   let highestSequence = Number.NEGATIVE_INFINITY;
   let visibleState;
+  let visibleSessionPath;
 
   const server = net.createServer((socket) => {
     sockets.add(socket);
@@ -42,14 +43,33 @@ test("an answered question settles the Herdr agent back to idle", async (t) => {
         const request = JSON.parse(input.slice(0, newline));
         input = input.slice(newline + 1);
 
+        if (request.method === "pane.report_agent_session") {
+          const { agent_session_path: sessionPath, seq } = request.params;
+          const accepted = typeof sessionPath === "string" && seq > highestSequence;
+          if (accepted) {
+            highestSequence = seq;
+            visibleSessionPath = sessionPath;
+          }
+          reports.push({ accepted, method: request.method, seq, sessionPath });
+        }
+
         if (request.method === "pane.report_agent") {
-          const { seq, state } = request.params;
-          const accepted = seq > highestSequence;
+          const {
+            agent_session_path: sessionPath,
+            seq,
+            state,
+          } = request.params;
+          const sessionMatches = visibleSessionPath !== undefined
+            && (sessionPath === undefined || sessionPath === visibleSessionPath);
+          const accepted = sessionMatches && seq > highestSequence;
           if (accepted) {
             highestSequence = seq;
             visibleState = state;
+            // Herdr 0.8 replaces the full-lifecycle authority with exactly the
+            // incoming report. A sessionless report therefore drops the anchor.
+            visibleSessionPath = sessionPath;
           }
-          reports.push({ accepted, seq, state });
+          reports.push({ accepted, method: request.method, seq, sessionPath, state });
         }
 
         socket.write(`${JSON.stringify({ id: request.id, result: {} })}\n`);
@@ -144,5 +164,10 @@ test("an answered question settles the Herdr agent back to idle", async (t) => {
     visibleState,
     "idle",
     `Herdr remained ${visibleState}; reports: ${JSON.stringify(reports)}`,
+  );
+  assert.equal(
+    visibleSessionPath,
+    "/tmp/test-session.jsonl",
+    `Herdr lost the Pi session anchor; reports: ${JSON.stringify(reports)}`,
   );
 });

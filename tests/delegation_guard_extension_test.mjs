@@ -38,10 +38,10 @@ function uiContext(notices) {
   }
 }
 
-test("substantial direct work injects and records one visible soft audit", () => {
+test("substantial debugging injects and records one visible soft audit", () => {
   const harness = loadExtension()
   const before = harness.handlers.get("before_agent_start")({
-    prompt: "Refactor the authentication architecture across multiple modules",
+    prompt: "Debug why escaped delimiters intermittently fail in the parser",
     systemPrompt: "base prompt",
   })
 
