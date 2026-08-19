@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -27,8 +28,78 @@ WORK_TOOLS = {
     "MultiEdit",
 }
 EXPLICIT_MUTATION_TOOLS = {"Edit", "Write", "NotebookEdit", "MultiEdit"}
+DOC_EXTENSIONS = {".md", ".markdown", ".rst", ".txt", ".adoc"}
+READ_ONLY_BASH_COMMANDS = {
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "grep",
+    "rg",
+    "fd",
+    "find",
+    "file",
+    "stat",
+    "du",
+    "df",
+    "pwd",
+    "which",
+    "whereis",
+    "type",
+    "echo",
+    "printf",
+    "env",
+    "printenv",
+    "date",
+    "uname",
+    "whoami",
+    "id",
+    "ps",
+    "tr",
+    "cut",
+    "sort",
+    "uniq",
+    "column",
+    "diff",
+    "cmp",
+    "md5sum",
+    "sha256sum",
+    "basename",
+    "dirname",
+    "realpath",
+    "readlink",
+    "test",
+    "true",
+    "jq",
+    "strings",
+    "cd",
+    "git",
+    "python3",
+}
+READ_ONLY_GIT_SUBCOMMANDS = {
+    "status",
+    "log",
+    "diff",
+    "show",
+    "rev-parse",
+    "branch",
+    "ls-files",
+    "ls-tree",
+    "blame",
+    "shortlog",
+    "describe",
+    "remote",
+    "grep",
+    "cat-file",
+    "rev-list",
+    "reflog",
+    "worktree",
+}
 WORK_LIMIT = 10
 SMALL_EDIT_LIMIT = 250
+STOP_BLOCK_LIMIT = 2
+PI_INFLIGHT_TTL = 3600
 VERIFY_CHANGE_VOLUME = 2000
 VERIFY_FILE_LIMIT = 4
 HIGH_RISK_SEGMENTS = {
@@ -93,7 +164,7 @@ REMINDER = (
 
 def initial_state():
     return {
-        "version": 4,
+        "version": 5,
         "prompt_id": "",
         "legacy_prompt_seq": 0,
         "work_completed": 0,
@@ -114,18 +185,30 @@ def initial_state():
         "verify_failed_epoch": -1,
         "verified_snapshot": "",
         "verify_failed_snapshot": "",
+        "stop_blocks": 0,
+        "stop_block_epoch": -1,
     }
 
 
 def normalized_state(value):
     state = initial_state()
-    if isinstance(value, dict) and value.get("version") in {1, 2, 3, 4}:
+    if isinstance(value, dict) and value.get("version") in {1, 2, 3, 4, 5}:
         for key in state:
             if key == "version":
                 continue
             if key in value and isinstance(value[key], type(state[key])):
                 state[key] = value[key]
+    state["stop_blocks"] = max(0, state["stop_blocks"])
     return state
+
+
+def fresh_pi_inflight(state):
+    now = time.time()
+    for call in state["pi_inflight"].values():
+        started = call.get("started") if isinstance(call, dict) else None
+        if isinstance(started, (int, float)) and now - started < PI_INFLIGHT_TTL:
+            return True
+    return False
 
 
 def state_root():
@@ -278,6 +361,8 @@ def start_prompt(state, prompt_id):
             "changed_files": [],
             "high_risk_change": False,
             "uncertain_change": False,
+            "stop_blocks": 0,
+            "stop_block_epoch": -1,
         }
     )
     reset_work_phase(state)
@@ -363,6 +448,159 @@ def is_high_risk_path(path):
     )
 
 
+def is_memory_path(path):
+    parts = canonical_path(path).split("/")
+    for i, part in enumerate(parts):
+        if (
+            part == ".claude"
+            and i + 3 < len(parts)
+            and parts[i + 1] == "projects"
+            and parts[i + 3] == "memory"
+        ):
+            return True
+    return False
+
+
+def is_untracked_path(path):
+    if is_memory_path(path):
+        return True
+    if not os.path.isabs(path):
+        return False
+    normalized = canonical_path(os.path.abspath(path))
+    temp_root = canonical_path(os.path.abspath(tempfile.gettempdir())).rstrip("/")
+    return normalized.startswith(f"{temp_root}/") or normalized.startswith("/tmp/")
+
+
+def is_doc_path(path):
+    return posixpath.splitext(canonical_path(path).lower())[1] in DOC_EXTENSIONS
+
+
+def is_read_only_bash(command):
+    if not isinstance(command, str) or not command.strip():
+        return False
+    forbidden = (">", "`", "$(", "<(", ">>", "&>", "2>", "|&", "rm ", "sudo ", "eval ", "exec ")
+    if any(value in command for value in forbidden):
+        return False
+
+    assignment_pattern = r"([A-Za-z_][A-Za-z0-9_]*)=.*"
+    disallowed_assignment_names = {"PATH", "IFS", "ENV", "BASH_ENV", "SHELL", "CDPATH", "PS4", "FPATH"}
+    disallowed_assignment_prefixes = (
+        "LD_",
+        "DYLD_",
+        "PYTHON",
+        "GIT_",
+        "PERL5",
+        "RUBY",
+        "NODE_",
+        "MALLOC_",
+        "GCONV_",
+    )
+    branch_options = {
+        "-a",
+        "-r",
+        "-v",
+        "-vv",
+        "--all",
+        "--remotes",
+        "--verbose",
+        "--list",
+        "--show-current",
+        "--merged",
+        "--no-merged",
+        "--contains",
+    }
+    segments = re.split(r"&&|\|\||;|\||\n", command)
+    for segment in segments:
+        segment = segment.strip()
+        if not segment:
+            return False
+        tokens = segment.split()
+        while tokens:
+            assignment = re.fullmatch(assignment_pattern, tokens[0])
+            if assignment is None:
+                break
+            name = assignment.group(1)
+            if name in disallowed_assignment_names or name.startswith(disallowed_assignment_prefixes):
+                return False
+            tokens.pop(0)
+        if not tokens:
+            return False
+        if "/" in tokens[0]:
+            return False
+        head = tokens[0]
+        if head not in READ_ONLY_BASH_COMMANDS:
+            return False
+        writer_flags = (
+            "--output",
+            "--output-file",
+            "--compress-program",
+            "--ext-diff",
+            "--textconv",
+            "--filters",
+            "--open-files-in-pager",
+            "--pre",
+            "-fls",
+            "-fprint",
+            "-fprint0",
+        )
+        writer_prefixes = (
+            "--output=",
+            "--output-file=",
+            "--compress-program=",
+            "--open-files-in-pager=",
+            "--pre=",
+            "--ext-diff=",
+            "--textconv=",
+            "--filters=",
+            "-fls=",
+        )
+        if any(token in writer_flags or token.startswith(writer_prefixes) for token in tokens[1:]):
+            return False
+        if head == "env" and any(re.fullmatch(assignment_pattern, token) is None for token in tokens[1:]):
+            return False
+        if head == "find" and any(
+            value in segment
+            for value in ("-delete", "-exec", "-execdir", "-ok", "-okdir", "-fprint")
+        ):
+            return False
+        if head == "sort" and any(token.startswith("-o") or token.startswith("--output") for token in tokens[1:]):
+            return False
+        if head == "uniq" and sum(not token.startswith("-") for token in tokens[1:]) > 1:
+            return False
+        if head == "date" and any(
+            token in {"-s", "--set"} or token.startswith("--set=") for token in tokens[1:]
+        ):
+            return False
+        if head == "git":
+            if any(token == "-o" or token.startswith("--output") for token in tokens[1:]):
+                return False
+            index = 1
+            while index < len(tokens) and tokens[index].startswith("-"):
+                if tokens[index] == "-C":
+                    index += 2
+                else:
+                    index += 1
+            if index >= len(tokens) or tokens[index] not in READ_ONLY_GIT_SUBCOMMANDS:
+                return False
+            subcommand = tokens[index]
+            remainder = tokens[index + 1 :]
+            if subcommand == "branch" and any(token not in branch_options for token in remainder):
+                return False
+            if subcommand == "remote" and not (
+                not remainder
+                or all(token in {"-v", "--verbose"} for token in remainder)
+                or remainder[0] in {"show", "get-url"}
+            ):
+                return False
+            if subcommand == "reflog" and any(token in {"expire", "delete", "drop"} for token in remainder):
+                return False
+            if subcommand == "worktree" and (not remainder or remainder[0] != "list"):
+                return False
+        if head == "python3" and (len(tokens) != 2 or tokens[1] not in {"--version", "-V"}):
+            return False
+    return True
+
+
 def mark_processed(state, tool_use_id):
     if tool_use_id:
         state["processed_tools"].append(tool_use_id)
@@ -410,6 +648,7 @@ def pre_tool(state, payload):
                 "role": tool_input["role"],
                 "epoch": state["change_epoch"],
                 "snapshot": worktree_snapshot(payload),
+                "started": time.time(),
             }
         return None
 
@@ -460,22 +699,52 @@ def finish_work(state, payload, succeeded):
         state["work_completed"] += 1
     if tool_name in EXPLICIT_MUTATION_TOOLS:
         tool_input = payload.get("tool_input", {})
-        state["change_volume"] += change_volume(tool_name, tool_input)
-        for path in submitted_paths(tool_input):
-            canonical = canonical_path(path)
-            if canonical not in state["changed_files"]:
-                state["changed_files"].append(canonical)
-            if is_high_risk_path(canonical):
-                state["high_risk_change"] = True
-        state["change_epoch"] += 1
-        recompute_verification(state)
+        paths = submitted_paths(tool_input)
+        if not (paths and all(is_untracked_path(p) for p in paths)):
+            tracked_paths = [path for path in paths if not is_untracked_path(path)]
+            if not tracked_paths or any(not is_doc_path(path) for path in tracked_paths):
+                state["change_volume"] += change_volume(tool_name, tool_input)
+            for path in tracked_paths:
+                canonical = canonical_path(path)
+                if canonical not in state["changed_files"]:
+                    state["changed_files"].append(canonical)
+                if is_high_risk_path(canonical):
+                    state["high_risk_change"] = True
+            state["change_epoch"] += 1
+            recompute_verification(state)
     elif tool_name == "Bash":
-        state["uncertain_change"] = True
-        state["change_epoch"] += 1
-        recompute_verification(state)
+        tool_input = payload.get("tool_input", {})
+        command = tool_input.get("command") if isinstance(tool_input, dict) else None
+        if not is_read_only_bash(command):
+            state["uncertain_change"] = True
+            state["change_epoch"] += 1
+            recompute_verification(state)
     elif succeeded:
         recompute_verification(state)
     mark_processed(state, tool_use_id)
+
+
+def tool_response_text(payload):
+    response = payload.get("tool_response")
+    if isinstance(response, str):
+        return response
+    if not isinstance(response, dict):
+        return ""
+    content = response.get("content")
+    if isinstance(content, str):
+        return content
+    if not isinstance(content, list):
+        return ""
+    return "\n".join(
+        block["text"]
+        for block in content
+        if isinstance(block, dict) and isinstance(block.get("text"), str)
+    )
+
+
+def is_background_transition(payload):
+    text = tool_response_text(payload)
+    return bool(re.search(r"moved to (the )?background", text, re.IGNORECASE)) or "still running after" in text.lower()
 
 
 def finish_pi(state, payload, succeeded):
@@ -485,12 +754,27 @@ def finish_pi(state, payload, succeeded):
     if tool_use_id and tool_use_id in state["processed_tools"]:
         return
 
-    call = state["pi_inflight"].pop(tool_use_id, None) if tool_use_id else None
+    call = state["pi_inflight"].get(tool_use_id) if tool_use_id else None
     if call is None:
         return
 
     role = call["role"]
     captured_epoch = call["epoch"]
+    if succeeded and is_background_transition(payload):
+        state["delegated"] = True
+        if role not in state["delegated_roles"]:
+            state["delegated_roles"].append(role)
+        call["started"] = time.time()
+        if role == "apply":
+            state["uncertain_change"] = True
+            state["change_epoch"] += 1
+            state["verification_required"] = True
+        elif role == "verify":
+            state["verify_failed_epoch"] = max(state["verify_failed_epoch"], captured_epoch)
+        mark_processed(state, tool_use_id)
+        return
+
+    state["pi_inflight"].pop(tool_use_id, None)
     captured_snapshot = call.get("snapshot")
     current_snapshot = worktree_snapshot(payload) if role == "verify" else None
     unchanged_snapshot = current_snapshot is not None and current_snapshot == captured_snapshot
@@ -506,6 +790,7 @@ def finish_pi(state, payload, succeeded):
             state["verified_epoch"] = max(state["verified_epoch"], captured_epoch)
             if unchanged_snapshot:
                 state["verified_snapshot"] = current_snapshot
+                state["verified_epoch"] = state["change_epoch"]
     else:
         state["delegation_failed"] = True
         if role == "apply":
@@ -516,6 +801,7 @@ def finish_pi(state, payload, succeeded):
             state["verify_failed_epoch"] = max(state["verify_failed_epoch"], captured_epoch)
             if unchanged_snapshot:
                 state["verify_failed_snapshot"] = current_snapshot
+                state["verify_failed_epoch"] = state["change_epoch"]
     mark_processed(state, tool_use_id)
 
 
@@ -557,7 +843,7 @@ def has_running_pi_task(payload):
 def stop_event(state, payload):
     if not current_prompt(state, payload):
         return None
-    if has_running_pi_task(payload):
+    if fresh_pi_inflight(state) or has_running_pi_task(payload):
         return None
     if not state["verification_required"]:
         return None
@@ -574,6 +860,13 @@ def stop_event(state, payload):
     if state["verified_epoch"] == epoch or state["verify_failed_epoch"] == epoch:
         state["verification_required"] = False
         return None
+
+    if state["stop_block_epoch"] != epoch:
+        state["stop_block_epoch"] = epoch
+        state["stop_blocks"] = 0
+    if state["stop_blocks"] >= STOP_BLOCK_LIMIT:
+        return None
+    state["stop_blocks"] += 1
 
     return {
         "decision": "block",

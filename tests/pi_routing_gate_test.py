@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 import json
 import os
 import runpy
@@ -65,7 +66,15 @@ class RoutingGateTest(unittest.TestCase):
             ),
         )
 
-    def finish(self, name, tool_id, tool_input=None, succeeded=True, prompt_id=None):
+    def finish(
+        self,
+        name,
+        tool_id,
+        tool_input=None,
+        succeeded=True,
+        prompt_id=None,
+        tool_response=None,
+    ):
         payload = self.base(
             hook_event_name="PostToolUse" if succeeded else "PostToolUseFailure",
             tool_name=name,
@@ -74,6 +83,8 @@ class RoutingGateTest(unittest.TestCase):
         )
         if prompt_id is not None:
             payload["prompt_id"] = prompt_id
+        if tool_response is not None:
+            payload["tool_response"] = tool_response
         return self.call("post" if succeeded else "failure", payload)
 
     def complete(self, name, tool_id, tool_input=None):
@@ -98,6 +109,10 @@ class RoutingGateTest(unittest.TestCase):
     def pi_input(self, role):
         return {"role": role, "brief": "Self-contained test brief", "cwd": self.cwd, "timeout_ms": 600000}
 
+    def state(self):
+        key = hashlib.sha256(self.session.encode()).hexdigest()
+        return json.loads((Path(self.tempdir.name) / f"{key}.json").read_text())
+
     def use_clean_git_repo(self):
         worktree = tempfile.TemporaryDirectory()
         self.addCleanup(worktree.cleanup)
@@ -105,9 +120,9 @@ class RoutingGateTest(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(root)], check=True)
         subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.com"], check=True)
         subprocess.run(["git", "-C", str(root), "config", "user.name", "Routing Gate Test"], check=True)
-        tracked = root / "tracked.txt"
+        tracked = root / "tracked.py"
         tracked.write_text("initial\n")
-        subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
+        subprocess.run(["git", "-C", str(root), "add", "tracked.py"], check=True)
         subprocess.run(["git", "-C", str(root), "commit", "-qm", "initial"], check=True)
         self.cwd = str(root)
         self.session = "session-git"
@@ -131,7 +146,7 @@ class RoutingGateTest(unittest.TestCase):
         self.assertIsNone(self.pre("TaskOutput", "task-status", {"task_id": "abc", "block": False}))
 
     def test_stop_is_allowed_while_pi_task_runs_without_clearing_obligation(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.complete("Write", "large-write-background", write)
         running = [{
             "id": "task-1",
@@ -145,7 +160,7 @@ class RoutingGateTest(unittest.TestCase):
         self.assertEqual(self.stop(background_tasks=[])["decision"], "block")
 
     def test_unrelated_or_completed_background_task_does_not_bypass_stop(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.complete("Write", "large-write-other-task", write)
         unrelated = [{
             "id": "task-2",
@@ -170,7 +185,9 @@ class RoutingGateTest(unittest.TestCase):
             "tool": "subagent",
         }]
         self.assertEqual(self.stop(background_tasks=unrelated)["decision"], "block")
+        self.prompt("prompt-after-unrelated-task")
         self.assertEqual(self.stop(background_tasks=wrong_server)["decision"], "block")
+        self.prompt("prompt-after-wrong-server-task")
         self.assertEqual(self.stop(background_tasks=completed)["decision"], "block")
 
     def test_ten_completed_calls_allowed_and_eleventh_denied(self):
@@ -196,6 +213,49 @@ class RoutingGateTest(unittest.TestCase):
         self.assertIsNone(self.pre(PI_TOOL, "pi-explore", request))
         self.finish(PI_TOOL, "pi-explore", request)
         self.assertIsNone(self.pre("Read", "after-delegation", {"file_path": "/tmp/after"}))
+
+    def test_backgrounded_verify_stays_inflight_and_records_attempt(self):
+        root = self.use_clean_git_repo()
+        tracked = root / "tracked.py"
+        tracked.write_text("x" * 2000)
+        self.complete(
+            "Write",
+            "large-write-before-background-verify",
+            {"file_path": "/app/tracked.py", "content": "x" * 2000},
+        )
+        captured_epoch = self.state()["change_epoch"]
+        verify = self.pi_input("verify")
+        self.assertIsNone(self.pre(PI_TOOL, "verify-background", verify))
+        response = {
+            "content": [
+                {
+                    "type": "text",
+                    "text": (
+                        'MCP tool "pi/subagent" is still running after 2s. '
+                        "It was moved to the background as task abc and keeps running"
+                    ),
+                }
+            ]
+        }
+        self.assertIsNone(
+            self.finish(
+                PI_TOOL,
+                "verify-background",
+                verify,
+                tool_response=response,
+            )
+        )
+        state = self.state()
+        self.assertIn("verify-background", state["pi_inflight"])
+        self.assertEqual(state["verified_epoch"], -1)
+        self.assertEqual(state["verify_failed_epoch"], captured_epoch)
+        self.assertTrue(state["delegated"])
+        self.assertIsNone(self.stop())
+
+        self.prompt("prompt-after-background-verify")
+        state = self.state()
+        self.assertEqual(state["pi_inflight"], {})
+        self.assertFalse(state["verification_required"])
 
     def test_only_valid_failed_pi_call_unlocks_gate(self):
         self.complete_reads(WORK_LIMIT)
@@ -228,23 +288,66 @@ class RoutingGateTest(unittest.TestCase):
         self.complete("Edit", "copy-test-2", expected)
         self.assertIsNone(self.stop())
 
+    def test_temp_and_memory_edits_are_exempt_from_change_accounting(self):
+        self.complete(
+            "Write",
+            "temp-write",
+            {"file_path": "/tmp/scratch.py", "content": "x" * 5000},
+        )
+        self.complete(
+            "Edit",
+            "memory-edit",
+            {
+                "file_path": "/home/u/.claude/projects/x/memory/f.md",
+                "old_string": "old",
+                "new_string": "new" * 2000,
+            },
+        )
+        state = self.state()
+        self.assertEqual(state["change_volume"], 0)
+        self.assertEqual(state["changed_files"], [])
+        self.assertEqual(state["change_epoch"], 0)
+        self.assertFalse(state["verification_required"])
+
+    def test_doc_edits_ignore_volume_but_count_file_breadth(self):
+        for index in range(4):
+            self.complete(
+                "Edit",
+                f"doc-{index}",
+                {
+                    "file_path": f"/app/docs/file-{index}.md",
+                    "old_string": "",
+                    "new_string": "x" * 5000,
+                },
+            )
+            state = self.state()
+            self.assertEqual(state["change_volume"], 0)
+            self.assertEqual(len(state["changed_files"]), index + 1)
+        self.assertTrue(state["verification_required"])
+        self.assertEqual(self.stop()["decision"], "block")
+
     def test_clean_worktree_never_requires_verify(self):
-        root = self.use_clean_git_repo()
-        write = {"file_path": str(root / "tracked.txt"), "content": "x" * 2000}
+        self.use_clean_git_repo()
+        write = {"file_path": "/app/tracked.py", "content": "x" * 2000}
         self.complete("Write", "synthetic-large-write", write)
         self.assertIsNone(self.stop())
 
     def test_successful_verify_covers_unchanged_diff_across_later_tool_activity(self):
         root = self.use_clean_git_repo()
-        tracked = root / "tracked.txt"
+        tracked = root / "tracked.py"
         tracked.write_text("x" * 2000)
-        write = {"file_path": str(tracked), "content": "x" * 2000}
+        write = {"file_path": "/app/tracked.py", "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         self.assertEqual(self.stop()["decision"], "block")
 
         verify = self.pi_input("verify")
         self.pre(PI_TOOL, "verify-current", verify)
-        self.finish(PI_TOOL, "verify-current", verify)
+        self.finish(
+            PI_TOOL,
+            "verify-current",
+            verify,
+            tool_response={"content": "Verification completed successfully"},
+        )
         self.assertIsNone(self.stop())
 
         self.prompt("prompt-after-verify")
@@ -254,9 +357,9 @@ class RoutingGateTest(unittest.TestCase):
 
     def test_change_after_successful_verify_requires_new_verify(self):
         root = self.use_clean_git_repo()
-        tracked = root / "tracked.txt"
+        tracked = root / "tracked.py"
         tracked.write_text("x" * 2000)
-        write = {"file_path": str(tracked), "content": "x" * 2000}
+        write = {"file_path": "/app/tracked.py", "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         verify = self.pi_input("verify")
         self.pre(PI_TOOL, "verify-first-diff", verify)
@@ -264,18 +367,18 @@ class RoutingGateTest(unittest.TestCase):
         self.assertIsNone(self.stop())
 
         tracked.write_text("y" * 2000)
-        edit = {"file_path": str(tracked), "old_string": "x" * 2000, "new_string": "y" * 2000}
+        edit = {"file_path": "/app/tracked.py", "old_string": "x" * 2000, "new_string": "y" * 2000}
         self.complete("Edit", "changed-after-verify", edit)
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_large_deletion_requires_verify(self):
-        deletion = {"file_path": "/tmp/a", "old_string": "x" * 2000, "new_string": ""}
+        deletion = {"file_path": "/app/a.py", "old_string": "x" * 2000, "new_string": ""}
         self.complete("Edit", "large-delete", deletion)
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_one_small_edit_bypasses_exhausted_budget_without_forcing_verify(self):
         self.complete_reads(WORK_LIMIT)
-        small = {"file_path": "/tmp/b", "old_string": "a" * 125, "new_string": "b" * 125}
+        small = {"file_path": "/app/b.py", "old_string": "a" * 125, "new_string": "b" * 125}
         self.complete("Edit", "small-bypass", small)
         self.assertIsNone(self.stop())
         self.assertEqual(
@@ -285,21 +388,24 @@ class RoutingGateTest(unittest.TestCase):
 
     def test_large_edit_does_not_bypass_exhausted_budget(self):
         self.complete_reads(WORK_LIMIT)
-        large = {"file_path": "/tmp/b", "old_string": "a" * 125, "new_string": "b" * 126}
+        large = {"file_path": "/app/b.py", "old_string": "a" * 125, "new_string": "b" * 126}
         self.assertEqual(
             self.pre("Edit", "large-after-budget", large)["hookSpecificOutput"]["permissionDecision"],
             "deny",
         )
 
     def test_single_small_edit_does_not_force_verify(self):
-        edit = {"file_path": "/tmp/a", "old_string": "a", "new_string": "b"}
+        edit = {"file_path": "/app/a.py", "old_string": "a", "new_string": "b"}
         self.complete("Edit", "small-edit", edit)
         self.assertIsNone(self.stop())
 
-    def test_bash_is_potential_change_at_work_threshold(self):
+    def test_read_only_bash_does_not_create_change_at_work_threshold(self):
         self.complete("Bash", "bash-1", {"command": "true"})
         self.complete_reads(WORK_LIMIT - 1, prefix="after-bash")
-        self.assertEqual(self.stop()["decision"], "block")
+        state = self.state()
+        self.assertFalse(state["uncertain_change"])
+        self.assertEqual(state["change_epoch"], 0)
+        self.assertIsNone(self.stop())
 
     def test_failed_bash_can_still_create_verification_obligation(self):
         command = {"command": "touch /tmp/example; false"}
@@ -309,29 +415,29 @@ class RoutingGateTest(unittest.TestCase):
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_moderate_edit_volume_does_not_require_verify(self):
-        edit = {"file_path": "/tmp/a", "old_string": "a" * 300, "new_string": "b" * 300}
+        edit = {"file_path": "/app/a.py", "old_string": "a" * 300, "new_string": "b" * 300}
         self.complete("Edit", "replacement-600", edit)
         self.assertIsNone(self.stop())
 
     def test_large_submitted_edit_volume_requires_verify(self):
-        edit = {"file_path": "/tmp/a", "old_string": "a" * 1000, "new_string": "b" * 1000}
+        edit = {"file_path": "/app/a.py", "old_string": "a" * 1000, "new_string": "b" * 1000}
         self.complete("Edit", "replacement-2000", edit)
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_failed_explicit_mutation_can_still_require_verify(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.pre("Write", "failed-write", write)
         self.finish("Write", "failed-write", write, succeeded=False)
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_notebook_deletions_without_submitted_text_do_not_require_verify(self):
-        deletion = {"notebook_path": "/tmp/a.ipynb", "cell_id": "1", "edit_mode": "delete"}
+        deletion = {"notebook_path": "/app/a.ipynb", "cell_id": "1", "edit_mode": "delete"}
         self.complete("NotebookEdit", "delete-cell-1", deletion)
         self.complete("NotebookEdit", "delete-cell-2", deletion)
         self.assertIsNone(self.stop())
 
     def test_multiedit_counts_submitted_text_not_json_metadata(self):
-        small = {"edits": [{"file_path": "/tmp/" + "x" * 600, "old_string": "a", "new_string": "b"}]}
+        small = {"edits": [{"file_path": "/app/" + "x" * 600, "old_string": "a", "new_string": "b"}]}
         self.complete("MultiEdit", "small-multiedit", small)
         self.assertIsNone(self.stop())
 
@@ -399,10 +505,12 @@ class RoutingGateTest(unittest.TestCase):
             "verification_required": True,
             "verified_epoch": 3,
         })
-        self.assertEqual(migrated["version"], 4)
+        self.assertEqual(migrated["version"], 5)
         self.assertEqual(migrated["work_completed"], 10)
         self.assertEqual(migrated["change_epoch"], 4)
         self.assertTrue(migrated["verification_required"])
+        self.assertEqual(migrated["stop_blocks"], 0)
+        self.assertEqual(migrated["stop_block_epoch"], -1)
 
     def test_ask_user_question_response_resets_work_budget(self):
         self.complete_reads(WORK_LIMIT)
@@ -415,7 +523,7 @@ class RoutingGateTest(unittest.TestCase):
         self.assertIsNone(self.pre("Read", "after-answer", {"file_path": "/tmp/after"}))
 
     def test_ask_user_question_reset_preserves_verification_obligation(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.complete("Write", "large-write-before-question", write)
         question = {"questions": [{"question": "Continue?"}]}
         self.finish("AskUserQuestion", "question-1", question)
@@ -423,7 +531,7 @@ class RoutingGateTest(unittest.TestCase):
 
     def test_successful_and_failed_apply_both_require_verify_when_they_change_files(self):
         root = self.use_clean_git_repo()
-        tracked = root / "tracked.txt"
+        tracked = root / "tracked.py"
         apply_request = self.pi_input("apply")
         self.pre(PI_TOOL, "apply-success", apply_request)
         tracked.write_text("apply success\n")
@@ -443,9 +551,9 @@ class RoutingGateTest(unittest.TestCase):
 
     def test_current_diff_verify_failure_fails_open_but_later_change_invalidates_it(self):
         root = self.use_clean_git_repo()
-        tracked = root / "tracked.txt"
+        tracked = root / "tracked.py"
         tracked.write_text("x" * 2000)
-        write = {"file_path": str(tracked), "content": "x" * 2000}
+        write = {"file_path": "/app/tracked.py", "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         verify = self.pi_input("verify")
         self.pre(PI_TOOL, "verify-failure", verify)
@@ -453,12 +561,12 @@ class RoutingGateTest(unittest.TestCase):
         self.assertIsNone(self.stop())
 
         tracked.write_text("y" * 2000)
-        edit = {"file_path": str(tracked), "old_string": "x", "new_string": "y"}
+        edit = {"file_path": "/app/tracked.py", "old_string": "x", "new_string": "y"}
         self.complete("Edit", "later-edit", edit)
         self.assertEqual(self.stop()["decision"], "block")
 
     def test_duplicate_events_and_prompt_retries_are_idempotent(self):
-        edit = {"file_path": "/tmp/a", "old_string": "a", "new_string": "b"}
+        edit = {"file_path": "/app/a.py", "old_string": "a", "new_string": "b"}
         self.complete("Edit", "edit-once", edit)
         self.finish("Edit", "edit-once", edit)
         self.assertIsNone(self.stop())
@@ -478,7 +586,7 @@ class RoutingGateTest(unittest.TestCase):
         )
 
     def test_new_prompt_preserves_unresolved_verification_and_ignores_old_post(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         old_prompt = self.prompt_id
         self.prompt("prompt-new")
@@ -516,7 +624,7 @@ class RoutingGateTest(unittest.TestCase):
         }))
 
     def test_session_end_cleanup_and_malformed_input_fail_open(self):
-        write = {"file_path": "/tmp/a", "content": "x" * 2000}
+        write = {"file_path": "/app/a.py", "content": "x" * 2000}
         self.complete("Write", "large-write", write)
         self.call("cleanup", {"session_id": self.session, "hook_event_name": "SessionEnd", "reason": "other"})
         self.assertIsNone(self.stop())
