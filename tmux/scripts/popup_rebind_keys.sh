@@ -63,7 +63,15 @@ unbind_default_keys
 
 # Match the parent tmux copy-mode navigation so h/j/k/l work in popup copy mode.
 tmux_popup set-window-option -g mode-keys vi
-tmux_popup bind-key -T copy-mode-vi y send -X copy-pipe-and-cancel 'wl-copy'
+
+# Same yank contract as the parent tmux: y leaves copy mode, Y stays in it.
+if [ "$(uname)" = "Darwin" ]; then
+    clipboard_cmd='pbcopy'
+else
+    clipboard_cmd='wl-copy'
+fi
+tmux_popup bind-key -T copy-mode-vi y send -X copy-pipe-and-cancel "$clipboard_cmd"
+tmux_popup bind-key -T copy-mode-vi Y send -X copy-pipe "$clipboard_cmd"
 
 while [ "$#" -gt 0 ]; do
     case "$1" in

@@ -216,5 +216,8 @@
   "diffEditor.maxComputationTime": 0,
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "remote.SSH.remotePlatform": {
+    "31.97.210.249": "linux"
   }
 }

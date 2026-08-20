@@ -64,16 +64,14 @@ yabai -m space 7 --label arzopa 2>/dev/null || true
 yabai -m rule --add app="^Raycast$" manage=off
 yabai -m rule --add app="^Alfred$" manage=off
 yabai -m rule --add app="^1Password" manage=off
+yabai -m rule --add app="^Handy$" manage=off
 
 # ─────────────────────────────────────────────────────────────────────────────────
 # SIGNALS - Auto-fix problematic windows
 # ─────────────────────────────────────────────────────────────────────────────────
 
-# Zoom every regular Ghostty window/tab; macOS exposes native tabs as separate windows.
-# Ignore the quick terminal, which uses the AXFloatingWindow subrole.
-yabai -m signal --add app="^Ghostty$" event=window_created action='[ "$(yabai -m query --windows --window "$YABAI_WINDOW_ID" | jq -r .subrole)" = "AXStandardWindow" ] && yabai -m window "$YABAI_WINDOW_ID" --toggle zoom-fullscreen' label="ghostty_zoom_fullscreen"
-
-# Focus next window when one is closed
-yabai -m signal --add event=window_destroyed action="yabai -m window --focus recent || yabai -m window --focus first" label="focus_on_destroy"
+# Do not force-focus another window after every window_destroyed event.
+# Handy creates a temporary recording overlay; when that overlay disappears,
+# a global focus-on-destroy signal steals focus from the dictation target.
 
 echo "yabai configuration loaded.."

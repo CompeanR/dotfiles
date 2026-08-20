@@ -82,3 +82,6 @@ alt - b : osascript -e 'tell application "Google Chrome" to make new window'
 
 # Close window (Hyprland style)
 alt + shift - q : yabai -m window --close
+
+# Interactive VPS screenshot: drag a region, or press Space and click a window.
+ctrl + alt + cmd - 4 : /Users/compean/scripts/vps_screenshot_macos.sh

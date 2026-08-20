@@ -15,6 +15,7 @@
 /opencode/kv.json
 /opencode/model.json
 /opencode/prompt-history.jsonl
+/opencode/service.json
 
 # Local-only pi agent files
 /.pi-subagents/
