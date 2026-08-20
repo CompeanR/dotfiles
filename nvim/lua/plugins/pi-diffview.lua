@@ -6,9 +6,9 @@
 -- <leader>pp  open/toggle the popup;  <C-q> or <C-g> hides it from inside
 --
 -- Diffview:
+-- e           explain the selected/current hunk (bare e, so <leader>e stays the tree)
 -- <leader>a   ask pi about the selected/current hunk
--- <leader>e   explain the selected/current hunk
--- <leader>F   diffview's focus_files, rehomed since <leader>e is taken
+-- <leader>F   diffview's focus_files, rehomed since <leader>e is the file tree
 --
 -- The hunk is written to a temp file and passed as a pi `@file` argument, so the
 -- prompt itself stays a single line. That matters: it lets a second question be
@@ -91,7 +91,39 @@ local function review_context()
   if branch then
     parts[#parts + 1] = "branch: " .. branch
   end
+  local review = package.loaded["config.review_mode"]
+  if review and review.is_active() and review.base() then
+    parts[#parts + 1] = "review base: " .. review.base()
+  end
   return table.concat(parts, ", ")
+end
+
+local function repo_relative_path(name)
+  local normalized = vim.fs.normalize(name)
+  local root = vim.fs.root(normalized, ".git")
+  if root then
+    root = vim.fs.normalize(root)
+    if normalized:sub(1, #root + 1) == root .. "/" then return normalized:sub(#root + 2) end
+  end
+  return vim.fn.fnamemodify(name, ":.")
+end
+
+local pid = vim.uv.os_getpid()
+local excerpt_seq = 0
+
+---@param lines string[]
+---@return string?
+local function write_excerpt(lines)
+  vim.fn.mkdir(scratch_dir, "p")
+  excerpt_seq = excerpt_seq + 1
+  -- pid-scoped: the cache dir is shared by every nvim instance, and one
+  -- instance's exit cleanup must not delete a file another just handed to pi.
+  local file = ("%s/excerpt-%d-%d.md"):format(scratch_dir, pid, excerpt_seq)
+  if vim.fn.writefile(lines, file) ~= 0 then
+    vim.notify("[pi-diffview] could not write " .. file, vim.log.levels.ERROR)
+    return nil
+  end
+  return file
 end
 
 ---Write the excerpt to a temp file and return its path.
@@ -113,7 +145,31 @@ local function capture()
   path = vim.fn.fnamemodify(path, ":.")
 
   local s, e = visual_range()
-  if not s then
+  if not s and not name:match("^diffview://") then
+    local gs = package.loaded.gitsigns
+    local ok, hunks = pcall(function()
+      return gs and gs.get_hunks and gs.get_hunks(buf) or {}
+    end)
+    if ok and hunks and #hunks > 0 then
+      local hunk = require("config.git_hunk_nav").hunk_at(hunks, vim.api.nvim_win_get_cursor(0)[1])
+      if hunk and type(hunk.head) == "string" and type(hunk.lines) == "table" then
+        local header = {
+          ("File: %s"):format(repo_relative_path(name)),
+          ("Hunk: %s"):format(hunk.head),
+        }
+        local review = package.loaded["config.review_mode"]
+        if review and review.is_active() and review.base() then
+          header[#header + 1] = "review base: " .. review.base()
+        end
+        header[#header + 1] = ""
+        header[#header + 1] = "```diff"
+        vim.list_extend(header, hunk.lines)
+        header[#header + 1] = "```"
+        return write_excerpt(header)
+      end
+    end
+    s, e = hunk_range()
+  elseif not s then
     s, e = hunk_range()
   end
 
@@ -135,10 +191,7 @@ local function capture()
   vim.list_extend(header, lines)
   header[#header + 1] = "```"
 
-  vim.fn.mkdir(scratch_dir, "p")
-  local file = ("%s/excerpt-%s.md"):format(scratch_dir, os.date("%H%M%S"))
-  vim.fn.writefile(header, file)
-  return file
+  return write_excerpt(header)
 end
 
 ---The running pi terminal, if any.
@@ -285,18 +338,21 @@ end
 
 package.loaded["pi_diffview"] = M
 
--- Excerpts are only needed until pi has read them; clear them out on exit so the
--- cache dir doesn't grow one file per question forever.
+-- Excerpts are only needed until pi has read them; clear this instance's own
+-- files on exit (other instances may still be mid-question with theirs), plus
+-- anything a crashed instance orphaned more than a day ago.
 vim.api.nvim_create_autocmd("VimLeavePre", {
   callback = function()
+    local day_ago = os.time() - 24 * 60 * 60
+    local own_prefix = ("/excerpt-%d-"):format(pid)
     for _, f in ipairs(vim.fn.glob(scratch_dir .. "/excerpt-*.md", false, true)) do
-      pcall(vim.fn.delete, f)
+      if f:find(own_prefix, 1, true) or vim.fn.getftime(f) < day_ago then pcall(vim.fn.delete, f) end
     end
   end,
 })
 
--- Namespaced globally to preserve LazyVim's <leader>e explorer mapping. Diffview
--- keeps the shorter buffer-local <leader>a and <leader>e mappings below.
+-- Namespaced globally to preserve LazyVim's <leader>e explorer mapping.
+-- Diffview uses bare `e` for explain so it does not steal that mapping either.
 vim.keymap.set({ "n", "x" }, "<leader>pa", M.ask, { desc = "pi: ask about this code" })
 vim.keymap.set({ "n", "x" }, "<leader>pe", M.explain, { desc = "pi: explain this code" })
 vim.keymap.set("n", "<leader>pp", M.toggle, { desc = "pi: open/toggle popup" })
@@ -306,29 +362,32 @@ return {
     "sindrets/diffview.nvim",
     opts = function(_, opts)
       opts.keymaps = opts.keymaps or {}
-      opts.keymaps.view = opts.keymaps.view or {}
 
-      local view_maps = {
-        { { "n", "x" }, "<leader>a", M.ask, { desc = "pi: ask about this hunk" } },
-        { { "n", "x" }, "<leader>e", M.explain, { desc = "pi: explain this hunk" } },
-        -- diffview binds <leader>e to focus_files by default; rehome it.
-        { "n", "<leader>F", require("diffview.actions").focus_files, { desc = "Focus file panel" } },
-      }
+      local function apply(group, maps)
+        local ours = {}
+        for _, m in ipairs(maps) do
+          ours[m[2]] = true
+        end
+        opts.keymaps[group] = vim.tbl_filter(function(m)
+          return not (type(m) == "table" and ours[m[2]])
+        end, opts.keymaps[group] or {})
+        for _, m in ipairs(maps) do
+          table.insert(opts.keymaps[group], m)
+        end
+      end
 
       -- lazy may evaluate opts more than once and hands back a fresh table each
       -- time, so a "already applied" flag doesn't survive. Drop any entry we own
       -- before appending, which makes this idempotent however often it runs.
-      local ours = {}
-      for _, m in ipairs(view_maps) do
-        ours[m[2]] = true
-      end
-      opts.keymaps.view = vim.tbl_filter(function(m)
-        return not (type(m) == "table" and ours[m[2]])
-      end, opts.keymaps.view)
-
-      for _, m in ipairs(view_maps) do
-        table.insert(opts.keymaps.view, m)
-      end
+      apply("view", {
+        { { "n", "x" }, "e", M.explain, { desc = "pi: explain this hunk" } },
+        { { "n", "x" }, "<leader>a", M.ask, { desc = "pi: ask about this hunk" } },
+        -- Diffview default + our old mapping both stole LazyVim's file tree.
+        { "n", "<leader>e", false },
+        { "n", "<leader>F", require("diffview.actions").focus_files, { desc = "Focus file panel" } },
+      })
+      apply("file_panel", { { "n", "<leader>e", false } })
+      apply("file_history_panel", { { "n", "<leader>e", false } })
       return opts
     end,
   },

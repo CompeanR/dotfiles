@@ -47,24 +47,23 @@ return {
       if result.code ~= 0 or not result.stdout then return {} end
 
       local files = {}
-      local parts = vim.split(result.stdout, "\0", { plain = true, trimempty = true })
-      local i = 1
-      while i <= #parts do
-        local status, file = parts[i]:match("^(..) (.+)$")
-        i = i + 1
-        if status then
-          if status:find("[RC]") then
-            file = parts[i] or file
-            i = i + 1
-          end
-          local path = existing_file(abs_path(root .. "/" .. file))
-          if path then files[#files + 1] = path end
-        end
+      for _, rel in ipairs(hunk_nav.porcelain_paths(result.stdout)) do
+        local path = existing_file(abs_path(root .. "/" .. rel))
+        if path then files[#files + 1] = path end
       end
       return files
     end
 
+    ---@return boolean
+    local function review_transitioning()
+      local review = package.loaded["config.review_mode"]
+      return not not (review and type(review.is_stopping) == "function" and review.is_stopping())
+    end
+
     local function changed_files()
+      local review = package.loaded["config.review_mode"]
+      if review and review.is_active() then return review.files() end
+
       local files = files_from_git_explorer()
       if #files > 0 then return files end
       return files_from_git_status()
@@ -146,23 +145,70 @@ return {
       end
     end
 
-    local function land_in_buffer(gs, direction, restore_scroll)
+    ---@param gs table
+    ---@param callback? fun(err?: string)
+    local function preview_hunk(gs, callback)
+      local review = package.loaded["config.review_mode"]
+      if review and review.is_active() and type(review.preview_and_pin) == "function" then
+        review.preview_and_pin(callback)
+        return
+      end
+      gs.preview_hunk_inline(callback)
+    end
+
+    ---@param restore_scroll fun()
+    ---@param callback? fun(err?: string)
+    ---@param err? string
+    local function finish_landing(restore_scroll, callback, err)
+      restore_scroll()
+      if callback then callback(err) end
+    end
+
+    ---@param gs? table
+    ---@param direction "next"|"prev"
+    ---@param restore_scroll fun()
+    ---@param retries? integer
+    ---@param callback? fun(err?: string)
+    local function land_in_buffer(gs, direction, restore_scroll, retries, callback)
       local buf = vim.api.nvim_get_current_buf()
       local hunks = gs and gs.get_hunks(buf) or {}
       if not gs or #hunks == 0 then
-        -- untracked: gitsigns does not attach, so treat the file as one stop
+        -- attach() resolving does not mean hunks exist yet: gitsigns fills them
+        -- in a later async pass. Poll briefly before treating the file as
+        -- untracked (where gitsigns never attaches and the file is one stop).
+        retries = retries == nil and 20 or retries
+        if gs and retries > 0 then
+          vim.defer_fn(function()
+            if vim.api.nvim_get_current_buf() == buf then
+              land_in_buffer(gs, direction, restore_scroll, retries - 1, callback)
+            else
+              finish_landing(restore_scroll, callback, "buffer changed while landing")
+            end
+          end, 50)
+          return
+        end
         local lnum = direction == "next" and 1 or vim.api.nvim_buf_line_count(buf)
         pcall(vim.api.nvim_win_set_cursor, 0, { math.max(lnum, 1), 0 })
-        restore_scroll()
+        finish_landing(restore_scroll, callback)
         return
       end
-      gs.nav_hunk(direction == "next" and "first" or "last", {}, function()
-        gs.preview_hunk_inline()
-        restore_scroll()
+      gs.nav_hunk(direction == "next" and "first" or "last", {}, function(err)
+        if err then
+          finish_landing(restore_scroll, callback, err)
+          return
+        end
+        preview_hunk(gs, function(preview_err)
+          finish_landing(restore_scroll, callback, preview_err)
+        end)
       end)
     end
 
     local function nav_hunk_without_scroll_animation(direction)
+      if review_transitioning() then
+        vim.api.nvim_echo({ { "Review mode is stopping", "WarningMsg" } }, false, {})
+        return
+      end
+
       local restore_scroll = pause_snacks_scroll()
       vim.defer_fn(restore_scroll, 800)
 
@@ -172,7 +218,7 @@ return {
       local cursor = vim.api.nvim_win_get_cursor(0)
       if gs and hunk_nav.has_hunk(hunks, cursor[1], direction, vim.api.nvim_buf_line_count(buffer)) then
         gs.nav_hunk(direction, { wrap = false }, function()
-          gs.preview_hunk_inline()
+          preview_hunk(gs)
           restore_scroll()
         end)
         return
@@ -195,6 +241,35 @@ return {
         land_in_buffer(gs, direction, restore_scroll)
       end)
     end
+
+    package.loaded["git_hunk_nav_actions"] = {
+      nav = nav_hunk_without_scroll_animation,
+      -- Right after :edit gitsigns has not attached yet, so get_hunks is nil;
+      -- landing must wait for attach or the nav treats the file as hunk-less.
+      ---@param direction "next"|"prev"
+      ---@param callback? fun(err?: string)
+      land = function(direction, callback)
+        if review_transitioning() then
+          if callback then callback("review mode is stopping") end
+          return
+        end
+
+        local restore_scroll = pause_snacks_scroll()
+        vim.defer_fn(restore_scroll, 800)
+        local gs = package.loaded.gitsigns
+        if not gs then
+          land_in_buffer(nil, direction, restore_scroll, nil, callback)
+          return
+        end
+        gs.attach({ bufnr = vim.api.nvim_get_current_buf() }, function(err)
+          if err then
+            finish_landing(restore_scroll, callback, err)
+            return
+          end
+          land_in_buffer(gs, direction, restore_scroll, nil, callback)
+        end)
+      end,
+    }
 
     local function map_hunk_nav(lhs, direction, diff_motion, desc, buffer)
       vim.keymap.set("n", lhs, function()
