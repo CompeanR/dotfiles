@@ -125,5 +125,6 @@
   "effortLevel": "high",
   "tui": "fullscreen",
   "theme": "dark",
+  "remoteControlAtStartup": false,
   "agentPushNotifEnabled": true
 }
