@@ -104,3 +104,6 @@ key = "prefix+shift+b"
 type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/flip_sidebar_collapsed_mode.sh\""
 description = "Flip sidebar collapse mode (compact/hidden)"
+
+[experimental]
+kitty_graphics = true

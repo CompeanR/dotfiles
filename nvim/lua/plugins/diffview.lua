@@ -14,13 +14,15 @@
 -- someone else's PR stays blob-only (nothing on disk to attach to).
 --
 -- diff2_vertical stacks A (old) above B (new). We flip that (new on top) and
--- collapse A to 1 line by default. `go` toggles A to a 50/50 split.
+-- show both panes 50/50 by default — same shape as native `:diffthis`.
+-- `go` collapses A to a 1-line sliver when you want the new file full-height.
 -- Don't close A — Diffview recover() recreates both panes if its winid dies.
 -- Re-applied on WinResized so herdr / equalalways don't undo collapse or 50/50.
 
 ---@return boolean
 local function old_pane_visible()
-  return vim.t.diffview_old_visible == true
+  -- nil (unset) → visible. `go` writes false/true after that.
+  return vim.t.diffview_old_visible ~= false
 end
 
 ---Put Diff2Ver's new pane (B) above old (A); collapse A or equalize 50/50.
@@ -99,7 +101,7 @@ local function toggle_files_keep_ratio()
   schedule_layout()
 end
 
----`go` → show/hide old (A) pane. Shown → 50/50; hidden → 1-line sliver.
+---`go` → hide/show old (A) pane. Shown → 50/50; hidden → 1-line sliver.
 local function toggle_old_pane()
   vim.t.diffview_old_visible = not old_pane_visible()
   schedule_layout()

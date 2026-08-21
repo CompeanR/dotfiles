@@ -77,6 +77,7 @@ READ_ONLY_BASH_COMMANDS = {
     "git",
     "python3",
 }
+READ_ONLY_SCRIPT_ROOTS = ("~/.claude/skills/",)
 READ_ONLY_GIT_SUBCOMMANDS = {
     "status",
     "log",
@@ -181,6 +182,7 @@ def initial_state():
         "uncertain_change": False,
         "change_epoch": 0,
         "verification_required": False,
+        "verification_reason": "",
         "verified_epoch": -1,
         "verify_failed_epoch": -1,
         "verified_snapshot": "",
@@ -238,6 +240,51 @@ def git_output(cwd, *args):
     except (OSError, subprocess.TimeoutExpired):
         return None
     return result.stdout if result.returncode == 0 else None
+
+
+def diff_stats(payload):
+    cwd = payload.get("cwd")
+    if not isinstance(cwd, str) or not cwd:
+        return None
+
+    root_output = git_output(cwd, "rev-parse", "--show-toplevel")
+    if root_output is None:
+        return None
+    root = os.fsdecode(root_output.rstrip(b"\n"))
+    files = {}
+    for cached in (False, True):
+        mode = ("--cached",) if cached else ()
+        names_output = git_output(root, "diff", *mode, "--name-only", "-z")
+        patch_output = git_output(root, "diff", *mode, "--unified=0")
+        if names_output is None or patch_output is None:
+            return None
+        paths = [os.fsdecode(path) for path in names_output.split(b"\0") if path]
+        for path in paths:
+            files.setdefault(path, 0)
+        path_index = -1
+        for line in patch_output.splitlines():
+            if line.startswith(b"diff --git "):
+                path_index += 1
+            elif (
+                0 <= path_index < len(paths)
+                and (line.startswith(b"+") or line.startswith(b"-"))
+                and not line.startswith((b"+++", b"---"))
+            ):
+                path = paths[path_index]
+                files[path] += len(line) - 1
+
+    untracked = git_output(root, "ls-files", "--others", "--exclude-standard", "-z")
+    if untracked is None:
+        return None
+    for relative in filter(None, untracked.split(b"\0")):
+        path = os.fsdecode(relative)
+        size = 0
+        try:
+            size = os.path.getsize(os.path.join(root, path))
+        except OSError:
+            pass
+        files[path] = files.get(path, 0) + size
+    return files, sum(files.values())
 
 
 def worktree_snapshot(payload):
@@ -352,15 +399,17 @@ def start_prompt(state, prompt_id):
     if obligation_satisfied:
         state["verification_required"] = False
 
+    # pi_inflight survives prompt turnover: backgrounded workers outlive the
+    # prompt that dispatched them, and PI_INFLIGHT_TTL already bounds staleness.
     state.update(
         {
             "prompt_id": prompt_id,
             "processed_tools": [],
-            "pi_inflight": {},
             "change_volume": 0,
             "changed_files": [],
             "high_risk_change": False,
             "uncertain_change": False,
+            "verification_reason": "",
             "stop_blocks": 0,
             "stop_block_epoch": -1,
         }
@@ -473,6 +522,21 @@ def is_untracked_path(path):
 
 def is_doc_path(path):
     return posixpath.splitext(canonical_path(path).lower())[1] in DOC_EXTENSIONS
+
+
+def is_read_only_script(path):
+    candidate = path.strip().strip("'\"")
+    if not candidate:
+        return False
+    expanded = os.path.expanduser(os.path.expandvars(candidate))
+    if not os.path.isabs(expanded):
+        return False
+    normalized = canonical_path(os.path.abspath(expanded))
+    for root in READ_ONLY_SCRIPT_ROOTS:
+        root_normalized = canonical_path(os.path.abspath(os.path.expanduser(root))).rstrip("/")
+        if normalized.startswith(f"{root_normalized}/"):
+            return True
+    return False
 
 
 def is_read_only_bash(command):
@@ -596,8 +660,12 @@ def is_read_only_bash(command):
                 return False
             if subcommand == "worktree" and (not remainder or remainder[0] != "list"):
                 return False
-        if head == "python3" and (len(tokens) != 2 or tokens[1] not in {"--version", "-V"}):
-            return False
+        if head == "python3":
+            if len(tokens) == 2 and tokens[1] in {"--version", "-V"}:
+                continue
+            script = next((token for token in tokens[1:] if not token.startswith("-")), None)
+            if script is None or not is_read_only_script(script):
+                return False
     return True
 
 
@@ -607,14 +675,18 @@ def mark_processed(state, tool_use_id):
 
 
 def recompute_verification(state):
-    if (
-        state["change_volume"] >= VERIFY_CHANGE_VOLUME
-        or len(state["changed_files"]) >= VERIFY_FILE_LIMIT
-        or state["high_risk_change"]
-    ):
+    reason = ""
+    if state["change_volume"] >= VERIFY_CHANGE_VOLUME:
+        reason = "change-volume"
+    elif len(state["changed_files"]) >= VERIFY_FILE_LIMIT:
+        reason = "file-count"
+    elif state["high_risk_change"]:
+        reason = "high-risk-path"
+    elif state["uncertain_change"] and state["work_completed"] >= WORK_LIMIT:
+        reason = "uncertain-bash"
+    if reason:
         state["verification_required"] = True
-    if state["uncertain_change"] and state["work_completed"] >= WORK_LIMIT:
-        state["verification_required"] = True
+        state["verification_reason"] = reason
 
 
 def pre_tool(state, payload):
@@ -648,6 +720,7 @@ def pre_tool(state, payload):
                 "role": tool_input["role"],
                 "epoch": state["change_epoch"],
                 "snapshot": worktree_snapshot(payload),
+                "diff_stats": diff_stats(payload) if tool_input["role"] == "apply" else None,
                 "started": time.time(),
             }
         return None
@@ -725,26 +798,69 @@ def finish_work(state, payload, succeeded):
 
 
 def tool_response_text(payload):
-    response = payload.get("tool_response")
-    if isinstance(response, str):
-        return response
-    if not isinstance(response, dict):
-        return ""
-    content = response.get("content")
-    if isinstance(content, str):
-        return content
-    if not isinstance(content, list):
-        return ""
-    return "\n".join(
-        block["text"]
-        for block in content
-        if isinstance(block, dict) and isinstance(block.get("text"), str)
-    )
+    # MCP tools report backgrounding as a bare list of content blocks, not a
+    # dict; missing that shape evicts the in-flight entry and re-arms stop
+    # demands while the worker is still running.
+    return flattened_response_text(payload.get("tool_response"))
+
+
+def flattened_response_text(value):
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(filter(None, (flattened_response_text(item) for item in value)))
+    if isinstance(value, dict):
+        if isinstance(value.get("text"), str):
+            return value["text"]
+        return flattened_response_text(value.get("content"))
+    return ""
 
 
 def is_background_transition(payload):
     text = tool_response_text(payload)
     return bool(re.search(r"moved to (the )?background", text, re.IGNORECASE)) or "still running after" in text.lower()
+
+
+def record_apply_diff(state, payload, call):
+    state["change_epoch"] += 1
+    before = call.get("diff_stats")
+    current = diff_stats(payload)
+    valid = (
+        isinstance(before, (list, tuple))
+        and len(before) == 2
+        and isinstance(before[0], dict)
+        and isinstance(before[1], int)
+        and isinstance(current, tuple)
+        and len(current) == 2
+        and isinstance(current[0], dict)
+        and isinstance(current[1], int)
+        and all(isinstance(path, str) and isinstance(volume, int) for path, volume in before[0].items())
+        and all(isinstance(path, str) and isinstance(volume, int) for path, volume in current[0].items())
+    )
+    if not valid:
+        state["uncertain_change"] = True
+        state["verification_required"] = True
+        state["verification_reason"] = "apply-unmeasured"
+        return
+
+    before_files = before[0]
+    current_files = current[0]
+    delta_paths = sorted(
+        path
+        for path in set(before_files) | set(current_files)
+        if before_files.get(path) != current_files.get(path)
+    )
+    state["change_volume"] += sum(
+        max(0, current_files.get(path, 0) - before_files.get(path, 0))
+        for path in delta_paths
+    )
+    for path in delta_paths:
+        canonical = canonical_path(path)
+        if canonical not in state["changed_files"]:
+            state["changed_files"].append(canonical)
+        if is_high_risk_path(canonical):
+            state["high_risk_change"] = True
+    recompute_verification(state)
 
 
 def finish_pi(state, payload, succeeded):
@@ -768,7 +884,6 @@ def finish_pi(state, payload, succeeded):
         if role == "apply":
             state["uncertain_change"] = True
             state["change_epoch"] += 1
-            state["verification_required"] = True
         elif role == "verify":
             state["verify_failed_epoch"] = max(state["verify_failed_epoch"], captured_epoch)
         mark_processed(state, tool_use_id)
@@ -783,9 +898,7 @@ def finish_pi(state, payload, succeeded):
         if role not in state["delegated_roles"]:
             state["delegated_roles"].append(role)
         if role == "apply":
-            state["uncertain_change"] = True
-            state["change_epoch"] += 1
-            state["verification_required"] = True
+            record_apply_diff(state, payload, call)
         elif role == "verify":
             state["verified_epoch"] = max(state["verified_epoch"], captured_epoch)
             if unchanged_snapshot:
@@ -794,9 +907,7 @@ def finish_pi(state, payload, succeeded):
     else:
         state["delegation_failed"] = True
         if role == "apply":
-            state["uncertain_change"] = True
-            state["change_epoch"] += 1
-            state["verification_required"] = True
+            record_apply_diff(state, payload, call)
         elif role == "verify":
             state["verify_failed_epoch"] = max(state["verify_failed_epoch"], captured_epoch)
             if unchanged_snapshot:
@@ -868,15 +979,16 @@ def stop_event(state, payload):
         return None
     state["stop_blocks"] += 1
 
+    reason = state["verification_reason"] or "unknown"
     return {
         "decision": "block",
         "reason": (
-            "High-risk, broad, or externally applied changes still require independent "
-            "Pi verification. Call mcp__pi__subagent with role=verify and a self-contained "
-            "brief covering the "
-            "completed changes and validation evidence. If Pi is unavailable, attempt the "
-            "verify call once so the routing gate can fail open. Do not merely claim that "
-            "verification was performed."
+            f"Pi verification is required (trigger: {reason}; changed files: "
+            f"{len(state['changed_files'])}; change volume: {state['change_volume']}). "
+            "Call mcp__pi__subagent with role=verify and a self-contained brief covering "
+            "the completed changes and validation evidence. If Pi is unavailable, attempt "
+            "the verify call once so the routing gate can fail open; do not merely claim "
+            "that verification was performed."
         ),
     }
 

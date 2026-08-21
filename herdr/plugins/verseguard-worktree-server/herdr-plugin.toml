@@ -1,0 +1,23 @@
+id = "verseguard-worktree-server"
+name = "VerseGuard Worktree Server"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Install dependencies and start the VerseGuard Expo server for new linked worktrees."
+platforms = ["linux", "macos"]
+
+# Primary lifecycle hook.
+[[events]]
+on = "worktree.created"
+command = ["python3", "verseguard_server.py", "event"]
+
+# One-time fallback for worktree workspaces created through alternate API paths.
+[[events]]
+on = "workspace.created"
+command = ["python3", "verseguard_server.py", "event"]
+
+[[actions]]
+id = "retry"
+title = "VerseGuard: retry worktree server"
+description = "Run npm ci and start Expo for the selected linked VerseGuard worktree."
+contexts = ["workspace"]
+command = ["python3", "verseguard_server.py", "retry"]

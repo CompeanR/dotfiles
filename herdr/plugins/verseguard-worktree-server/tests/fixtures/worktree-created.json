@@ -1,0 +1,33 @@
+{
+  "event": "worktree_created",
+  "data": {
+    "type": "worktree_created",
+    "workspace": {
+      "workspace_id": "w_1",
+      "number": 1,
+      "label": "feature",
+      "focused": true,
+      "pane_count": 1,
+      "tab_count": 1,
+      "active_tab_id": "w_1:t1",
+      "agent_status": "unknown",
+      "worktree": {
+        "repo_key": "repo-key",
+        "repo_name": "herdr-worktree-lifecycle",
+        "repo_root": "$PRIMARY",
+        "checkout_path": "$WORKTREE",
+        "is_linked_worktree": true
+      }
+    },
+    "worktree": {
+      "path": "$WORKTREE",
+      "branch": "dvic/feature",
+      "is_bare": false,
+      "is_detached": false,
+      "is_prunable": false,
+      "is_linked_worktree": true,
+      "open_workspace_id": "w_1",
+      "label": "feature"
+    }
+  }
+}

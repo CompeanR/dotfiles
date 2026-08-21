@@ -34,7 +34,9 @@ return {
             local signs = original_buf_signs(buf, wanted)
             if not wanted.mark then return signs end
 
-            local marks = vim.fn.getmarklist(buf)
+            -- Digit marks are global, so they are absent from getmarklist(buf);
+            -- the pos[1] check below keeps only the ones in this buffer.
+            local marks = vim.fn.getmarklist()
 
             for _, mark in ipairs(marks) do
               local mark_name = mark.mark:sub(2)

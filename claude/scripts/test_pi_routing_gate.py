@@ -1,4 +1,5 @@
 import importlib.util
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -33,6 +34,27 @@ class BashClassificationTests(unittest.TestCase):
         for command in commands:
             with self.subTest(command=command):
                 self.assertTrue(gate.is_read_only_bash(command))
+
+    def test_read_only_skill_scripts(self):
+        commands = (
+            "python3 /home/compean/.claude/skills/latest-images/latest-images.py 2",
+            'python3 "/home/compean/.claude/skills/latest-images/latest-images.py" 2',
+            "python3 $HOME/.claude/skills/latest-images/latest-images.py 2",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertTrue(gate.is_read_only_bash(command))
+
+    def test_python_invocations_that_may_write(self):
+        commands = (
+            "python3 /tmp/evil.py",
+            'python3 -c "import os"',
+            "python3 ~/notskills/x.py",
+            "python3 /home/compean/.claude/skills/latest-images/latest-images.py 2 > out.txt",
+        )
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertFalse(gate.is_read_only_bash(command))
 
     def test_commands_that_may_write(self):
         commands = (
@@ -272,6 +294,163 @@ class FinishWorkTests(unittest.TestCase):
         self.assertEqual(state["verified_epoch"], 7)
 
 
+class GitRepoTestCase(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.repo = Path(self.temporary.name)
+        self.git("init", "-q")
+        self.git("config", "user.email", "tests@example.com")
+        self.git("config", "user.name", "Pi Routing Gate Tests")
+        (self.repo / "app.py").write_text("base\n")
+        self.git("add", "app.py")
+        self.git("commit", "-qm", "initial")
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def git(self, *args):
+        subprocess.run(
+            ["git", "-C", str(self.repo), *args],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+    def dispatch_apply(self, state, tool_use_id="apply-call"):
+        gate.pre_tool(
+            state,
+            {
+                "cwd": str(self.repo),
+                "tool_name": gate.PI_TOOL,
+                "tool_use_id": tool_use_id,
+                "tool_input": {"role": "apply", "brief": "Make the scoped test change."},
+            },
+        )
+        self.assertIn(tool_use_id, state["pi_inflight"])
+
+    def finish_apply(self, state, tool_use_id="apply-call", succeeded=True):
+        gate.finish_pi(
+            state,
+            {
+                "cwd": str(self.repo),
+                "tool_name": gate.PI_TOOL,
+                "tool_use_id": tool_use_id,
+                "tool_response": {"content": "Apply completed."},
+            },
+            succeeded,
+        )
+
+
+class ApplyDiffTests(GitRepoTestCase):
+    def test_diff_stats_include_unstaged_staged_and_untracked_files(self):
+        (self.repo / "app.py").write_text("unstaged\n")
+        (self.repo / "staged.py").write_text("staged\n")
+        self.git("add", "staged.py")
+        (self.repo / "untracked.py").write_text("untracked\n")
+        files, total = gate.diff_stats({"cwd": str(self.repo)})
+        self.assertEqual(set(files), {"app.py", "staged.py", "untracked.py"})
+        self.assertEqual(total, sum(files.values()))
+        self.assertGreater(total, 0)
+
+    def test_tiny_apply_delta_does_not_require_verification(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        (self.repo / "app.py").write_text("base\ntiny\n")
+        self.finish_apply(state)
+        self.assertEqual(state["changed_files"], ["app.py"])
+        self.assertLess(state["change_volume"], gate.VERIFY_CHANGE_VOLUME)
+        self.assertFalse(state["verification_required"])
+
+    def test_failed_apply_also_uses_measured_delta(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        (self.repo / "app.py").write_text("base\ntiny\n")
+        self.finish_apply(state, succeeded=False)
+        self.assertEqual(state["changed_files"], ["app.py"])
+        self.assertFalse(state["verification_required"])
+
+    def test_apply_exceeding_file_limit_requires_verification(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        for index in range(gate.VERIFY_FILE_LIMIT):
+            (self.repo / f"file-{index}.py").write_text("x\n")
+        self.finish_apply(state)
+        self.assertEqual(len(state["changed_files"]), gate.VERIFY_FILE_LIMIT)
+        self.assertTrue(state["verification_required"])
+        self.assertEqual(state["verification_reason"], "file-count")
+
+    def test_apply_exceeding_volume_requires_verification(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        (self.repo / "app.py").write_text("x" * gate.VERIFY_CHANGE_VOLUME + "\n")
+        self.finish_apply(state)
+        self.assertGreaterEqual(state["change_volume"], gate.VERIFY_CHANGE_VOLUME)
+        self.assertTrue(state["verification_required"])
+        self.assertEqual(state["verification_reason"], "change-volume")
+
+    def test_apply_touching_high_risk_path_requires_verification(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        (self.repo / "auth.py").write_text("x\n")
+        self.finish_apply(state)
+        self.assertTrue(state["high_risk_change"])
+        self.assertTrue(state["verification_required"])
+        self.assertEqual(state["verification_reason"], "high-risk-path")
+
+    def test_preexisting_changes_are_not_attributed_to_apply(self):
+        (self.repo / "unrelated.py").write_text("preexisting\n")
+        state = gate.initial_state()
+        self.dispatch_apply(state)
+        (self.repo / "app.py").write_text("base\ntiny\n")
+        self.finish_apply(state)
+        self.assertEqual(state["changed_files"], ["app.py"])
+        self.assertNotIn("unrelated.py", state["changed_files"])
+        self.assertFalse(state["verification_required"])
+
+    def test_background_apply_is_uncertain_but_does_not_force_verification(self):
+        state = gate.initial_state()
+        self.dispatch_apply(state, "background-apply")
+        gate.finish_pi(
+            state,
+            {
+                "cwd": str(self.repo),
+                "tool_name": gate.PI_TOOL,
+                "tool_use_id": "background-apply",
+                "tool_response": "Still running after 2s and moved to the background.",
+            },
+            True,
+        )
+        self.assertIn("background-apply", state["pi_inflight"])
+        self.assertTrue(state["uncertain_change"])
+        self.assertFalse(state["verification_required"])
+
+    def test_unmeasured_apply_fails_safe(self):
+        state = gate.initial_state()
+        with tempfile.TemporaryDirectory() as non_repo:
+            gate.pre_tool(
+                state,
+                {
+                    "cwd": non_repo,
+                    "tool_name": gate.PI_TOOL,
+                    "tool_use_id": "unmeasured",
+                    "tool_input": {"role": "apply", "brief": "Make a scoped change."},
+                },
+            )
+            gate.finish_pi(
+                state,
+                {
+                    "cwd": non_repo,
+                    "tool_name": gate.PI_TOOL,
+                    "tool_use_id": "unmeasured",
+                    "tool_response": "Apply failed.",
+                },
+                False,
+            )
+        self.assertTrue(state["uncertain_change"])
+        self.assertTrue(state["verification_required"])
+        self.assertEqual(state["verification_reason"], "apply-unmeasured")
+
+
 class FinishPiTests(unittest.TestCase):
     def test_background_verify_records_attempt_and_keeps_inflight(self):
         state = gate.initial_state()
@@ -331,6 +510,22 @@ class FinishPiTests(unittest.TestCase):
 
 
 class StopEventTests(unittest.TestCase):
+    def test_block_reason_names_trigger_and_measurements(self):
+        with tempfile.TemporaryDirectory() as cwd:
+            subprocess.run(["git", "-C", cwd, "init", "-q"], check=True)
+            Path(cwd, "dirty.py").write_text("x\n")
+            state = gate.initial_state()
+            state["verification_required"] = True
+            state["verification_reason"] = "file-count"
+            state["changed_files"] = ["a.py", "b.py", "c.py", "d.py"]
+            state["change_volume"] = 17
+            state["change_epoch"] = 2
+            result = gate.stop_event(state, {"cwd": cwd})
+        self.assertEqual(result["decision"], "block")
+        self.assertIn("file-count", result["reason"])
+        self.assertIn("changed files: 4", result["reason"])
+        self.assertIn("change volume: 17", result["reason"])
+
     def test_matching_verified_epoch_clears_requirement(self):
         state = gate.initial_state()
         state["verification_required"] = True

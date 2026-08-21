@@ -4,6 +4,7 @@
 -- <leader>pa  ask pi about a selection or the code around the cursor
 -- <leader>pe  explain a selection or the code around the cursor
 -- <leader>pp  open/toggle the popup;  <C-q> or <C-g> hides it from inside
+--             <C-s> docks the popup to a right split (press again to float)
 --
 -- Diffview:
 -- e           explain the selected/current hunk (bare e, so <leader>e stays the tree)
@@ -20,8 +21,8 @@ local scratch_dir = vim.fn.stdpath("cache") .. "/pi-diffview"
 
 -- Keep the lightweight popup independent from the global pi defaults. The model
 -- must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
-local MODEL = "openai-codex/gpt-5.6-sol"
-local THINKING = "medium"
+local MODEL = "openai-codex/gpt-5.6-luna"
+local THINKING = "xhigh"
 
 -- pi is not detected by screen scraping — it registers itself through the
 -- herdr-agent-state / herdr-attention extensions, which both enable themselves
@@ -31,13 +32,61 @@ local THINKING = "medium"
 -- leaving real pi sessions in their own panes untouched.
 local NO_HERDR_AGENT = { HERDR_ENV = "0" }
 
+-- A terminal window only follows its cursor while it has focus. Keep the pi
+-- split at the live end of its buffer even when the editor owns the cursor,
+-- but leave the current terminal window alone so <C-d>/<C-u> can scroll it.
+local terminal_scrollers = {}
+
+---@param buf integer
+local function scroll_terminal_to_bottom(buf)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
+  local last = vim.api.nvim_buf_line_count(buf)
+  if last < 1 then return end
+
+  local current = vim.api.nvim_get_current_win()
+  for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+    if win ~= current and vim.api.nvim_win_is_valid(win) then
+      pcall(vim.api.nvim_win_set_cursor, win, { last, 0 })
+    end
+  end
+end
+
+---@param buf integer
+local function attach_terminal_scroll(buf)
+  if terminal_scrollers[buf] then
+    terminal_scrollers[buf]()
+    return
+  end
+
+  local pending = false
+  local function schedule_scroll()
+    if pending then return end
+    pending = true
+    vim.schedule(function()
+      pending = false
+      if not vim.api.nvim_buf_is_valid(buf) then
+        terminal_scrollers[buf] = nil
+        return
+      end
+      scroll_terminal_to_bottom(buf)
+    end)
+  end
+
+  terminal_scrollers[buf] = schedule_scroll
+  vim.api.nvim_buf_attach(buf, false, {
+    on_lines = schedule_scroll,
+    on_detach = function()
+      terminal_scrollers[buf] = nil
+    end,
+  })
+  schedule_scroll()
+end
+
 ---Lines of the current visual selection, or nil when not in visual mode.
 ---@return integer?, integer?
 local function visual_range()
   local mode = vim.fn.mode()
-  if not mode:match("^[vV\22]") then
-    return nil
-  end
+  if not mode:match("^[vV\22]") then return nil end
   -- Leave visual mode so '< and '> are set.
   vim.cmd("normal! \27")
   local s = vim.fn.line("'<")
@@ -56,13 +105,9 @@ local function hunk_range()
   local last = vim.fn.line("$")
 
   -- diff_hlID is window-local and returns 0 for unchanged lines.
-  local function changed(l)
-    return vim.fn.diff_hlID(l, 1) ~= 0
-  end
+  local function changed(l) return vim.fn.diff_hlID(l, 1) ~= 0 end
 
-  if not changed(lnum) then
-    return math.max(1, lnum - 15), math.min(last, lnum + 15)
-  end
+  if not changed(lnum) then return math.max(1, lnum - 15), math.min(last, lnum + 15) end
 
   local s, e = lnum, lnum
   while s > 1 and changed(s - 1) do
@@ -81,20 +126,12 @@ local function review_context()
   local view = ok and lib.get_current_view() or nil
   local rev = view and view.rev_arg or nil
   local branch = vim.fn.systemlist("git rev-parse --abbrev-ref HEAD")[1]
-  if vim.v.shell_error ~= 0 then
-    branch = nil
-  end
+  if vim.v.shell_error ~= 0 then branch = nil end
   local parts = {}
-  if rev then
-    parts[#parts + 1] = "diff range: " .. rev
-  end
-  if branch then
-    parts[#parts + 1] = "branch: " .. branch
-  end
+  if rev then parts[#parts + 1] = "diff range: " .. rev end
+  if branch then parts[#parts + 1] = "branch: " .. branch end
   local review = package.loaded["config.review_mode"]
-  if review and review.is_active() and review.base() then
-    parts[#parts + 1] = "review base: " .. review.base()
-  end
+  if review and review.is_active() and review.base() then parts[#parts + 1] = "review base: " .. review.base() end
   return table.concat(parts, ", ")
 end
 
@@ -147,9 +184,7 @@ local function capture()
   local s, e = visual_range()
   if not s and not name:match("^diffview://") then
     local gs = package.loaded.gitsigns
-    local ok, hunks = pcall(function()
-      return gs and gs.get_hunks and gs.get_hunks(buf) or {}
-    end)
+    local ok, hunks = pcall(function() return gs and gs.get_hunks and gs.get_hunks(buf) or {} end)
     if ok and hunks and #hunks > 0 then
       local hunk = require("config.git_hunk_nav").hunk_at(hunks, vim.api.nvim_win_get_cursor(0)[1])
       if hunk and type(hunk.head) == "string" and type(hunk.lines) == "table" then
@@ -158,9 +193,7 @@ local function capture()
           ("Hunk: %s"):format(hunk.head),
         }
         local review = package.loaded["config.review_mode"]
-        if review and review.is_active() and review.base() then
-          header[#header + 1] = "review base: " .. review.base()
-        end
+        if review and review.is_active() and review.base() then header[#header + 1] = "review base: " .. review.base() end
         header[#header + 1] = ""
         header[#header + 1] = "```diff"
         vim.list_extend(header, hunk.lines)
@@ -174,18 +207,14 @@ local function capture()
   end
 
   local lines = vim.api.nvim_buf_get_lines(buf, s - 1, e, false)
-  if #lines == 0 then
-    return nil
-  end
+  if #lines == 0 then return nil end
 
   local header = {
     ("File: %s"):format(path ~= "" and path or "(unnamed)"),
     ("Lines: %d-%d  [%s]"):format(s, e, side),
   }
   local ctx = review_context()
-  if ctx ~= "" then
-    header[#header + 1] = ctx
-  end
+  if ctx ~= "" then header[#header + 1] = ctx end
   header[#header + 1] = ""
   header[#header + 1] = ("```%s"):format(vim.bo[buf].filetype or "")
   vim.list_extend(header, lines)
@@ -197,15 +226,30 @@ end
 ---The running pi terminal, if any.
 local function pi_term()
   local ok, terminal = pcall(require, "snacks.terminal")
-  if not ok then
-    return nil
-  end
+  if not ok then return nil end
   for _, term in ipairs(terminal.list()) do
-    if vim.api.nvim_buf_is_valid(term.buf) and vim.b[term.buf].pi_diffview then
-      return term
-    end
+    if vim.api.nvim_buf_is_valid(term.buf) and vim.b[term.buf].pi_diffview then return term end
   end
   return nil
+end
+
+-- Snacks cannot retarget a live float into a split; hide+show keeps the same
+-- terminal buffer (and the running pi job) and opens it in the other layout.
+local FLOAT = { position = "float", width = 0.85, height = 0.85, border = "rounded" }
+local SIDE = { position = "right", width = 0.4, height = 0, border = "none" }
+
+local function toggle_side(win)
+  local layout = win.opts.position == "right" and FLOAT or SIDE
+  win:hide()
+  win.opts.position = layout.position
+  win.opts.width = layout.width
+  win.opts.height = layout.height
+  win.opts.border = layout.border
+  win.opts.backdrop = layout.position == "float" and 60 or false
+  win.opts.wo = win.opts.wo or {}
+  win.opts.wo.winfixwidth = layout.position == "right"
+  win.opts.wo.winbar = layout.position == "float" and "" or " pi — agent "
+  win:show()
 end
 
 ---Open a new pi popup, optionally with initial arguments.
@@ -238,11 +282,14 @@ local function open_pi(args)
   vim.list_extend(cmd, args or {})
 
   local term = terminal.open(cmd, {
-    win = {
-      position = "float",
-      width = 0.85,
-      height = 0.85,
-      border = "rounded",
+    win = vim.tbl_extend("force", FLOAT, {
+      on_buf = function(self)
+        attach_terminal_scroll(self.buf)
+      end,
+      on_win = function(self)
+        local schedule_scroll = terminal_scrollers[self.buf]
+        if schedule_scroll then schedule_scroll() end
+      end,
       title = " pi — agent ",
       title_pos = "center",
       -- Must live under `win`: terminal.open passes only opts.win to Snacks.win,
@@ -253,28 +300,28 @@ local function open_pi(args)
       keys = {
         pi_hide = {
           "<C-q>",
-          function(self)
-            self:hide()
-          end,
+          function(self) self:hide() end,
           mode = { "t", "n" },
           desc = "Hide pi popup",
         },
         pi_hide_g = {
           "<C-g>",
-          function(self)
-            self:hide()
-          end,
+          function(self) self:hide() end,
           mode = { "t", "n" },
           desc = "Hide pi popup",
         },
+        pi_side = {
+          "<C-s>",
+          toggle_side,
+          mode = { "t", "n" },
+          desc = "Toggle pi right split",
+        },
       },
-    },
+    }),
     env = NO_HERDR_AGENT,
     interactive = true,
   })
-  if term and term.buf then
-    vim.b[term.buf].pi_diffview = true
-  end
+  if term and term.buf then vim.b[term.buf].pi_diffview = true end
   return term
 end
 
@@ -309,9 +356,7 @@ function M.ask()
     return
   end
   vim.ui.input({ prompt = "Ask pi about this code: " }, function(answer)
-    if answer and answer ~= "" then
-      send(file, answer)
-    end
+    if answer and answer ~= "" then send(file, answer) end
   end)
 end
 
@@ -368,9 +413,7 @@ return {
         for _, m in ipairs(maps) do
           ours[m[2]] = true
         end
-        opts.keymaps[group] = vim.tbl_filter(function(m)
-          return not (type(m) == "table" and ours[m[2]])
-        end, opts.keymaps[group] or {})
+        opts.keymaps[group] = vim.tbl_filter(function(m) return not (type(m) == "table" and ours[m[2]]) end, opts.keymaps[group] or {})
         for _, m in ipairs(maps) do
           table.insert(opts.keymaps[group], m)
         end

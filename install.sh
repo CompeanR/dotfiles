@@ -56,6 +56,10 @@ install_desktop() {
   ln -sf "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json
   ln -sf "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc
 
+  # Cursor personal skills (Pi MCP playbook)
+  mkdir -p ~/.cursor/skills
+  ln -sfn "$ROOT/cursor/skills/pi" ~/.cursor/skills/pi
+
   # Herdr config (durable files only; runtime state stays local)
   mkdir -p ~/.config/herdr/agent-detection
   ln -sf "$ROOT/herdr/config.toml" ~/.config/herdr/config.toml
@@ -130,6 +134,10 @@ install_server() {
   safe_link "$ROOT/pi/npm/package.json" ~/.pi/agent/npm/package.json || status=1
   safe_link "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json || status=1
   safe_link "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc || status=1
+
+  # Cursor personal skills (Pi MCP playbook)
+  mkdir -p ~/.cursor/skills
+  safe_link "$ROOT/cursor/skills/pi" ~/.cursor/skills/pi || status=1
 
   # Herdr durable files only
   mkdir -p ~/.config/herdr/agent-detection

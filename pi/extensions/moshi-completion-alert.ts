@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
 const WEBHOOK_URL = "https://api.getmoshi.app/api/webhook";
-const DEFAULT_LONG_TURN_SECONDS = 300;
+const DEFAULT_LONG_TURN_SECONDS = 1200;
 const MAX_MESSAGE_LENGTH = 220;
 // ponytail: no push on ask_user_question / cursor_ask_question — Herdr sidebar
 // (herdr-attention) owns that signal; Moshi only for long-turn + /push-next.

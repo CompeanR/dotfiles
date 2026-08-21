@@ -3,9 +3,9 @@
   "defaultProvider": "cursor",
   "defaultThinkingLevel": "xhigh",
   "enabledModels": [
-    "openai-codex/gpt-5.6-sol",
+    "cursor/grok-4.6",
     "openai-codex/gpt-5.6-luna",
-    "cursor/grok-4.6"
+    "openai-codex/gpt-5.6-sol"
   ],
   "hideThinkingBlock": true,
   "lastChangelogVersion": "0.84.2",
@@ -33,7 +33,7 @@
       ]
     },
     "npm:pi-claude-auth",
-    "src/pi-cursor"
+    "npm:pi-cursor-sdk"
   ],
   "subagents": {
     "disableBuiltins": true,
@@ -106,14 +106,14 @@
       },
       "work-design": {
         "model": "openai-codex/gpt-5.6-sol",
-        "thinking": "max",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-explore": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-terra",
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -121,8 +121,8 @@
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-sol",
-        "thinking": "xhigh",
+        "model": "openai-codex/gpt-5.6-luna",
+        "thinking": "max",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
