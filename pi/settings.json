@@ -1,14 +1,15 @@
 {
   "defaultModel": "grok-4.6",
   "defaultProvider": "cursor",
-  "defaultThinkingLevel": "xhigh",
+  "defaultThinkingLevel": "high",
   "enabledModels": [
     "cursor/grok-4.6",
     "openai-codex/gpt-5.6-luna",
-    "openai-codex/gpt-5.6-sol"
+    "openai-codex/gpt-5.6-sol",
+    "cursor/fable@300k"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.84.2",
+  "lastChangelogVersion": "0.84.4",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -21,9 +22,7 @@
     "npm:pi-undo-redo",
     {
       "source": "git:github.com/DietrichGebert/ponytail",
-      "extensions": [
-        "-pi-extension/index.js"
-      ],
+      "extensions": ["-pi-extension/index.js"],
       "skills": [
         "-skills/ponytail/SKILL.md",
         "-skills/ponytail-audit/SKILL.md",
@@ -42,6 +41,7 @@
     "agentOverrides": {
       "jd-fix-agent": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -50,6 +50,7 @@
       },
       "jd-judge-a": {
         "model": "openai-codex/gpt-5.6-terra",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -58,6 +59,7 @@
       },
       "jd-judge-b": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -66,6 +68,7 @@
       },
       "review-readability": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -74,6 +77,7 @@
       },
       "review-reliability": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -82,6 +86,7 @@
       },
       "review-resilience": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -90,6 +95,7 @@
       },
       "review-risk": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -98,7 +104,8 @@
       },
       "work-apply": {
         "model": "openai-codex/gpt-5.6-sol",
-        "thinking": "high",
+        "fallbackModels": ["cursor/grok-4.6"],
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -106,6 +113,7 @@
       },
       "work-design": {
         "model": "openai-codex/gpt-5.6-sol",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -114,6 +122,7 @@
       },
       "work-explore": {
         "model": "openai-codex/gpt-5.6-terra",
+        "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -122,7 +131,8 @@
       },
       "work-verify": {
         "model": "openai-codex/gpt-5.6-luna",
-        "thinking": "max",
+        "fallbackModels": ["cursor/grok-4.6"],
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -130,8 +140,6 @@
       }
     }
   },
-  "skills": [
-    "~/.config/opencode/skills/youtube-transcript"
-  ],
+  "skills": ["~/.config/opencode/skills/youtube-transcript"],
   "theme": "matte-black"
 }
