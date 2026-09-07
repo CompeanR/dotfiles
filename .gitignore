@@ -33,3 +33,7 @@
 # Generated Python bytecode
 __pycache__/
 *.py[cod]
+
+# Per-host ghostty selection (created by install.sh)
+ghostty/config-host
+ghostty/gtk-omarchy.css

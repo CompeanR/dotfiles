@@ -26,7 +26,20 @@ install_desktop() {
   ln -sf "$ROOT/vscode/settings.json" ~/.config/Code/User/settings.json
   ln -sf "$ROOT/vscode/keybindings.json" ~/.config/Code/User/keybindings.json
   ln -sf "$ROOT/ideavimrc" ~/.ideavimrc
-  ln -sf "$ROOT/ghostty" ~/.config/ghostty
+  ln -sfn "$ROOT/ghostty" ~/.config/ghostty
+  # Ghostty is split into config-common + a per-host file; pick this machine's.
+  case "$(uname -s)" in
+    Darwin) ghostty_host="config-macos" ;;
+    *) ghostty_host="config-linux" ;;
+  esac
+  ln -sf "$ROOT/ghostty/$ghostty_host" "$ROOT/ghostty/config-host"
+
+  # Linux only: keep Ghostty's GTK chrome in sync with the Omarchy theme.
+  if [[ $ghostty_host == "config-linux" ]] && [[ -d ~/.config/omarchy ]]; then
+    mkdir -p ~/.config/omarchy/hooks/theme-set.d
+    ln -sf "$ROOT/ghostty/theme-set-hook" ~/.config/omarchy/hooks/theme-set.d/ghostty-gtk-css
+    "$ROOT/ghostty/omarchy-gtk-css" || true
+  fi
 
   # Lazygit config
   mkdir -p ~/.config/lazygit

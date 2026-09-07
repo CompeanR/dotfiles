@@ -2,7 +2,7 @@
  * Syncs pi's light/dark theme with the active Omarchy theme.
  *
  * Omarchy light themes include:
- *   ~/.config/omarchy/current/theme/light.mode
+ *   ~/.local/state/omarchy/current/theme/light.mode
  */
 
 import { existsSync } from "node:fs";
@@ -10,7 +10,7 @@ import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const home = process.env.HOME ?? "";
-const lightModePath = join(home, ".config/omarchy/current/theme/light.mode");
+const lightModePath = join(home, ".local/state/omarchy/current/theme/light.mode");
 
 function omarchyPiTheme(): string {
 	return existsSync(lightModePath) ? "light" : "matte-black";

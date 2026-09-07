@@ -1,0 +1,17 @@
+# Shared Ghostty settings (macOS + Linux).
+# Platform files live in config-macos / config-linux; install.sh symlinks the
+# right one to ~/.config/ghostty/config.
+
+shell-integration-features = sudo,no-title
+
+cursor-style = block
+cursor-style-blink = false
+adjust-cell-height = 0
+
+mouse-hide-while-typing = true
+mouse-scroll-multiplier = 2
+
+window-padding-balance = true
+window-save-state = always
+
+copy-on-select = clipboard

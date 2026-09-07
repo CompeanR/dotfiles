@@ -1,0 +1,78 @@
+# macOS (mac mini) Ghostty config.
+config-file = ~/.config/ghostty/config-common
+
+font-family = SFMono Nerd Font
+font-style = Regular
+font-style-bold = Bold
+font-style-italic = Italic
+font-style-bold-italic = BoldItalic
+font-size = 17
+
+background-opacity = 0.77
+background-blur = true
+window-colorspace = "display-p3"
+macos-option-as-alt = true
+
+quick-terminal-autohide = true
+
+# synced w/ alacritty import: ~/.config/omarchy/current/theme/alacritty.toml
+background = #121212
+foreground = #bebebe
+cursor-color = #eaeaea
+selection-background = #333333
+selection-foreground = #bebebe
+palette = 0=#333333
+palette = 1=#D35F5F
+palette = 2=#FFC107
+palette = 3=#b91c1c
+palette = 4=#e68e0d
+palette = 5=#D35F5F
+palette = 6=#bebebe
+palette = 7=#bebebe
+palette = 8=#8a8a8d
+palette = 9=#B91C1C
+palette = 10=#FFC107
+palette = 11=#b90a0a
+palette = 12=#f59e0b
+palette = 13=#B91C1C
+palette = 14=#eaeaea
+palette = 15=#ffffff
+
+# keybindings
+keybind = cmd+s>r=reload_config
+keybind = cmd+s>x=close_surface
+keybind = cmd+s>n=new_window
+
+# tabs
+keybind = cmd+s>c=new_tab
+keybind = cmd+s>shift+l=next_tab
+keybind = cmd+s>shift+h=previous_tab
+keybind = cmd+s>comma=move_tab:-1
+keybind = cmd+s>period=move_tab:1
+
+# quick terminal
+keybind = global:cmd+escape=toggle_quick_terminal
+
+# quick tab switch
+keybind = cmd+s>1=goto_tab:1
+keybind = cmd+s>2=goto_tab:2
+keybind = cmd+s>3=goto_tab:3
+keybind = cmd+s>4=goto_tab:4
+keybind = cmd+s>5=goto_tab:5
+keybind = cmd+s>6=goto_tab:6
+keybind = cmd+s>7=goto_tab:7
+keybind = cmd+s>8=goto_tab:8
+keybind = cmd+s>9=goto_tab:9
+
+# split
+keybind = cmd+s>\=new_split:right
+keybind = cmd+s>-=new_split:down
+keybind = cmd+s>j=goto_split:bottom
+keybind = cmd+s>k=goto_split:top
+keybind = cmd+s>h=goto_split:left
+keybind = cmd+s>l=goto_split:right
+keybind = cmd+s>z=toggle_split_zoom
+keybind = cmd+s>e=equalize_splits
+
+# Unbinds
+keybind = global:cmd+d=unbind

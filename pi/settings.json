@@ -1,6 +1,6 @@
 {
-  "defaultModel": "grok-4.6",
-  "defaultProvider": "cursor",
+  "defaultModel": "gpt-5.6-sol",
+  "defaultProvider": "openai-codex",
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "cursor/grok-4.6",
