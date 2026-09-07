@@ -27,3 +27,4 @@ and re-dispatch; do not silently take the work back unless the remaining
 correction is trivial.
 
 Deploy pi sub-agents with at least 20min timeout. For design agents we can increase the threshold to 30min.
+Don't be verbose

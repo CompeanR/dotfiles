@@ -1,7 +1,10 @@
 {
   "env": {
-    "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS": "2000"
+    "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS": "2000",
+    "CLAUDISH_PROVIDER": "openai",
+    "CLAUDISH_MODEL": "gpt-5.6-luna"
   },
+  "outputStyle": "Concise",
   "permissions": {
     "allow": [
       "mcp__plugin_engram_engram__*",
@@ -12,21 +15,9 @@
     ],
     "defaultMode": "auto"
   },
-  "model": "claude-opus-4-6",
+  "model": "opus",
   "hooks": {
     "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$HOME/dotfiles/claude/scripts/guard-default-branch.sh",
-            "if": "Bash(git *)",
-            "timeout": 10,
-            "statusMessage": "Checking branch..."
-          }
-        ]
-      },
       {
         "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|TaskOutput|mcp__pi__subagent",
         "hooks": [
@@ -112,7 +103,8 @@
   "enabledPlugins": {
     "engram@engram": true,
     "mattpocock-skills@claude-plugins-official": true,
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "claudish-to-english@gvzdv-plugins": true
   },
   "extraKnownMarketplaces": {
     "engram": {
@@ -120,9 +112,20 @@
         "source": "github",
         "repo": "Gentleman-Programming/engram"
       }
+    },
+    "gvzdv-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "gvzdv/claudish-to-english"
+      }
     }
   },
   "effortLevel": "high",
+  "modelSettings": {
+    "claude-opus-4-6": {
+      "effortLevel": "xhigh"
+    }
+  },
   "tui": "fullscreen",
   "theme": "dark",
   "remoteControlAtStartup": false,
