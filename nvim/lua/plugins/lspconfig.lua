@@ -43,6 +43,8 @@ local function diffview_safe_picker(provider)
   end
 end
 
+local peek = require("config.lsp_peek")
+
 return {
   {
     "neovim/nvim-lspconfig",
@@ -53,6 +55,8 @@ return {
         ["*"] = {
           keys = {
             { "gd", diffview_safe_picker("lsp_definitions"), desc = "Goto Definition", has = "definition" },
+            { "gp", peek.peek_definition, desc = "Peek Definition", has = "definition" },
+            { "gP", peek.peek_implementation, desc = "Peek Implementation", has = "implementation" },
             { "gr", diffview_safe_picker("lsp_references"), desc = "References", nowait = true },
             { "gI", diffview_safe_picker("lsp_implementations"), desc = "Goto Implementation" },
             { "gy", diffview_safe_picker("lsp_typedefs"), desc = "Goto T[y]pe Definition" },
