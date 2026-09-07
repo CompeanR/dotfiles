@@ -1,240 +1,300 @@
 ---
 name: engram-prune
 description: >
-  Audit, prune, migrate, and consolidate Engram persistent memory observations directly via SQLite.
-  Trigger: When the user asks to clean up memories, prune engram, merge project keys, audit observations, or when search results return too much noise.
+  Audit and prune Engram SQLite observations with backup-first, review-first
+  soft-deletes. Candidate queries are review lists, never auto-delete lists.
+  Use when the user asks to prune engram, clean up memories, merge project
+  keys, audit observations, or when mem_search is too noisy.
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "1.0"
+  version: "1.3.0"
 ---
+
+# Engram prune
+
+Direct SQLite against `~/.engram/engram.db`. Do not use `mem_update` for bulk work.
+
+**v1.3.0:** Adds the measured findings from a real 1,230-row run (see "What a real run looks like"). Expected yield is ~4%, not ~40%. Whole-document similarity is near-useless here; the real duplicate class is *containment* (`containment.py`). Retitling blank-titled rows beats deleting. Adds `validate-ids.py` (pre-write reconciliation check), `retitle.py`, and `briefs/` for delegating the two analysis passes.
+
+**v1.2.1:** Candidate SQL is a review list. Age-based `session_summary` bulk UPDATE is gone. `verify.sql` does not target 0 summaries. TIER A keep-guards include `follow-up/*` on every candidate query. `run.py` refuses migrate without both `--old-key` and `--new-key`. Ignore any v1.0 copy that says "safe to delete" for those heuristics.
+
+## What a real run looks like
+
+Measured on 1,230 rows, 6 months of one project (2026-08-31):
+
+| | |
+|---|---|
+| Rows cut | **49 (4%)** — 1230 → 1181 |
+| Rows retitled | 30 blank titles → 0 |
+| Duplicate clusters found by full pairwise TF-IDF over 644,680 pairs | **0** above 0.85 cosine; 52% false-positive rate at 0.50 |
+| Dominant noise | workflow narration, *not* re-saved facts |
+
+Three calibration lessons, each of which cost a wasted analysis pass:
+
+1. **Do not estimate yield from row counts.** "1230 rows, must be bloated, cut to
+   700" was wrong by an order of magnitude. Only content reading gives a number.
+2. **Similarity clustering finds almost nothing.** Run it once to prove the
+   negative, then move on. Budget it as a check, not as the main event.
+3. **The real duplicate is containment, not similarity.** A short typed row
+   (`**What** / **Why** / **Learned**`) beside a long `session_summary` from the
+   same session, stating the same fact. Cosine scores that pair LOW because
+   lengths and vocabulary differ. Find them structurally with adjacent ids and
+   close timestamps — run `containment.py --project {PROJECT}`. Keep the typed row.
+
+Cut composition from that run, as a prior for the next one:
+
+| Bucket | Share |
+|---|---|
+| Workflow narration (commit / rebase / stash / handoff recaps) | 17 |
+| Session summary duplicating an adjacent typed row | 10 |
+| Assistant-tooling bookkeeping (skill registry, agent ops, editor config) | 7 |
+| One-run verification results | 6 |
+| Superseded rows (each with a quoted contradiction) | 5 |
+| Code-explanation Q&A describing code still in the repo | 4 |
+
+## Retitle before you delete
+
+Blank and generic titles hurt retrieval more than surplus rows do. In the run
+above, 30 rows held real content — tax-regime research, an export-risk
+analysis, an app-review rejection — under an empty title, reachable only by
+full-text luck. That was the single biggest search-quality win of the session.
+
+```bash
+python3 run.py assets/retitle-candidates.sql --project {PROJECT}
+# write id<TAB>title lines into titles.tsv, then:
+python3 retitle.py --project {PROJECT} --map titles.tsv            # dry run
+python3 retitle.py --project {PROJECT} --map titles.tsv --write --backup {BACKUP}
+
+# blank titles are the default target; add --allow-generic to also replace
+# signal-free titles like "Session summary" and "sdd/<change>/<phase>"
+python3 retitle.py --project {PROJECT} --map titles.tsv --allow-generic \
+  --write --backup {BACKUP}
+```
+
+`retitle.py` only fires on rows that are still retitleable (blank by default,
+plus generic titles under `--allow-generic`), active and in-project, so it is
+idempotent and never clobbers a hand-written title.
 
 ## When to Use
 
 - User says "prune engram", "clean up memories", "too much noise", "memory cleanup"
 - `mem_search` returns irrelevant results consistently
 - Multiple project keys exist for the same codebase
-- After a major milestone when shipped SDD artifacts should be archived
-- Observation count exceeds ~200 for a single project
+- After a major milestone when the user names shipped SDD changes to archive
+- Observation count exceeds ~200 for a single project (audit; do not hit 200 by wiping signal)
 
----
+Skip projects with < 100 active observations unless the user asks anyway.
 
-## Database Location
+## Hard rules
 
-The active Engram SQLite database lives at `~/.engram/engram.db`.
+1. Backup before every write.
+2. Audit before proposing deletes.
+3. **Candidate query ≠ delete list.** Show IDs, wait for approval.
+4. Never bulk-delete `session_summary` by age. Extract unique Discoveries / SHAs / Next Steps first.
+5. Keep `follow-up/*`, `pinned = 1`, and `review_after IS NOT NULL`.
+6. Soft-delete only (`deleted_at`). Hard-delete only if the user asks after verify.
+7. `sqlite3` CLI is often missing. Use `run.py` (Python stdlib).
+8. Run `validate-ids.py` on the final list before any write. It catches the
+   real-world failure: a reconciliation naming one id as both a keeper and a
+   drop (an analysis pass proposed deleting row 482 while also citing 482 as
+   the row that supersedes 481).
+9. Delegate the two analysis passes to read-only sub-agents pointed at the
+   **backup copy**, never the live DB. That makes them mechanically unable to
+   write. Briefs are in `briefs/`.
+10. Sub-agents disagree. Reconcile rather than trusting either: one pass found
+    14 "duplicates" that were all adjacent-id artifacts; the other found zero
+    duplicates but was blind to containment. Both were partly right.
 
-Verify before operating:
+Keep-guards baked into `run.py --soft-delete-ids` and TIER A queries:
 
-```bash
-ls -la ~/.engram/engram.db
+```sql
+AND pinned = 0
+AND IFNULL(topic_key, '') NOT LIKE 'follow-up/%'
+AND review_after IS NULL
 ```
 
----
+## Tool
 
-## Step 0: ALWAYS Backup First
+Skill dir: parent of this file.
+
+```bash
+python3 run.py assets/audit.sql --project {PROJECT}
+python3 run.py assets/noise-candidates.sql --project {PROJECT}
+python3 run.py assets/verify.sql --project {PROJECT}
+```
+
+Writes:
 
 ```bash
 cp ~/.engram/engram.db ~/.engram/engram.db.backup-$(date +%Y%m%d-%H%M%S)
+python3 run.py --soft-delete-ids 12,34,56 --project {PROJECT} \
+  --write --backup ~/.engram/engram.db.backup-YYYYMMDD-HHMMSS
 ```
 
-Non-negotiable. Every prune session starts with a backup.
+`--write` without an existing `--backup` file is refused. FTS triggers on `observations` keep the search index in sync on UPDATE/DELETE.
 
----
+## Step 0: Backup
 
-## Step 1: Diagnosis — Run the Audit Query
+```bash
+cp ~/.engram/engram.db ~/.engram/engram.db.backup-$(date +%Y%m%d-%H%M%S)
+ls -la ~/.engram/engram.db ~/.engram/engram.db.backup-*
+```
 
-Run the audit query from [assets/audit.sql](assets/audit.sql) to understand what you're working with.
+Non-negotiable before `--write`.
 
-This gives you:
-- Total active observations per project
-- Breakdown by type
-- Split of SDD artifacts vs real architecture
-- Age distribution (how many are older than 30/60/90 days)
-- Duplicate title detection
+## Step 1: Audit
 
-**Read the numbers before deleting anything.** If a project has < 100 observations, it probably doesn't need pruning.
+Run `assets/audit.sql`. Record: active count, type mix, session_summary with vs without Discoveries, follow-up count, pinned/review_after/passive, SDD change names, sibling project keys.
 
----
+If `< 100` active, stop unless the user still wants a pass.
 
-## Step 2: Classification — What's Noise vs Signal
+## Step 2: Classify
 
-### Noise (safe to delete)
+### Default KEEP (do not "clean" these)
 
-| Type | Pattern | Why it's noise |
-|------|---------|---------------|
-| `session_summary` | **Older than 30 days** | Describes state that likely changed. Code is the source of truth. |
-| `session_summary` | SDD sub-agent phase sessions | Process logs — the actual artifacts contain the real content. Identifiable by goals like "Create the SDD task breakdown", "Write the sdd-spec artifact", "Execute the SDD design phase". |
-| `session_summary` | Micro Q&A sessions | Goals like "Explain X", "Clarify Y", "Answer whether Z" — conceptual Q&A with no code changes. |
-| SDD planning artifacts | `topic_key LIKE 'sdd/%/{explore,proposal,spec,design,tasks}'` for SHIPPED changes | Intermediate planning for work that's done. Only the `completed` marker has lasting value, and even that is optional. |
-| `decision` | Early UI micro-decisions ("starting X screen", "refined Y layout") | Screens get rewritten. These describe states that no longer exist. |
-| `bugfix` | Fixes for code rewritten 2+ times since | The lesson is stale because the code doesn't exist anymore. |
-| `discovery` | One-shot verifications ("verified X is Y") where Y was then fixed | The finding was addressed — keeping it pollutes searches. |
-| `discovery` | Meta observations about engram itself | Tooling knowledge, not project knowledge. |
-| Any | Titles starting with `[DELETED]` or `[INVALIDATED]` | Already marked as dead. |
+| Pattern | Why |
+|---------|-----|
+| `topic_key LIKE 'follow-up/%'` | Pending work source of truth |
+| `pinned = 1` or `review_after` set | User/lifecycle hold |
+| `preference`, `pattern`, current `architecture` | Conventions still in force |
+| `config` for project key, sync, skill registry, this prune skill | Tooling that must survive cleanup |
+| `discovery` titles `Found` / `Verified` / `Audited` / … | Lasting findings, not one-shot logs |
+| `bugfix` whose lesson still applies (crashes, root cause) | Age does not stale a live bug class |
+| `session_summary` with Discoveries not saved as typed rows | Only copy of the finding |
+| `passive` unique rows (e.g. UI prefs) | Dedupe extras only |
+| Early `decision`s (first 14 days) | Often product boundary / PRD, not "Starting X screen" |
+| SDD artifacts for changes the user did **not** name as shipped | `sdd/%/completed` is often **0** even after apply |
 
-### Signal (keep)
+### TIER A candidates (review IDs, then soft-delete)
 
-| Type | Pattern | Why it's signal |
-|------|---------|----------------|
-| `decision` | `topic_key LIKE 'follow-up/%'` | Active work items — THE source of truth for pending work |
-| `session_summary` | **Last 30 days** with real implementation work | Contains commit SHAs, unique discoveries not saved elsewhere, relevant file lists. Review before deleting. |
-| `architecture` | Describes CURRENT codebase structure | Still true today |
-| `bugfix` | Lessons that apply to current code | Prevents re-introducing the same bug |
-| `discovery` | Lasting technical learnings (API behavior, library gotchas) | Saves future debugging time |
-| `pattern` | Established conventions | Must be preserved for consistency |
-| `preference` | User/project preferences | Must be preserved across sessions |
-| `config` | SDD init context, skill registry | Infrastructure knowledge |
-| SDD artifacts | For ACTIVE (not shipped) changes | Still needed for `/sdd-continue` |
+| Pattern | Notes |
+|---------|-------|
+| Title `[DELETED]` / `[INVALIDATED]` | Already marked dead |
+| `expires_at < now` | Row was meant to expire |
+| Empty title **and** `length(content) < 40` | Accidental saves. Empty title with real content → retitle, don't delete |
+| Duplicate `session_summary` with identical content | Keep newest id |
+| Extra `passive` rows sharing a title | Keep newest id |
+| SDD **process-only** summaries with **narrow** Goal phrases | `Create the SDD task breakdown`, `Write the sdd-spec artifact`, … — **not** `%sdd-verify%` |
+| `decision` titles `Starting` / `Committed` / `Implementing` | Confirm they are not real decisions |
+| SDD topic keys the **user listed** as shipped | Explicit list only |
+| Workflow narration: "committed X", "opened PR #N", "rebased", "stash", handoff recaps | Highest-volume bucket in practice; git already records it |
+| `session_summary` beside an adjacent typed row stating the same fact | Run `containment.py --project {PROJECT}`; keep the typed row |
+| One-run verification results ("TypeScript and targeted tests passed") | No finding about *why* → nothing to retrieve later |
+| Assistant-tooling bookkeeping (skill registry, sub-agent ops, editor config) | About the tooling, not the project |
+| Q&A summaries ("Explain X") describing code still in the repo | Re-readable on demand; a non-obvious *rationale* is a KEEP |
+
+### Known false positives (v1.0 called these "safe")
+
+- `session_summary` older than 30 days — most still contain Discoveries (release hardening, Screen Time, production-readiness).
+- `Explain` / `Clarify` / `Answer whether` LIKE — matches "Clarify and **fix**…".
+- `%sdd-verify%` — matches product verify/review sessions.
+- Discovery title prefixes — those **are** the signal.
+- Bugfix older than 60 days — includes current crash lessons.
+- Title contains `Engram` — hits canonical project key, sync model, retrieval preference.
 
 ### Decision tree
 
 ```
-Is it a follow-up topic key?               → KEEP (always)
-Is it a session_summary older than 30 days? → DELETE
-Is it a session_summary for SDD sub-agent?  → DELETE
-Is it a session_summary for Q&A?            → DELETE
-Is it a recent session_summary with real work? → REVIEW (may contain unique commit SHAs, discoveries)
-Is it an SDD artifact for a shipped change? → DELETE
-Is it about code that was rewritten 2+ times? → DELETE
-Is it a one-shot finding that was addressed?  → DELETE
-Is it meta (about engram/tooling itself)?     → DELETE
-Is it about current code/conventions?         → KEEP
-Is it a lasting lesson?                       → KEEP
+pinned or review_after set?                         → KEEP
+follow-up/* ?                                       → KEEP
+preference / pattern / current architecture?        → KEEP
+discovery/bugfix lesson still applies?              → KEEP
+session_summary with unextracted Discoveries/SHAs?  → EXTRACT, then maybe delete
+user-named shipped SDD topic_key?                   → candidate
+SDD process-only Goal (narrow phrases)?             → candidate
+tombstone / expired / thin-empty-title / exact dup? → candidate
+empty title with real content?                      → RETITLE, keep
+Starting/Committed/Implementing decision?           → review, default KEEP if unsure
+else                                                → KEEP
 ```
 
-### Session Summary Triage (for recent ones you keep)
+### Extract before deleting a session summary
 
-Recent session summaries may contain information not captured elsewhere. Before deleting, check:
+1. Commit SHAs not stored elsewhere → `mem_save` typed row first.
+2. Discoveries section not already a `discovery` → save it.
+3. Next Steps not already `follow-up/*` → save it.
 
-1. **Commit SHAs** — are they recorded in any other observation? If not, the session summary is the only link between code and context.
-2. **Discoveries section** — were these saved as separate `discovery` observations? Often they weren't.
-3. **Next Steps** — did these become `follow-up/*` topic keys? If not, the intent may be lost.
+Then delete by **id**, not by age.
 
-If a recent session summary has unique information, **extract it first** — save the valuable bits as proper typed observations (decision, discovery, bugfix), THEN delete the session summary.
+### Shipped SDD
 
----
+A change is shipped only if the user names it, or it has `sdd/{change}/completed`, `sdd/{change}/archive-report`, or `sdd/{change}/archive` **and** the user confirms. `apply-progress` is not enough. Do not DELETE all `sdd/%` except `completed`.
 
-## Step 3: Execute — Use Bulk SQL
+## Step 3: Execute
 
-**NEVER use `mem_update` for bulk operations.** It's one-at-a-time and burns context. Go directly to SQLite.
+Never run v1.0 bulk UPDATEs (`type = 'session_summary' AND created_at < datetime('now', '-30 days')`, Q&A LIKE, `%sdd-verify%`).
 
-Engram uses **soft delete** via the `deleted_at` column. Set it to `datetime('now')` to remove an observation from search results without destroying it.
+Validate the reconciled list first — it exits non-zero on any failure:
 
-### Delete session summaries (age-based + pattern-based)
-
-```sql
--- Old session summaries (> 30 days) — safe to bulk delete
-UPDATE observations SET deleted_at = datetime('now')
-WHERE deleted_at IS NULL AND project = '{PROJECT}' AND type = 'session_summary'
-AND created_at < datetime('now', '-30 days');
-
--- SDD sub-agent session summaries (any age) — process logs, not knowledge
-UPDATE observations SET deleted_at = datetime('now')
-WHERE deleted_at IS NULL AND project = '{PROJECT}' AND type = 'session_summary'
-AND (
-  content LIKE '%SDD task breakdown%' OR
-  content LIKE '%sdd-spec artifact%' OR
-  content LIKE '%sdd-design%artifact%' OR
-  content LIKE '%sdd-explore%artifact%' OR
-  content LIKE '%SDD proposal%artifact%' OR
-  content LIKE '%sdd-verify%' OR
-  content LIKE '%sdd-init%'
-);
-
--- Micro Q&A session summaries (any age) — no code changes, just explanations
-UPDATE observations SET deleted_at = datetime('now')
-WHERE deleted_at IS NULL AND project = '{PROJECT}' AND type = 'session_summary'
-AND (
-  content LIKE '%Explain %' OR
-  content LIKE '%Clarify %' OR
-  content LIKE '%Answer whether%'
-)
-AND content NOT LIKE '%Implement%'
-AND content NOT LIKE '%commit%';
+```bash
+python3 validate-ids.py --project {PROJECT} --ids {ids} --keepers {ids-that-must-survive}
 ```
 
-**Recent session summaries (< 30 days) with real implementation work**: review manually before deleting. Check for commit SHAs, unique discoveries, and Next Steps not captured elsewhere.
+Pass `--keepers` every id that some pair cites as the surviving side. That is
+what catches an id listed as both keeper and drop.
 
-### Delete shipped SDD artifacts
+After the user approves IDs:
+
+```bash
+python3 run.py --soft-delete-ids {comma,separated,ids} --project {PROJECT} \
+  --write --backup {backup-path}
+```
+
+`run.py` previews allowed vs keep-guard-blocked IDs, then soft-deletes only the allowed set.
+
+Shipped SDD by explicit topic_key list (still `--write` + backup). Put the SQL in a temp file or pass via a one-off `.sql` — keep-guards are **not** automatic unless you add them:
 
 ```sql
-UPDATE observations SET deleted_at = datetime('now')
+UPDATE observations SET deleted_at = datetime('now'), updated_at = datetime('now')
 WHERE deleted_at IS NULL AND project = '{PROJECT}'
-AND topic_key LIKE 'sdd/%'
-AND topic_key NOT LIKE 'sdd/%/completed'  -- keep completed markers if desired
+AND pinned = 0
+AND IFNULL(topic_key, '') NOT LIKE 'follow-up/%'
+AND review_after IS NULL
 AND topic_key IN (
-  -- List specific shipped change topic keys
-  'sdd/{change-name}/explore',
-  'sdd/{change-name}/proposal',
-  'sdd/{change-name}/spec',
-  'sdd/{change-name}/design',
-  'sdd/{change-name}/tasks',
-  'sdd/{change-name}/apply-progress',
-  'sdd/{change-name}/verify-report'
+  'sdd/{change}/explore',
+  'sdd/{change}/proposal',
+  'sdd/{change}/spec',
+  'sdd/{change}/design',
+  'sdd/{change}/tasks',
+  'sdd/{change}/apply-progress',
+  'sdd/{change}/verify-report'
 );
 ```
 
-### Delete by ID list (after manual review)
+Project-key merge: `assets/migrate.sql` with `--old-key` `--new-key` (new key **lowercase**) and `--write`. There is no `mem_merge_projects` tool — this SQL is the merge.
 
-```sql
-UPDATE observations SET deleted_at = datetime('now')
-WHERE deleted_at IS NULL AND project = '{PROJECT}' AND id IN (
-  -- IDs identified during audit
-  123, 456, 789
-);
-```
+## Step 4: Verify
 
-### Migrate project keys
+Run `assets/verify.sql`. Check:
 
-```sql
--- Migrate observations
-UPDATE observations SET project = '{NEW_KEY}', updated_at = datetime('now')
-WHERE project = '{OLD_KEY}' AND deleted_at IS NULL;
+1. Follow-up count matches pre-prune.
+2. Session summaries remain if they still hold unique Discoveries (target is **not** 0).
+3. pinned / review_after / passive not wiped.
+4. Spot-check a few kept rows.
+5. `< 200` is an aspiration for search quality, not a quota.
 
--- Migrate sessions
-UPDATE sessions SET project = '{NEW_KEY}'
-WHERE project = '{OLD_KEY}';
-```
+Then `mem_search` for `follow-up` and one known discovery title.
 
----
+## Step 5: Hard delete (optional, user-asked)
 
-## Step 4: Verify — Run Post-Prune Check
-
-After pruning, verify:
-
-1. **Count is reasonable** (target: < 200 per project)
-2. **Follow-ups are searchable**: `mem_search(query: "follow-up", project: "{PROJECT}")`
-3. **No accidental deletions**: spot-check a few kept observations
-
-Run the verify query from [assets/verify.sql](assets/verify.sql).
-
----
-
-## Step 5: Hard Delete + Vacuum (optional, recommended)
-
-Soft-deleted rows don't pollute searches but they DO pollute sync exports and waste disk space. After confirming the prune is correct (backups exist), hard-delete:
+Soft-deleted rows stay out of FTS but still occupy disk and sync exports. Only after verify + user confirm:
 
 ```sql
 DELETE FROM observations WHERE deleted_at IS NOT NULL AND project = '{PROJECT}';
+VACUUM;
 ```
 
-Then reclaim disk space:
-
-```bash
-sqlite3 ~/.engram/engram.db "VACUUM;"
-```
+Run via `python3 run.py {file} --project {PROJECT} --write --backup {backup-path}`. Irreversible except the backup. A past prune hard-deleted 728→480; do not repeat that by default.
 
 If syncing across machines, re-export after hard delete:
 
 ```bash
 rm -rf .engram/chunks/ .engram/manifest.json
 engram sync --project {PROJECT}
-git add .engram/ && git commit -m "sync: clean export after prune"
 ```
 
----
-
-## Step 6: Record — Save What You Did
+## Step 6: Record
 
 ```
 mem_save(
@@ -242,66 +302,47 @@ mem_save(
   type: "config",
   project: "{PROJECT}",
   topic_key: "engram/prune-log",
-  content: "**What**: Pruned from {before} to {after}. Deleted: {summary}. **Why**: {reason}. **Learned**: {any new noise patterns found}"
+  content: "**What**: Soft-deleted {n} ids ({summary}). **Why**: {reason}. **Learned**: {false positives avoided}"
 )
 ```
 
----
-
-## Reusable Queries Reference
-
-All queries are in [assets/](assets/):
+## Assets
 
 | File | Purpose |
 |------|---------|
-| `audit.sql` | Full diagnostic — run FIRST |
-| `noise-candidates.sql` | Find likely noise by heuristic |
-| `verify.sql` | Post-prune health check |
-| `migrate.sql` | Project key migration template |
+| `run.py` | Read-only runner; `--write` + `--backup` for mutations |
+| `validate-ids.py` | Pre-write check on a candidate list; non-zero exit on failure |
+| `retitle.py` | Guarded, idempotent blank-title fixes from an `id<TAB>title` TSV |
+| `briefs/summary-triage.md` | Delegation brief: row-by-row session-summary triage |
+| `briefs/clustering.md` | Delegation brief: full-corpus similarity (low yield, run once) |
+| `containment.py` | The high-yield duplicate class — a typed row plus the session summary that restates it |
+| `assets/retitle-candidates.sql` | Blank and generic titles worth naming |
+| `assets/audit.sql` | Diagnosis |
+| `assets/noise-candidates.sql` | COUNT buckets + TIER A/B/C review lists |
+| `assets/verify.sql` | Retention health check |
+| `assets/migrate.sql` | Project key merge (preview SELECT, then UPDATE) |
 
----
+## Project key casing
 
-## Critical: Project Key Casing
+`engram sync` lowercases project names. Store lowercase keys. After migrate, nuke chunks and full re-export — delta export will not pick up renamed rows.
 
-`engram sync` normalizes project names to **lowercase** before exporting. If your DB stores `MyProject` but sync searches for `myproject`, the export will be empty.
+## Anti-patterns
 
-**Rule**: Always use lowercase project keys in Engram. If you find PascalCase or mixed-case keys, migrate them:
-
-```sql
-UPDATE observations SET project = 'myproject', updated_at = datetime('now') WHERE project = 'MyProject';
-UPDATE sessions SET project = 'myproject' WHERE project = 'MyProject';
-UPDATE user_prompts SET project = 'myproject' WHERE project = 'MyProject';
-```
-
-Then **nuke old chunks and do a full re-export** — delta exports don't re-export renamed observations:
-
-```bash
-rm -rf .engram/chunks/ .engram/manifest.json
-engram sync --project myproject
-git add .engram/ && git commit -m "sync: full re-export under myproject"
-git push
-```
-
-On the receiving machine:
-```bash
-git pull
-engram sync --import
-```
-
-The `migrate.sql` asset handles the DB rename — but you MUST also re-export.
-
----
-
-## Anti-Patterns
-
-| Don't | Do instead |
-|-------|-----------|
-| Use `mem_update` for bulk ops | Direct SQLite queries |
-| Delete without backup | `cp` the DB first |
-| Delete follow-up topic keys | These are sacred — always KEEP |
-| Hard-delete rows WITHOUT backup | Always backup first, soft-delete to review, THEN hard-delete after confirming |
-| Prune without diagnosis | Run `audit.sql` first |
-| Prune projects with < 100 obs | Probably not worth it |
-| Delete active SDD artifacts | Only prune SHIPPED changes |
-| Blindly delete ALL session summaries | Recent ones (< 30 days) may contain unique commit SHAs and discoveries — review first |
-| Delete without extracting unique info | If a session summary has commit SHAs or discoveries not saved elsewhere, extract them into proper observations BEFORE deleting |
+| Don't | Do |
+|-------|----|
+| Bulk UPDATE from a candidate WHERE | Delete approved IDs via `run.py --soft-delete-ids` |
+| Trust v1.0 "safe to delete" | Treat those heuristics as TIER B/C |
+| `mem_update` in a loop | Direct SQLite |
+| Delete without backup | Step 0 |
+| Delete follow-ups / pinned / review_after | Keep-guards |
+| Hard-delete as the first write | Soft-delete, verify, then maybe hard-delete |
+| `%sdd-verify%` or `Clarify %` LIKE | Narrow Goal phrases; read the Goal |
+| Wipe all session summaries to hit 0 | Extract, then id-delete leftovers |
+| Assume `sdd/%/completed` marks shipped work | Ask the user; completed is often 0 |
+| Delete Engram-titled keep-class rows | Project key, sync, retrieval prefs stay |
+| Use `sqlite3` CLI blindly | `python3 run.py` (CLI often absent) |
+| Estimate the cut from row counts | Read content; expect ~4%, not ~40% |
+| Expect similarity clustering to carry the run | Run it once to prove the negative; use containment for real dupes |
+| Delete a blank-titled row | Retitle it — bigger retrieval win than the delete |
+| Point a sub-agent at the live DB | Point it at the backup copy; it then cannot write |
+| Trust one analysis pass | Reconcile two, then `validate-ids.py` |
