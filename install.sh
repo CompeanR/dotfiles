@@ -72,6 +72,7 @@ install_desktop() {
     if command -v cargo >/dev/null 2>&1; then
       herdr plugin install Tyru5/herdr-floax -y >/dev/null 2>&1 || true
     fi
+    herdr plugin link "$ROOT/herdr/plugins/ram-status" --enabled >/dev/null 2>&1 || true
   fi
 
   echo "Dotfiles have been symlinked!"
@@ -144,6 +145,9 @@ install_server() {
   safe_link "$ROOT/herdr/config.toml" ~/.config/herdr/config.toml || status=1
   safe_link "$ROOT/herdr/.gitignore" ~/.config/herdr/.gitignore || status=1
   safe_link "$ROOT/herdr/agent-detection/pi.toml" ~/.config/herdr/agent-detection/pi.toml || status=1
+  if command -v herdr >/dev/null 2>&1; then
+    herdr plugin link "$ROOT/herdr/plugins/ram-status" --enabled >/dev/null 2>&1 || true
+  fi
 
   # VerseGuard Metro user unit (link only; do not enable/start)
   safe_link "$ROOT/systemd/user/verseguard-metro.service" "$HOME/.config/systemd/user/verseguard-metro.service" || status=1

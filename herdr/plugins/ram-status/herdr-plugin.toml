@@ -1,0 +1,12 @@
+id = "ram-status"
+name = "RAM status"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "Print host RAM and swap on one line."
+platforms = ["linux"]
+
+[[actions]]
+id = "show"
+title = "Show RAM"
+description = "Print current host RAM and swap on one line."
+command = ["python3", "ram.py"]
