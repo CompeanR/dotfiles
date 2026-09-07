@@ -6,6 +6,7 @@
 -- IMPORTANT: {NEW_KEY} must be LOWERCASE.
 -- `engram sync` normalizes to lowercase before exporting.
 -- If your canonical key is PascalCase, sync will export 0 memories.
+-- Preview SELECTs run in read-only; UPDATEs need run.py --write.
 -- =============================================================
 
 -- 1. Preview what will be migrated
@@ -14,6 +15,9 @@ FROM observations WHERE project = '{OLD_KEY}' AND deleted_at IS NULL;
 
 SELECT COUNT(*) || ' sessions to migrate'
 FROM sessions WHERE project = '{OLD_KEY}';
+
+SELECT COUNT(*) || ' user_prompts to migrate'
+FROM user_prompts WHERE project = '{OLD_KEY}';
 
 -- 2. Migrate observations
 UPDATE observations
@@ -25,12 +29,13 @@ UPDATE sessions
 SET project = '{NEW_KEY}'
 WHERE project = '{OLD_KEY}';
 
--- 4. Migrate user prompts
+-- 4. Migrate user prompts (table may be empty; still run)
 UPDATE user_prompts
 SET project = '{NEW_KEY}'
 WHERE project = '{OLD_KEY}';
 
 -- 5. Verify no orphans remain
-SELECT 'Remaining under old key:',
+SELECT 'Remaining under old key:' as label,
   (SELECT COUNT(*) FROM observations WHERE project = '{OLD_KEY}' AND deleted_at IS NULL) || ' observations, ' ||
-  (SELECT COUNT(*) FROM sessions WHERE project = '{OLD_KEY}') || ' sessions';
+  (SELECT COUNT(*) FROM sessions WHERE project = '{OLD_KEY}') || ' sessions, ' ||
+  (SELECT COUNT(*) FROM user_prompts WHERE project = '{OLD_KEY}') || ' prompts' as leftover;
