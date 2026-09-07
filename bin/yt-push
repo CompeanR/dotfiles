@@ -1,0 +1,273 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["yt-dlp"]
+# ///
+"""Fetch YouTube transcripts on a residential IP, push them to the VPS over Tailscale.
+
+The VPS gets bot-gated by YouTube ("Sign in to confirm you're not a bot"), so
+captions are fetched here (laptop/mini) and shipped to dev-vps. Transfer is
+outbound only, so the laptop does not need to accept SSH.
+
+  yt-push "https://youtu.be/VIDEO_ID"
+  yt-push VIDEO_ID --timestamps --format md
+  yt-push --batch urls.txt
+  yt-push URL --taildrop            # Taildrop instead of scp
+  yt-push URL --no-push             # keep it local
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import yt_dlp
+
+DEFAULT_HOST = "dev-vps"
+DEFAULT_REMOTE_DIR = "~/transcripts"
+DEFAULT_LANGS = ["en", "en-US", "en-GB", "es"]
+
+CUE_TIME = re.compile(
+    r"(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})"
+)
+INLINE_TAG = re.compile(r"<[^>]+>")
+URL_ID = re.compile(r"(?:v=|/shorts/|youtu\.be/|/embed/|/live/)([A-Za-z0-9_-]{11})")
+BARE_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+def normalize_url(raw: str) -> str:
+    raw = raw.strip()
+    if BARE_ID.match(raw):
+        return f"https://www.youtube.com/watch?v={raw}"
+    return raw
+
+
+def video_id(raw: str) -> str:
+    m = URL_ID.search(raw)
+    if m:
+        return m.group(1)
+    return raw if BARE_ID.match(raw) else "video"
+
+
+def slugify(text: str, fallback: str) -> str:
+    slug = re.sub(r"[^\w\s-]", "", text).strip().lower()
+    slug = re.sub(r"[\s_-]+", "-", slug)[:70].strip("-")
+    return slug or fallback
+
+
+def pick_track(info: dict, langs: list[str]) -> tuple[list[dict], str, str] | None:
+    """Manual subtitles win over auto-captions; first matching language wins."""
+    manual = info.get("subtitles") or {}
+    auto = info.get("automatic_captions") or {}
+
+    for source, table in (("manual", manual), ("auto", auto)):
+        for lang in langs:
+            if table.get(lang):
+                return table[lang], lang, source
+        # Fall back to any regional variant of a requested language (en-orig, es-419).
+        for lang in langs:
+            base = lang.split("-")[0].lower()
+            for have, entries in table.items():
+                if have.split("-")[0].lower() == base and entries:
+                    return entries, have, source
+    for source, table in (("manual", manual), ("auto", auto)):
+        for have, entries in table.items():
+            if entries:
+                return entries, have, source
+    return None
+
+
+def track_url(entries: list[dict]) -> str | None:
+    for want in ("vtt", "srv3", "srv1", "ttml"):
+        for entry in entries:
+            if entry.get("ext") == want and entry.get("url"):
+                return entry["url"]
+    return entries[0].get("url") if entries else None
+
+
+def parse_vtt(raw: str) -> list[tuple[float, str]]:
+    """VTT -> [(start_seconds, line)], with YouTube's rolling repeats collapsed."""
+    out: list[tuple[float, str]] = []
+    start = 0.0
+    seen_recent: list[str] = []
+
+    for block in re.split(r"\n\s*\n", raw.replace("\r\n", "\n")):
+        lines = [ln for ln in block.split("\n") if ln.strip()]
+        if not lines:
+            continue
+        payload: list[str] = []
+        for line in lines:
+            m = CUE_TIME.search(line)
+            if m:
+                h, mi, s, ms = (int(x) for x in m.groups()[:4])
+                start = h * 3600 + mi * 60 + s + ms / 1000
+                payload = []
+                continue
+            if line.startswith(("WEBVTT", "Kind:", "Language:", "NOTE", "STYLE")):
+                continue
+            if line.strip().isdigit():
+                continue
+            payload.append(line)
+
+        for line in payload:
+            text = INLINE_TAG.sub("", line)
+            text = re.sub(r"\s+", " ", text).strip()
+            if not text or text in seen_recent:
+                continue
+            out.append((start, text))
+            seen_recent.append(text)
+            del seen_recent[:-4]  # auto-captions only ever repeat the last few lines
+    return out
+
+
+def hhmmss(seconds: float) -> str:
+    total = int(seconds)
+    return f"{total // 3600:02d}:{total % 3600 // 60:02d}:{total % 60:02d}"
+
+
+def render(cues, info, lang, source, fmt, timestamps) -> str:
+    title = info.get("title") or "Untitled"
+    if fmt == "srt":
+        chunks = []
+        for i, (start, text) in enumerate(cues, 1):
+            end = cues[i][0] if i < len(cues) else start + 3
+            fmt_t = lambda s: f"{hhmmss(s)},{int(s * 1000) % 1000:03d}"
+            chunks.append(f"{i}\n{fmt_t(start)} --> {fmt_t(end)}\n{text}\n")
+        return "\n".join(chunks)
+
+    body = "\n".join(
+        (f"[{hhmmss(start)}] {text}" if timestamps else text) for start, text in cues
+    )
+    if fmt == "md":
+        head = [
+            f"# {title}",
+            "",
+            f"- **Channel:** {info.get('channel') or info.get('uploader') or 'unknown'}",
+            f"- **URL:** {info.get('webpage_url')}",
+            f"- **Duration:** {hhmmss(info.get('duration') or 0)}",
+            f"- **Captions:** {source} / {lang}",
+            "",
+            "---",
+            "",
+        ]
+        return "\n".join(head) + body + "\n"
+    return body + "\n"
+
+
+def fetch(url: str, args) -> Path:
+    url = normalize_url(url)
+    opts = {
+        "quiet": True,
+        "no_warnings": True,
+        "skip_download": True,
+        "extract_flat": False,
+    }
+    if args.cookies:
+        opts["cookiefile"] = str(Path(args.cookies).expanduser())
+    if args.cookies_from_browser:
+        opts["cookiesfrombrowser"] = (args.cookies_from_browser,)
+
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        chosen = pick_track(info, args.langs)
+        if not chosen:
+            raise SystemExit(f"no captions available for {url}")
+        entries, lang, source = chosen
+        turl = track_url(entries)
+        if not turl:
+            raise SystemExit(f"caption track for {url} has no usable URL")
+        raw = ydl.urlopen(turl).read().decode("utf-8", "replace")
+
+    cues = parse_vtt(raw)
+    if not cues:
+        raise SystemExit(f"caption track for {url} parsed empty")
+
+    text = render(cues, info, lang, source, args.format, args.timestamps)
+    ext = {"md": "md", "txt": "txt", "srt": "srt"}[args.format]
+    name = f"{slugify(info.get('title') or '', video_id(url))}-{video_id(url)}.{ext}"
+
+    out_dir = Path(args.out_dir).expanduser()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / name
+    path.write_text(text, encoding="utf-8")
+    print(f"  {source}/{lang}  {len(cues)} lines  ->  {path}")
+    return path
+
+
+def push(paths: list[Path], args) -> None:
+    if args.taildrop:
+        if not shutil.which("tailscale"):
+            raise SystemExit("tailscale not on PATH")
+        subprocess.run(
+            ["tailscale", "file", "cp", *map(str, paths), f"{args.host}:"], check=True
+        )
+        print(f"\nTaildropped to {args.host}. On the VPS run:  tailscale file get ~/transcripts/")
+        return
+
+    if not shutil.which("scp"):
+        raise SystemExit("scp not on PATH")
+    subprocess.run(
+        ["ssh", args.host, f"mkdir -p {args.remote_dir}"], check=True
+    )
+    subprocess.run(
+        ["scp", "-q", *map(str, paths), f"{args.host}:{args.remote_dir}/"], check=True
+    )
+    print(f"\nPushed {len(paths)} file(s) to {args.host}:{args.remote_dir}/")
+    for p in paths:
+        print(f"  {args.remote_dir}/{p.name}")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(
+        prog="yt-push", description="Fetch YouTube transcripts locally, push to the VPS."
+    )
+    ap.add_argument("urls", nargs="*", help="YouTube URL(s) or 11-char video ID(s)")
+    ap.add_argument("--batch", metavar="FILE", help="file with one URL per line")
+    ap.add_argument("--format", choices=["txt", "md", "srt"], default="md")
+    ap.add_argument("--timestamps", action="store_true", help="prefix [HH:MM:SS]")
+    ap.add_argument("--langs", default=",".join(DEFAULT_LANGS), help="preference order")
+    ap.add_argument("--out-dir", default="~/Transcripts", help="local output directory")
+    ap.add_argument("--host", default=DEFAULT_HOST, help="tailnet target")
+    ap.add_argument("--remote-dir", default=DEFAULT_REMOTE_DIR)
+    ap.add_argument("--taildrop", action="store_true", help="Taildrop instead of scp")
+    ap.add_argument("--no-push", action="store_true", help="fetch only, stay local")
+    ap.add_argument("--cookies", metavar="FILE", help="Netscape cookies.txt")
+    ap.add_argument(
+        "--cookies-from-browser", metavar="BROWSER", help="firefox, chromium, brave..."
+    )
+    args = ap.parse_args()
+    args.langs = [l.strip() for l in args.langs.split(",") if l.strip()]
+
+    targets = list(args.urls)
+    if args.batch:
+        targets += [
+            ln.strip()
+            for ln in Path(args.batch).expanduser().read_text().splitlines()
+            if ln.strip() and not ln.startswith("#")
+        ]
+    if not targets:
+        ap.error("give at least one URL, or --batch FILE")
+
+    done: list[Path] = []
+    for url in targets:
+        print(f"[{video_id(url)}] fetching...")
+        try:
+            done.append(fetch(url, args))
+        except SystemExit as e:
+            print(f"  FAILED: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"  FAILED: {type(e).__name__}: {str(e)[:200]}", file=sys.stderr)
+
+    if not done:
+        return 2
+    if not args.no_push:
+        push(done, args)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
