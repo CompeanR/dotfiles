@@ -9,7 +9,7 @@
     "cursor/fable@300k"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.84.4",
+  "lastChangelogVersion": "0.85.0",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -40,7 +40,7 @@
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "jd-fix-agent": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -49,7 +49,7 @@
         "acceptanceRole": "writer"
       },
       "jd-judge-a": {
-        "model": "openai-codex/gpt-5.6-terra",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -58,7 +58,7 @@
         "acceptanceRole": "read-only"
       },
       "jd-judge-b": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -67,7 +67,7 @@
         "acceptanceRole": "read-only"
       },
       "review-readability": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -76,7 +76,7 @@
         "acceptanceRole": "read-only"
       },
       "review-reliability": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -103,9 +103,9 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "medium",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -114,16 +114,16 @@
       "work-design": {
         "model": "openai-codex/gpt-5.6-sol",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "xhigh",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-explore": {
-        "model": "openai-codex/gpt-5.6-terra",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "medium",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
