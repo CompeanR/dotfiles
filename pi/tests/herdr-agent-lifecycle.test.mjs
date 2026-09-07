@@ -171,3 +171,146 @@ test("an answered question keeps its Herdr session anchor and settles to idle", 
     `Herdr lost the Pi session anchor; reports: ${JSON.stringify(reports)}`,
   );
 });
+
+test("a settled parent stays working in herdr while async subagents are busy", async (t) => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "herdr-busy-lifecycle-"));
+  const socketPath = path.join(tempDir, "herdr.sock");
+  const sockets = new Set();
+  const reports = [];
+  let highestSequence = Number.NEGATIVE_INFINITY;
+  let visibleState;
+  let visibleSessionPath;
+
+  const server = net.createServer((socket) => {
+    sockets.add(socket);
+    socket.on("close", () => sockets.delete(socket));
+    socket.on("error", () => {});
+
+    let input = "";
+    socket.on("data", (chunk) => {
+      input += chunk.toString("utf8");
+      for (;;) {
+        const newline = input.indexOf("\n");
+        if (newline < 0) break;
+
+        const request = JSON.parse(input.slice(0, newline));
+        input = input.slice(newline + 1);
+
+        if (request.method === "pane.report_agent_session") {
+          const { agent_session_path: sessionPath, seq } = request.params;
+          const accepted = typeof sessionPath === "string" && seq > highestSequence;
+          if (accepted) {
+            highestSequence = seq;
+            visibleSessionPath = sessionPath;
+          }
+          reports.push({ accepted, method: request.method, seq, sessionPath });
+        }
+
+        if (request.method === "pane.report_agent") {
+          const {
+            agent_session_path: sessionPath,
+            seq,
+            state,
+          } = request.params;
+          const sessionMatches = visibleSessionPath !== undefined
+            && (sessionPath === undefined || sessionPath === visibleSessionPath);
+          const accepted = sessionMatches && seq > highestSequence;
+          if (accepted) {
+            highestSequence = seq;
+            visibleState = state;
+            visibleSessionPath = sessionPath;
+          }
+          reports.push({ accepted, method: request.method, seq, sessionPath, state });
+        }
+
+        socket.write(`${JSON.stringify({ id: request.id, result: {} })}\n`);
+      }
+    });
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(socketPath, resolve);
+  });
+
+  t.after(async () => {
+    for (const socket of sockets) socket.destroy();
+    await new Promise((resolve) => server.close(resolve));
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  process.env.HERDR_ENV = "1";
+  process.env.HERDR_SOCKET_PATH = socketPath;
+  process.env.HERDR_PANE_ID = "test:p1";
+
+  const cacheBust = `?test=${Date.now()}-${Math.random()}`;
+  const agentState = (
+    await import(`${pathToFileURL(path.join(extensionsDir, "herdr-agent-state.ts")).href}${cacheBust}`)
+  ).default;
+  const busy = (
+    await import(`${pathToFileURL(path.join(extensionsDir, "herdr-busy.ts")).href}${cacheBust}`)
+  ).default;
+
+  const lifecycleHandlers = new Map();
+  const events = new EventEmitter();
+  const pi = {
+    events,
+    on(name, handler) {
+      const handlers = lifecycleHandlers.get(name) ?? [];
+      handlers.push(handler);
+      lifecycleHandlers.set(name, handlers);
+    },
+  };
+
+  agentState(pi);
+  busy(pi);
+
+  let idle = true;
+  const context = {
+    hasUI: true,
+    mode: "tui",
+    isIdle: () => idle,
+    sessionManager: {
+      getSessionFile: () => "/tmp/test-session.jsonl",
+      getSessionId: () => "test-session",
+    },
+  };
+
+  async function emit(name, event = {}) {
+    for (const handler of lifecycleHandlers.get(name) ?? []) {
+      await handler(event, context);
+    }
+  }
+
+  await emit("session_start", { reason: "startup" });
+  await waitFor(() => visibleState === "idle", "session start was not reported as idle");
+
+  idle = false;
+  await emit("agent_start");
+  await waitFor(() => visibleState === "working", "agent start was not reported as working");
+
+  events.emit("herdr:busy", { active: true, label: "⏳ 1 subagent (work-apply)" });
+
+  idle = true;
+  const reportsBeforeSettled = reports.length;
+  await emit("agent_settled");
+  await waitFor(
+    () => reports.slice(reportsBeforeSettled).some((report) => report.state === "idle"),
+    "agent settlement did not produce an idle report",
+  );
+  await waitFor(
+    () => visibleState === "working",
+    `parent settle idled herdr while a subagent was busy; reports: ${JSON.stringify(reports)}`,
+  );
+  assert.equal(
+    visibleSessionPath,
+    "/tmp/test-session.jsonl",
+    `Herdr lost the Pi session anchor; reports: ${JSON.stringify(reports)}`,
+  );
+
+  events.emit("herdr:busy", { active: false });
+  await waitFor(
+    () => visibleState === "idle",
+    `clearing herdr:busy did not return herdr to idle; reports: ${JSON.stringify(reports)}`,
+  );
+});
