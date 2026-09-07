@@ -22,7 +22,7 @@ local scratch_dir = vim.fn.stdpath("cache") .. "/pi-diffview"
 -- Keep the lightweight popup independent from the global pi defaults. The model
 -- must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
 local MODEL = "openai-codex/gpt-5.6-luna"
-local THINKING = "xhigh"
+local THINKING = "high"
 
 -- pi is not detected by screen scraping — it registers itself through the
 -- herdr-agent-state / herdr-attention extensions, which both enable themselves
@@ -45,9 +45,7 @@ local function scroll_terminal_to_bottom(buf)
 
   local current = vim.api.nvim_get_current_win()
   for _, win in ipairs(vim.fn.win_findbuf(buf)) do
-    if win ~= current and vim.api.nvim_win_is_valid(win) then
-      pcall(vim.api.nvim_win_set_cursor, win, { last, 0 })
-    end
+    if win ~= current and vim.api.nvim_win_is_valid(win) then pcall(vim.api.nvim_win_set_cursor, win, { last, 0 }) end
   end
 end
 
@@ -75,9 +73,7 @@ local function attach_terminal_scroll(buf)
   terminal_scrollers[buf] = schedule_scroll
   vim.api.nvim_buf_attach(buf, false, {
     on_lines = schedule_scroll,
-    on_detach = function()
-      terminal_scrollers[buf] = nil
-    end,
+    on_detach = function() terminal_scrollers[buf] = nil end,
   })
   schedule_scroll()
 end
@@ -283,9 +279,7 @@ local function open_pi(args)
 
   local term = terminal.open(cmd, {
     win = vim.tbl_extend("force", FLOAT, {
-      on_buf = function(self)
-        attach_terminal_scroll(self.buf)
-      end,
+      on_buf = function(self) attach_terminal_scroll(self.buf) end,
       on_win = function(self)
         local schedule_scroll = terminal_scrollers[self.buf]
         if schedule_scroll then schedule_scroll() end
