@@ -11,9 +11,11 @@ local augroup_name = "review_mode"
 -- Only <Tab>/<S-Tab> are bare: every other single letter shadows a core normal
 -- mode command (a append, d delete, p paste, e word motion, q macro), and files
 -- stay editable during a review.
+-- <Tab> and <C-i> share a TTY byte; CSI u / kitty protocol can split them.
+-- Map <C-i> separately so distinguished Ctrl-I keeps jumplist-forward.
 -- <C-n>/<C-p> only shadow normal mode's duplicates of j/k, so they are free for
 -- the next/previous mnemonic that bare n (search) and p (paste) cannot take.
-local review_keys = { "<Tab>", "<S-Tab>", "]f", "[f", "<C-n>", "<C-p>", "<leader>rp", "<leader>rd", "<leader>rq" }
+local review_keys = { "<Tab>", "<S-Tab>", "<C-i>", "]f", "[f", "<C-n>", "<C-p>", "<C-q>", "<leader>rp", "<leader>rd", "<leader>rq" }
 
 ---@class ReviewTarget
 ---@field rev? string
@@ -40,6 +42,60 @@ end
 ---@return string?
 function M.base()
   return base_sha
+end
+
+---Commits in the review: after the merge-base, through HEAD.
+---@param sha? string
+---@return string?
+function M.git_log_range(sha)
+  if type(sha) ~= "string" or sha == "" then return nil end
+  return sha .. "..HEAD"
+end
+
+---First hex token from an fzf git-log line (ANSI already stripped).
+---@param line? string
+---@return string?
+function M.git_log_sha(line)
+  if type(line) ~= "string" then return nil end
+  local sha = line:match("^%s*(%x+)")
+  if sha and #sha >= 7 then return sha end
+end
+
+---@class CommitReview
+---@field rev string parent; gitsigns base so the commit itself is in the review
+---@field checkout string the commit to detach onto
+
+---Single-commit review, same range as Diffview `sha^!`.
+---@param sha? string
+---@return CommitReview?
+function M.commit_review(sha)
+  if type(sha) ~= "string" or sha == "" then return nil end
+  return { rev = sha .. "^", checkout = sha }
+end
+
+---Pick a commit, then Enter starts review of that commit only.
+function M.start_commit(sha)
+  local spec = M.commit_review(sha)
+  if not spec then return end
+  M.start(spec.rev, { checkout = spec.checkout })
+end
+
+---Same picker as `<leader>gd` then Ctrl-Q: pick a commit, Enter starts review.
+function M.open_commits()
+  local ok, fzf = pcall(require, "fzf-lua")
+  if not ok then
+    vim.notify("fzf-lua unavailable", vim.log.levels.WARN)
+    return
+  end
+
+  local range = M.git_log_range(base_sha)
+  if not range then
+    fzf.git_commits()
+    return
+  end
+
+  local cmd = require("fzf-lua.defaults").defaults.git.commits.cmd
+  fzf.git_commits({ cmd = cmd .. " " .. range })
 end
 
 local function abs_path(path)
@@ -178,35 +234,49 @@ local function restore_working_tree()
   stash_ref = nil
   stash_branch = nil
   stash_repo = nil
-  if not ref then return end
-
-  local short = ref:sub(1, 7)
-  local index = repo and stash_index(repo, ref)
-  if not (repo and target and index) then
-    local list = repo and ("git -C %s stash list"):format(vim.fn.shellescape(repo)) or "git stash list"
-    local recover = repo and target and recovery_command(repo, target, "stash@{n}") or "git stash pop stash@{n}"
+  if not (repo and target) then
+    if not ref then return end
+    local list = "git stash list"
     vim.notify(
-      ("stashed changes kept at SHA %s; find it with `%s`, then run `%s` with its stash index"):format(ref, list, recover),
+      ("stashed changes kept at SHA %s; find it with `%s`, then run `git stash pop stash@{n}`"):format(ref:sub(1, 7), list),
       vim.log.levels.ERROR
     )
     return
   end
 
-  -- The stash was taken before `gh pr checkout`, so popping it on the PR branch
-  -- would move the work onto the wrong branch.
+  -- Detached commit review and PR checkout both leave HEAD; return first so a
+  -- later stash pop lands on the original branch.
   if checkout_target(repo) ~= target then
     local checkout = vim.system({ "git", "-C", repo, "checkout", target }, { text = true }):wait()
     if checkout.code ~= 0 then
-      vim.notify(
-        ("stashed changes kept (%s): could not return to %s; run `%s`"):format(
-          short,
-          target,
-          recovery_command(repo, target, ("stash@{%d}"):format(index))
-        ),
-        vim.log.levels.ERROR
-      )
+      if ref then
+        vim.notify(
+          ("stashed changes kept (%s): could not return to %s; run `%s`"):format(
+            ref:sub(1, 7),
+            target,
+            recovery_command(repo, target, "stash@{n}")
+          ),
+          vim.log.levels.ERROR
+        )
+      else
+        vim.notify("could not return to " .. target, vim.log.levels.ERROR)
+      end
       return
     end
+  end
+
+  if not ref then return end
+
+  local short = ref:sub(1, 7)
+  local index = stash_index(repo, ref)
+  if not index then
+    local list = ("git -C %s stash list"):format(vim.fn.shellescape(repo))
+    local recover = recovery_command(repo, target, "stash@{n}")
+    vim.notify(
+      ("stashed changes kept at SHA %s; find it with `%s`, then run `%s` with its stash index"):format(ref, list, recover),
+      vim.log.levels.ERROR
+    )
+    return
   end
 
   local selector = ("stash@{%d}"):format(index)
@@ -229,7 +299,7 @@ local function isolate_working_tree(repo, force_stash)
   local dirty = dirty_paths(repo)
   if #dirty == 0 then return true end
 
-  local summary = ("%d uncommitted change%s would appear inside this PR review."):format(#dirty, #dirty == 1 and "" or "s")
+  local summary = ("%d uncommitted change%s would appear inside this review."):format(#dirty, #dirty == 1 and "" or "s")
   if not force_stash then
     -- confirm() has no answer without a UI, so headless runs just warn.
     if #vim.api.nvim_list_uis() == 0 then
@@ -456,18 +526,22 @@ local function apply_keymaps(buf)
 
   map("<Tab>", function() shared_nav("next") end, "next hunk")
   map("<S-Tab>", function() shared_nav("prev") end, "previous hunk")
+  -- noremap string: builtin jumplist-forward, not the <Tab> hunk map.
+  map("<C-i>", "<C-i>", "jumplist forward")
   map("]f", function() change_file("next") end, "next changed file")
   map("[f", function() change_file("prev") end, "previous changed file")
   map("<C-n>", function() change_file("next") end, "next changed file")
   map("<C-p>", function() change_file("prev") end, "previous changed file")
   map("<leader>rp", M.preview_and_pin, "preview hunk")
   map("<leader>rd", function() require("gitsigns").diffthis(M.base()) end, "diff against base")
+  map("<C-q>", M.open_commits, "commits → review")
   map("<leader>rq", M.stop, "stop")
   mapped_buffers[buf] = true
 end
 
 ---@class ReviewStartOpts
 ---@field stash? boolean
+---@field checkout? string detach onto this commit before resolving the base
 
 ---@param arg? string
 ---@param opts? ReviewStartOpts
@@ -486,8 +560,24 @@ function M.start(arg, opts)
 
   local target = M.parse_target(arg)
   local rev = target.rev or "origin/master"
-  if target.pr or opts.stash then
+  if target.pr or opts.stash or opts.checkout then
     if not isolate_working_tree(repo, opts.stash) then return end
+  end
+  if opts.checkout then
+    stash_branch = stash_branch or checkout_target(repo)
+    stash_repo = stash_repo or repo
+    if not stash_branch then
+      vim.notify("cannot checkout commit: could not resolve HEAD", vim.log.levels.ERROR)
+      restore_working_tree()
+      return
+    end
+    local detached = vim.system({ "git", "-C", repo, "checkout", "--detach", opts.checkout }, { text = true }):wait()
+    if detached.code ~= 0 then
+      local message = vim.trim(detached.stderr or "")
+      vim.notify(message ~= "" and message or ("git checkout failed for " .. opts.checkout), vim.log.levels.ERROR)
+      restore_working_tree()
+      return
+    end
   end
   if target.pr then
     local checkout = vim.system({ "gh", "pr", "checkout", tostring(target.pr) }, { cwd = repo, text = true }):wait()

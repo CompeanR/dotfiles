@@ -19,8 +19,10 @@ printf 'local value = 2\n' > main.lua
 cat > .git/review_keymaps_test.lua <<'LUA'
 local failed = false
 local expected = {
+  "<C-i>",
   "<C-n>",
   "<C-p>",
+  "<C-q>",
   "<S-Tab>",
   "<Tab>",
   "<leader>rd",
@@ -57,7 +59,22 @@ end
 
 vim.cmd("ReviewStart HEAD")
 local actual = review_maps()
-report("review keymaps are exactly the nine-key contract", vim.deep_equal(actual, expected), "got " .. vim.inspect(actual))
+report("review keymaps include hunk, file, and commit-review keys", vim.deep_equal(actual, expected), "got " .. vim.inspect(actual))
+
+local tab = vim.fn.maparg("<Tab>", "n", false, true)
+local ci = vim.fn.maparg("<C-i>", "n", false, true)
+report("Tab is next hunk", type(tab) == "table" and tab.desc == "review: next hunk", vim.inspect(tab))
+report("C-i is jumplist forward", type(ci) == "table" and ci.desc == "review: jumplist forward", vim.inspect(ci))
+report(
+  "Tab and C-i use distinct lhsraw",
+  type(tab) == "table"
+    and type(ci) == "table"
+    and type(tab.lhsraw) == "string"
+    and type(ci.lhsraw) == "string"
+    and tab.lhsraw ~= ci.lhsraw,
+  vim.inspect({ tab = tab.lhsraw, ci = ci.lhsraw })
+)
+report("Tab still wins the tab byte", type(tab) == "table" and tab.lhsraw == "\t", vim.inspect(tab.lhsraw))
 
 for _, lhs in ipairs(forbidden) do
   local map = vim.fn.maparg(lhs, "n", false, true)

@@ -30,17 +30,17 @@ return {
       git = {
         commits = {
           actions = {
-            -- LazyVim <leader>gc/<leader>gl → FzfLua git_commits. Enter used to
-            -- checkout; prefer single-commit Diffview review instead.
+            -- LazyVim <leader>gc/<leader>gl and <leader>gd Ctrl-Q → git_commits.
+            -- Enter starts review mode for that commit (sha^!), not Diffview.
             ["enter"] = function(selected)
               local utils = require("fzf-lua.utils")
+              local review = require("config.review_mode")
               local line = utils.strip_ansi_coloring(selected[1] or "")
-              local sha = line:match("%w+")
+              local sha = review.git_log_sha(line)
               if not sha then
                 return
               end
-              -- ^! = that commit alone (parent..commit), not "everything since".
-              vim.cmd("DiffviewOpen " .. sha .. "^!")
+              review.start_commit(sha)
             end,
             ["ctrl-s"] = actions.git_checkout,
           },
