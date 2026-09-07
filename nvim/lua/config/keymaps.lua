@@ -35,3 +35,15 @@ vim.keymap.set({ "n", "x" }, "d", '"_d')
 vim.keymap.set({ "n", "x" }, "D", '"_D')
 
 require("config.numeric_marks").setup()
+
+if vim.lsp.document_color then
+  Snacks.toggle({
+    name = "Document Colors",
+    get = function()
+      return vim.lsp.document_color.is_enabled()
+    end,
+    set = function(state)
+      vim.lsp.document_color.enable(state)
+    end,
+  }):map("<leader>uC")
+end

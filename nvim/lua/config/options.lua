@@ -10,6 +10,15 @@ vim.opt.expandtab = true
 -- Disable LazyVim's automatic root directory detection
 vim.g.root_spec = { "cwd" }
 
+-- Neovim 0.12 paints Tailwind/CSS colors in-buffer via LSP documentColor.
+-- Off by default; :DocumentColorToggle or <leader>uC to show them.
+if vim.lsp.document_color then
+  vim.lsp.document_color.enable(false)
+  vim.api.nvim_create_user_command("DocumentColorToggle", function()
+    vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
+  end, { desc = "Toggle LSP document colors" })
+end
+
 -- Remote / herdr: yank → Mac pasteboard via OSC 52.
 -- LazyVim clears clipboard under SSH so OSC 52 "works", but without a provider
 -- plain `y` never leaves nvim. Herdr panes inherit SSH_CONNECTION and set
