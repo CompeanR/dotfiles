@@ -103,9 +103,9 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "openai-codex/gpt-5.6-sol",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "high",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -130,9 +130,9 @@
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "openai-codex/gpt-5.6-sol",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "high",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",

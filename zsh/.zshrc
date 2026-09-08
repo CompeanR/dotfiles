@@ -24,3 +24,5 @@ ZSH_DOTFILES="${${(%):-%x}:A:h}"
 [[ -f "$ZSH_DOTFILES/portable.zsh" ]] && source "$ZSH_DOTFILES/portable.zsh"
 [[ -f "$ZSH_DOTFILES/.p10k.zsh" ]] && source "$ZSH_DOTFILES/.p10k.zsh"
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+alias n="nvim"
