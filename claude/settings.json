@@ -4,7 +4,6 @@
     "CLAUDISH_PROVIDER": "openai",
     "CLAUDISH_MODEL": "gpt-5.6-luna"
   },
-  "outputStyle": "Concise",
   "permissions": {
     "allow": [
       "mcp__plugin_engram_engram__*",
@@ -75,18 +74,6 @@
         ]
       }
     ],
-    "SessionStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash '/home/compean/.claude/hooks/herdr-agent-state.sh' session",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
     "SessionEnd": [
       {
         "matcher": "*",
@@ -120,6 +107,7 @@
       }
     }
   },
+  "outputStyle": "Concise",
   "effortLevel": "high",
   "modelSettings": {
     "claude-opus-4-6": {

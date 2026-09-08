@@ -16,6 +16,55 @@ Usage: $(basename "$0") [server [bootstrap|doctor|sandbox|help] [options]]
 EOF
 }
 
+# Claude Code config. Shared by both profiles.
+#
+# settings.json is COPIED, not symlinked: Claude Code rewrites it at runtime
+# (autoMode.environment, theme) and a symlink would push machine-local state
+# back into the repo. Everything else is read-only to Claude, so it links.
+install_claude() {
+  local mode="${1:-force}"   # force (desktop) | safe (server)
+  local status=0
+  mkdir -p ~/.claude/skills
+
+  if [[ "$mode" == "safe" ]]; then
+    safe_link "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md || status=1
+    for skill in "$ROOT"/claude/skills/*/; do
+      safe_link "${skill%/}" ~/.claude/skills/"$(basename "$skill")" || status=1
+    done
+  else
+    ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
+    for skill in "$ROOT"/claude/skills/*/; do
+      ln -sfn "${skill%/}" ~/.claude/skills/"$(basename "$skill")"
+    done
+  fi
+
+  # settings.json: copy, backing up anything that differs.
+  if ! cmp -s "$ROOT/claude/settings.json" ~/.claude/settings.json; then
+    if [[ -e ~/.claude/settings.json ]]; then
+      mkdir -p ~/.claude/backups
+      cp ~/.claude/settings.json ~/.claude/backups/"settings.json.$(date +%Y%m%d-%H%M%S)"
+    fi
+    cp "$ROOT/claude/settings.json" ~/.claude/settings.json
+    echo "claude: settings.json synced from dotfiles (previous copy in ~/.claude/backups/)"
+  fi
+
+  # Pi subagent MCP server (~/.claude.json is not tracked, so register it here).
+  if command -v claude >/dev/null 2>&1; then
+    if ! claude mcp list 2>/dev/null | grep -q '^pi:'; then
+      claude mcp add pi --scope user -- node "$ROOT/claude/mcp/pi-subagent/server.mjs" >/dev/null 2>&1 \
+        && echo "claude: registered pi MCP server" \
+        || echo "claude: could not register pi MCP server (run: claude mcp add pi --scope user -- node $ROOT/claude/mcp/pi-subagent/server.mjs)" >&2
+    fi
+  fi
+
+  # herdr owns ~/.claude/hooks/herdr-agent-state.sh; let it install its own hook.
+  if command -v herdr >/dev/null 2>&1; then
+    herdr integration install claude >/dev/null 2>&1 || true
+  fi
+
+  return "$status"
+}
+
 # Desktop: force-link map (unchanged destinations; sources resolved from script location).
 install_desktop() {
   ln -sf "$ROOT/alacritty/alacritty.yml" ~/.config/alacritty/alacritty.yml
@@ -87,6 +136,8 @@ install_desktop() {
     fi
     herdr plugin link "$ROOT/herdr/plugins/ram-status" --enabled >/dev/null 2>&1 || true
   fi
+
+  install_claude force
 
   echo "Dotfiles have been symlinked!"
 }
@@ -164,6 +215,8 @@ install_server() {
 
   # VerseGuard Metro user unit (link only; do not enable/start)
   safe_link "$ROOT/systemd/user/verseguard-metro.service" "$HOME/.config/systemd/user/verseguard-metro.service" || status=1
+
+  install_claude safe || status=1
 
   if (( status == 0 )); then
     echo "Server dotfiles have been symlinked!"
