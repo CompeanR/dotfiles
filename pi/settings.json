@@ -4,12 +4,11 @@
   "defaultThinkingLevel": "high",
   "enabledModels": [
     "cursor/grok-4.6",
-    "openai-codex/gpt-5.6-luna",
     "openai-codex/gpt-5.6-sol",
-    "cursor/fable@300k"
+    "openai-codex/gpt-6-astra"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.85.0",
+  "lastChangelogVersion": "0.85.1",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -103,7 +102,7 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -123,16 +122,16 @@
       "work-explore": {
         "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "high",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "medium",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",

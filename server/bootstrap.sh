@@ -79,7 +79,6 @@ Ubuntu 24.04 amd64 VPS bootstrap plan
    - engram $ENGRAM_VERSION
    - herdr $HERDR_VERSION
    - opencode $OPENCODE_VERSION
-   - gentle-ai $GENTLE_AI_VERSION (+ gentle-ai doctor)
 6. install $PI_NPM_PACKAGE and $CODEX_NPM_PACKAGE in owned prefix $NPM_AI_PREFIX
 7. TPM + plugins under ~/.tmux/plugins (errors not hidden)
 8. npm ci in ~/.pi/agent/npm (legacy-peer-deps via linked .npmrc)
@@ -129,7 +128,6 @@ version_of() {
     codex) "$exe" --version 2>/dev/null | awk '{print $NF}' ;;
     mise) "$exe" --version 2>/dev/null | awk '{print $1}' ;;
     node) "$exe" --version 2>/dev/null | sed 's/^v//' ;;
-    gentle-ai) "$exe" --version 2>/dev/null | awk '{print $NF}' ;;
     delta) "$exe" --version 2>/dev/null | awk '{print $2}' ;;
     eza) "$exe" --version 2>/dev/null | head -n1 | awk '{print $2}' ;;
     zoxide) "$exe" --version 2>/dev/null | awk '{print $2}' ;;
@@ -433,19 +431,6 @@ install_opencode() {
   rm -rf "$tmp"
 }
 
-install_gentle_ai() {
-  install_bin_from_tar "$GENTLE_AI_URL" "$GENTLE_AI_SHA256" gentle-ai gentle-ai "$GENTLE_AI_VERSION"
-  if is_dry; then
-    log "dry-run: gentle-ai doctor"
-    return 0
-  fi
-  export PATH="$HOME/.local/bin:$PATH"
-  need_cmd gentle-ai
-  have_exact_version gentle-ai "$GENTLE_AI_VERSION" || die "gentle-ai version mismatch after install"
-  # Doctor may warn (duplicates etc.) but must not hide hard failures.
-  gentle-ai doctor
-}
-
 install_npm_globals() {
   if is_dry; then
     log "dry-run: managed npm prefix $NPM_AI_PREFIX; install $PI_NPM_PACKAGE $CODEX_NPM_PACKAGE"
@@ -548,7 +533,6 @@ cmd_bootstrap() {
     install_engram
     install_herdr
     install_opencode
-    install_gentle_ai
     install_npm_globals
     install_tpm
     pi_npm_ci
@@ -568,7 +552,6 @@ cmd_bootstrap() {
   install_engram
   install_herdr
   install_opencode
-  install_gentle_ai
   install_npm_globals
   install_tpm
   pi_npm_ci
@@ -627,17 +610,17 @@ cmd_doctor() {
     "$ROOT/pi/settings.json|$HOME/.pi/agent/settings.json"
     "$ROOT/pi/subagent-tool-description.md|$HOME/.pi/agent/subagent-tool-description.md"
     "$ROOT/pi/mcp.json|$HOME/.pi/agent/mcp.json"
-    "$ROOT/pi/subagents.json|$HOME/.pi/agent/subagents.json"
+    "$ROOT/pi/AGENTS.md|$HOME/.pi/agent/AGENTS.md"
     "$ROOT/pi/cursor-sdk.json|$HOME/.pi/agent/cursor-sdk.json"
     "$ROOT/pi/agents|$HOME/.pi/agent/agents"
     "$ROOT/pi/chains|$HOME/.pi/agent/chains"
     "$ROOT/pi/extensions|$HOME/.pi/agent/extensions"
     "$ROOT/pi/themes|$HOME/.pi/agent/themes"
     "$ROOT/pi/skills|$HOME/.pi/agent/skills"
-    "$ROOT/pi/gentle-ai|$HOME/.pi/agent/gentle-ai"
     "$ROOT/pi/npm/package.json|$HOME/.pi/agent/npm/package.json"
     "$ROOT/pi/npm/package-lock.json|$HOME/.pi/agent/npm/package-lock.json"
     "$ROOT/pi/npm/.npmrc|$HOME/.pi/agent/npm/.npmrc"
+    "$ROOT/cursor/skills/pi|$HOME/.cursor/skills/pi"
     "$ROOT/herdr/config.toml|$HOME/.config/herdr/config.toml"
     "$ROOT/herdr/.gitignore|$HOME/.config/herdr/.gitignore"
     "$ROOT/herdr/agent-detection/pi.toml|$HOME/.config/herdr/agent-detection/pi.toml"
@@ -674,8 +657,6 @@ cmd_doctor() {
   if [[ "$ver" == "$ENGRAM_VERSION" ]]; then doc_add ok engram "engram $ver"; else doc_add fail engram "engram want $ENGRAM_VERSION got ${ver:-missing}"; fi
   ver="$(version_of lazygit || true)"
   if [[ "$ver" == "$LAZYGIT_VERSION" ]]; then doc_add ok lazygit "lazygit $ver"; else doc_add fail lazygit "lazygit want $LAZYGIT_VERSION got ${ver:-missing}"; fi
-  ver="$(version_of gentle-ai || true)"
-  if [[ "$ver" == "$GENTLE_AI_VERSION" ]]; then doc_add ok gentle_ai "gentle-ai $ver"; else doc_add fail gentle_ai "gentle-ai want $GENTLE_AI_VERSION got ${ver:-missing}"; fi
   ver="$(version_of "$NPM_AI_PREFIX/bin/codex" || true)"
   if [[ "$ver" == "$CODEX_VERSION" ]]; then doc_add ok codex "managed codex $ver"; else doc_add fail codex "managed codex want $CODEX_VERSION got ${ver:-missing}"; fi
   ver="$(version_of "$HOME/.local/share/mise/installs/node/$NODE_VERSION/bin/node" || true)"

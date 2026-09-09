@@ -1,6 +1,6 @@
 # Mac mini remote availability (Tailscale + Xcode)
 
-Researched 2026-08-13 from Apple/Tailscale docs and a live read of `javiers-mac-mini`. Goal: keep the mini reachable from `dev-vps` so `xcodebuild archive` can sign VerseGuard without sitting at the desk.
+Researched 2026-08-13 from Apple/Tailscale docs and a live read of `mac-mini`. Goal: keep the mini reachable from `dev-vps` so `xcodebuild archive` can sign VerseGuard without sitting at the desk.
 
 ## What is already true
 
@@ -101,12 +101,12 @@ Do not port-forward 5900 off the tailnet. Connect only via Tailscale.
 From another Mac on the tailnet:
 
 ```bash
-open "vnc://javiers-mac-mini"
+open "vnc://mac-mini"
 # or
 open "vnc://100.83.34.54"
 ```
 
-From iPhone: any VNC client to `javiers-mac-mini` / `100.83.34.54` (TCP 5900). Type the lock-screen password. After unlock, SSH `codesign` should work again.
+From iPhone: any VNC client to `mac-mini` / `100.83.34.54` (TCP 5900). Type the lock-screen password. After unlock, SSH `codesign` should work again.
 
 This is recovery, not unattended availability. If display-sleep is left at 10 minutes, FileVault will lock again. With `displaysleep 0`, this hatch is only needed after a lock, logout, or reboot.
 

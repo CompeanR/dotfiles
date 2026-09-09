@@ -99,7 +99,7 @@ assert_fail "unknown top-level arg fails" bash -c '"$0" nope >/dev/null 2>&1' "$
   out="$("$ROOT/install.sh" 2>&1)"
   rc=$?
   set -e
-  if (( rc == 0 )) && [[ -L "$HOME/.tmux.conf" && -L "$HOME/.config/nvim/init.vim" ]]; then
+  if (( rc == 0 )) && [[ -L "$HOME/.tmux.conf" && -L "$HOME/.config/nvim/init.lua" ]]; then
     PASS=$((PASS + 1))
     printf 'ok - desktop no-arg profile succeeds and links representative files\n'
   else
@@ -129,7 +129,6 @@ assert_fail "unknown top-level arg fails" bash -c '"$0" nope >/dev/null 2>&1' "$
   # shellcheck disable=SC1091
   source "$ROOT/server/versions.env"
   assert_eq "node pin exact 22.23.1" "22.23.1" "$NODE_VERSION"
-  assert_eq "gentle-ai pin 1.43.4" "1.43.4" "$GENTLE_AI_VERSION"
   assert_eq "codex exact pin 0.144.1" "0.144.1" "$CODEX_VERSION"
   assert_eq "codex package uses exact pin" "@openai/codex@0.144.1" "$CODEX_NPM_PACKAGE"
   for pkg in python3 mosh jq ripgrep fd-find fzf zoxide eza bat git-delta apparmor-profiles ncurses-bin; do
@@ -157,7 +156,6 @@ assert_fail "unknown top-level arg fails" bash -c '"$0" nope >/dev/null 2>&1' "$
   assert_eq "bootstrap dry-run no HOME mutation" "$before" "$after"
   assert_contains "dry-run mentions node pin" "$out" "node@22.23.1"
   assert_contains "dry-run mentions --no-install-recommends" "$out" "--no-install-recommends"
-  assert_contains "dry-run mentions gentle-ai" "$out" "gentle-ai 1.43.4"
   assert_contains "dry-run documents first nvim launch" "$out" "first interactive"
   rm -rf "$tmp" "$block"
   cleanup_ubuntu_env
@@ -394,8 +392,6 @@ EOF
     python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert "fail" in d and "warn" in d and isinstance(d["items"], list)' "$out"
   assert_ok "doctor json mentions node pin code" \
     python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert any(i.get("code")=="node" for i in d["items"])' "$out"
-  assert_ok "doctor json checks gentle-ai" \
-    python3 -c 'import json,sys; d=json.loads(sys.argv[1]); assert any(i.get("code")=="gentle_ai" for i in d["items"])' "$out"
   assert_ok "doctor json checks delta/eza/zoxide/mosh" \
     python3 -c 'import json,sys; d=json.loads(sys.argv[1]); codes={i.get("code") for i in d["items"]}; assert {"delta","eza","zoxide","mosh"} <= codes' "$out"
   weird_home="$tmp"$'\b\f\001'
@@ -412,7 +408,7 @@ msgs=" ".join(i.get("message","") for i in d["items"] if i.get("code")=="links")
 required=[
   ".zshenv",".zshrc",".config/nvim",".config/opencode",".tmux.conf",
   ".config/tmux","/scripts",".config/lazygit/config.yml",
-  ".pi/agent/settings.json",".pi/agent/mcp.json",".pi/agent/gentle-ai",
+  ".pi/agent/settings.json",".pi/agent/mcp.json",
   "verseguard-metro.service",
 ]
 missing=[r for r in required if r not in msgs]

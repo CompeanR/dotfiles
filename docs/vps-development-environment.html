@@ -653,7 +653,7 @@ cd ~/dotfiles</code></pre>
         <li>apt packages from <code>server/versions.env</code> (<code>APT_PACKAGES</code>), including zsh, mosh, bubblewrap, delta, etc.</li>
         <li><code>./install.sh server</code> safe links.</li>
         <li><code>zsh/bootstrap.sh</code> (Oh My Zsh + Powerlevel10k + autosuggestions).</li>
-        <li>mise + Node pinned versions; Neovim, tmux&nbsp;3.6b, lazygit, engram, herdr, opencode, gentle-ai (checksum verified).</li>
+        <li>mise + Node pinned versions; Neovim, tmux&nbsp;3.6b, lazygit, engram, herdr, opencode (checksum verified).</li>
         <li>Pi and Codex in the bootstrap-owned npm prefix <code>~/.local/opt/npm-ai</code>; TPM plugins; <code>npm ci</code> in <code>~/.pi/agent/npm</code>.</li>
       </ol>
 
@@ -670,10 +670,6 @@ cd ~/dotfiles</code></pre>
             <td>OAuth / device pairing</td>
           </tr>
           <tr>
-            <td>gentle-ai doctor during bootstrap</td>
-            <td>VerseGuard clone, Tailscale Serve, Metro enablement</td>
-          </tr>
-          <tr>
             <td>Refuse unknown installs / wrong symlinks</td>
             <td>Ghostty client terminfo; first interactive Neovim launch</td>
           </tr>
@@ -688,7 +684,7 @@ cd ~/dotfiles</code></pre>
       <p>
         Pins live in <code>server/versions.env</code> (examples current as of this guide):
         Neovim&nbsp;0.12.4, tmux&nbsp;3.6b, Node&nbsp;22.23.1, mise&nbsp;2026.5.15, Engram&nbsp;1.18.0,
-        Herdr&nbsp;0.7.3, OpenCode&nbsp;1.17.18, Gentle AI&nbsp;1.43.4, Lazygit&nbsp;0.62.1,
+        Herdr&nbsp;0.7.3, OpenCode&nbsp;1.17.18, Lazygit&nbsp;0.62.1,
         Pi npm package <code>@earendil-works/pi-coding-agent@0.80.6</code>,
         Codex npm <code>@openai/codex@0.144.1</code>. Digests are verified on download.
       </p>
@@ -743,7 +739,6 @@ cd ~/dotfiles</code></pre>
           <tr><td>Pi</td><td>Coding agent; config linked under <code>~/.pi/agent</code>; Engram extension can auto-start memory server</td></tr>
           <tr><td>OpenCode</td><td>Binary under <code>~/.opencode/bin</code>; config linked from repo</td></tr>
           <tr><td>Codex</td><td>npm global; tmux popup uses <code>workspace-write</code> + <code>on-request</code> (not sandbox bypass)</td></tr>
-          <tr><td>Gentle AI</td><td>CLI + <code>gentle-ai doctor</code> during bootstrap</td></tr>
           <tr><td>Engram</td><td>Persistent memory binary in <code>~/.local/bin</code></td></tr>
           <tr><td>Herdr</td><td>Agent-session UI inside outer tmux; durable config linked; runtime state local</td></tr>
         </tbody>

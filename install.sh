@@ -67,8 +67,9 @@ install_claude() {
 
 # Desktop: force-link map (unchanged destinations; sources resolved from script location).
 install_desktop() {
-  ln -sf "$ROOT/alacritty/alacritty.yml" ~/.config/alacritty/alacritty.yml
-  ln -sf "$ROOT/nvim/init.vim" ~/.config/nvim/init.vim
+  mkdir -p ~/.config/alacritty ~/.config/nvim
+  link_file "$ROOT/alacritty/alacritty.toml" ~/.config/alacritty/alacritty.toml
+  link_file "$ROOT/nvim/init.lua" ~/.config/nvim/init.lua
   ln -sf "$ROOT/tmux/.tmux.conf" ~/.tmux.conf
   ln -sfn "$ROOT/tmux/.config/tmux" ~/.config/tmux
   ln -sfn "$ROOT/tmux/scripts" ~/scripts
@@ -113,7 +114,6 @@ install_desktop() {
   ln -sfn "$ROOT/pi/extensions" ~/.pi/agent/extensions
   ln -sfn "$ROOT/pi/themes" ~/.pi/agent/themes
   ln -sfn "$ROOT/pi/skills" ~/.pi/agent/skills
-  ln -sfn "$ROOT/pi/gentle-ai" ~/.pi/agent/gentle-ai
   ln -sf "$ROOT/pi/npm/package.json" ~/.pi/agent/npm/package.json
   ln -sf "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json
   ln -sf "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc
@@ -171,6 +171,21 @@ safe_link() {
   ln -s "$target" "$link"
 }
 
+# Force-link a single file, unless the destination resolves back to the source.
+# ~/.config/nvim and ~/.config/alacritty are symlinks into $ROOT on some hosts,
+# so a plain `ln -sf` there would create a self-referential symlink inside the
+# repo. Skip that case instead of corrupting the tracked file.
+link_file() {
+  local target="$1" link="$2"
+  local target_dir link_dir
+  target_dir="$(cd "$(dirname "$target")" 2>/dev/null && pwd -P)" || target_dir=""
+  link_dir="$(cd "$(dirname "$link")" 2>/dev/null && pwd -P)" || link_dir=""
+  if [[ -n "$target_dir" && "$target_dir/$(basename "$target")" == "$link_dir/$(basename "$link")" ]]; then
+    return 0
+  fi
+  ln -sf "$target" "$link"
+}
+
 install_server() {
   local status=0
 
@@ -195,7 +210,6 @@ install_server() {
   safe_link "$ROOT/pi/extensions" ~/.pi/agent/extensions || status=1
   safe_link "$ROOT/pi/themes" ~/.pi/agent/themes || status=1
   safe_link "$ROOT/pi/skills" ~/.pi/agent/skills || status=1
-  safe_link "$ROOT/pi/gentle-ai" ~/.pi/agent/gentle-ai || status=1
   safe_link "$ROOT/pi/npm/package.json" ~/.pi/agent/npm/package.json || status=1
   safe_link "$ROOT/pi/npm/package-lock.json" ~/.pi/agent/npm/package-lock.json || status=1
   safe_link "$ROOT/pi/npm/.npmrc" ~/.pi/agent/npm/.npmrc || status=1

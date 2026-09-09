@@ -1,6 +1,5 @@
 ---
 description: Rebuild the OpenCode skill registry for the current project and installed skills
-agent: gentle-orchestrator
 subtask: true
 ---
 

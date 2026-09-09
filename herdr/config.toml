@@ -81,7 +81,7 @@ description = "navigate right (vim/herdr)"
 [[keys.command]]
 key = "alt+g"
 type = "popup"
-command = "lazygit"
+command = "zsh -lc lazygit"
 width = "90%"
 height = "90%"
 description = "lazygit popup"
