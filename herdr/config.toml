@@ -21,6 +21,18 @@ sidebar_collapsed_mode = "hidden"
 
 show_agent_labels_on_pane_borders = false
 status_indicators = "symbols"
+# Default agent rows, restated because token styling is inline (no separate style
+# table). Colour the machine token so the two "dotfiles" rows are tellable apart;
+# the token is omitted entirely while only Local is online.
+[ui.sidebar.agents]
+rows = [
+  ["state_icon", { token = "machine", rules = [
+    { equals = "Local", ignore_case = true, fg = "#83a598" },
+    { equals = "mac-mini", ignore_case = true, fg = "#8ec07c" },
+  ] }, "workspace", "tab"],
+  ["agent"],
+]
+
 [keys]
 prefix = "ctrl+space"
 toggle_sidebar = "prefix+b"
@@ -38,6 +50,11 @@ navigate_pane_up = "ctrl+k"
 # Tabs ≈ tmux windows. Keep prefix+n/p; add alt+] / alt+[ as instant twins.
 next_tab = ["prefix+n", "alt+]"]
 previous_tab = ["prefix+p", "alt+["]
+# Indexed jumps. switch_workspace indexes the focused machine's own Spaces, so
+# numbers stay stable per machine; Spaces get the cheap chord because alt+] / alt+[
+# already cover tabs.
+switch_workspace = "prefix+1..9"
+switch_tab = "prefix+shift+1..9"
 # New tab with generated name (no prompt). alt+w instant twin of prefix+c.
 new_tab = ["prefix+c", "alt+w"]
 # Close focused pane. alt+q instant twin of prefix+x.
