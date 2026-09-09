@@ -40,6 +40,9 @@ toggle_sidebar = "prefix+b"
 # ctrl+shift is the instant no-prefix twin of that chord.
 next_agent = ["prefix+shift+j", "ctrl+shift+j"]
 previous_agent = ["prefix+shift+k", "ctrl+shift+k"]
+# The only indexed jump that spans machines: focus_agent indexes the aggregated
+# online agent list, unlike switch_workspace which is scoped to one machine.
+focus_agent = "prefix+alt+1..9"
 
 # Navigate mode: j/k move the Spaces list (arrows still work).
 # Pane vertical in navigate mode: ctrl+k only — bare ctrl+j stays newline for Pi/shells.
