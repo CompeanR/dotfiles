@@ -3,6 +3,25 @@
 # Used by prefix+shift+b. prefix+b remains Herdr's toggle_sidebar expand/collapse.
 set -euo pipefail
 
+herdr_bin="${HERDR_BIN:-}"
+if [[ -z "$herdr_bin" ]]; then
+  candidate="$(command -v herdr 2>/dev/null || true)"
+  if [[ -n "$candidate" && -x "$candidate" ]]; then
+    herdr_bin="$candidate"
+  else
+    for candidate in "$HOME/.local/bin/herdr" /opt/homebrew/bin/herdr /usr/local/bin/herdr; do
+      if [[ -x "$candidate" ]]; then
+        herdr_bin="$candidate"
+        break
+      fi
+    done
+  fi
+fi
+if [[ -z "$herdr_bin" || ! -x "$herdr_bin" ]]; then
+  echo "herdr executable not found" >&2
+  exit 1
+fi
+
 cfg="${HERDR_CONFIG_PATH:-$HOME/.config/herdr/config.toml}"
 if [[ -L "$cfg" ]]; then
   cfg="$(readlink -f "$cfg")"
@@ -30,5 +49,5 @@ sidebar_collapsed_mode = \"$new\"
   rm -f "$cfg.bak"
 fi
 
-herdr server reload-config >/dev/null
-herdr notification show "Sidebar collapse: $new" --body "compact = thin rail · hidden = fully gone" 2>/dev/null || true
+"$herdr_bin" server reload-config >/dev/null
+"$herdr_bin" notification show "Sidebar collapse: $new" --body "compact = thin rail · hidden = fully gone" 2>/dev/null || true
