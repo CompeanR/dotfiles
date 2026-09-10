@@ -17,7 +17,7 @@ agent_panel_sort = "priority"
 prompt_new_tab_name = false
 # prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
 # hidden = zero width. Flip mode with prefix+shift+b.
-sidebar_collapsed_mode = "hidden"
+sidebar_collapsed_mode = "compact"
 
 show_agent_labels_on_pane_borders = false
 status_indicators = "symbols"
@@ -53,11 +53,11 @@ navigate_pane_up = "ctrl+k"
 # Tabs ≈ tmux windows. Keep prefix+n/p; add alt+] / alt+[ as instant twins.
 next_tab = ["prefix+n", "alt+]"]
 previous_tab = ["prefix+p", "alt+["]
-# Indexed jumps. switch_workspace indexes the focused machine's own Spaces, so
-# numbers stay stable per machine; Spaces get the cheap chord because alt+] / alt+[
-# already cover tabs.
-switch_workspace = "prefix+1..9"
-switch_tab = "prefix+shift+1..9"
+# Indexed jumps. Tabs own the bare prefix+number (tmux muscle memory).
+# switch_workspace stays UNBOUND on purpose: the default workspace_picker
+# (prefix+w, then a number) already covers indexed Space jumps, and binding it
+# here is what stole the numbers from tabs.
+switch_tab = "prefix+1..9"
 # New tab with generated name (no prompt). alt+w instant twin of prefix+c.
 new_tab = ["prefix+c", "alt+w"]
 # Close focused pane. alt+q instant twin of prefix+x.
