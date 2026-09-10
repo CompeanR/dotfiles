@@ -134,25 +134,13 @@
             "type": "local"
         }
     },
-    "permission": {
-        "bash": {
-            "*": "allow",
-            "git commit *": "ask",
-            "git push": "ask",
-            "git push *": "ask",
-            "git push --force *": "ask",
-            "git rebase *": "ask",
-            "git reset --hard *": "ask"
-        },
-        "read": {
-            "*": "allow",
-            "**/.env": "deny",
-            "**/.env.*": "deny",
-            "**/credentials.json": "deny",
-            "**/secrets/**": "deny",
-            "*.env": "deny",
-            "*.env.*": "deny"
-        }
+    "plan": {
+      "mode": "primary",
+      "permission": {
+        "bash": "allow",
+        "edit": "ask",
+        "question": "allow"
+      }
     },
     "plugin": [
         "opencode-gemini-auth@latest",

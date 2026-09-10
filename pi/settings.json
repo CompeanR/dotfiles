@@ -102,7 +102,7 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "cursor/grok-4.6",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -122,16 +122,16 @@
       "work-explore": {
         "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "medium",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "openai-codex/gpt-5.6-sol",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "xhigh",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
