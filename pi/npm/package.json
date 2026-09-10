@@ -10,8 +10,8 @@
     "pi-cursor-sdk": "^0.3.6",
     "pi-intercom": "^0.13.0",
     "pi-mcp-adapter": "^2.32.1",
-    "pi-subagents": "^0.66.0",
+    "pi-subagents": "^0.67.0",
     "pi-undo-redo": "^0.1.1",
-    "pi-web-access": "^0.28.0"
+    "pi-web-access": "^0.29.0"
   }
 }
