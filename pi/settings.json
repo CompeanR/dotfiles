@@ -102,9 +102,9 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "openai-codex/gpt-5.6-terra",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "xhigh",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
