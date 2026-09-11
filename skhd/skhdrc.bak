@@ -81,6 +81,37 @@ cmd - 7 [
     *                 : yabai -m space --focus 7
 ]
 
+# Switch to workspace inside Chrome (cmd+numbers belong to Chrome tabs there).
+# Everywhere else alt+numbers pass through untouched so herdr keeps alt+1..9.
+alt - 1 [
+    "google chrome"   : yabai -m space --focus 1
+    *                 ~
+]
+alt - 2 [
+    "google chrome"   : yabai -m space --focus 2
+    *                 ~
+]
+alt - 3 [
+    "google chrome"   : yabai -m space --focus 3
+    *                 ~
+]
+alt - 4 [
+    "google chrome"   : yabai -m space --focus 4
+    *                 ~
+]
+alt - 5 [
+    "google chrome"   : yabai -m space --focus 5
+    *                 ~
+]
+alt - 6 [
+    "google chrome"   : yabai -m space --focus 6
+    *                 ~
+]
+alt - 7 [
+    "google chrome"   : yabai -m space --focus 7
+    *                 ~
+]
+
 # Move window to workspace and follow (cmd + shift + number) - Hyprland-like
 cmd + shift - 1 : yabai -m window --space 1 --focus
 cmd + shift - 2 : yabai -m window --space 2 --focus

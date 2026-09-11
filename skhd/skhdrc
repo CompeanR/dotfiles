@@ -52,43 +52,13 @@ alt - y : yabai -m space --mirror y-axis
 alt - e : yabai -m window --toggle split
 
 # Switch to workspace (cmd + number) - Hyprland-like
-cmd - 1 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 1
-]
-cmd - 2 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 2
-]
-cmd - 3 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 3
-]
-cmd - 4 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 4
-]
-cmd - 5 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 5
-]
-cmd - 6 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 6
-]
-cmd - 7 [
-    "google chrome"   ~
-    *                 : yabai -m space --focus 7
-]
-
-# Switch to workspace - universal fallback (works in Chrome, herd, everywhere)
-cmd + ctrl - 1 : yabai -m space --focus 1
-cmd + ctrl - 2 : yabai -m space --focus 2
-cmd + ctrl - 3 : yabai -m space --focus 3
-cmd + ctrl - 4 : yabai -m space --focus 4
-cmd + ctrl - 5 : yabai -m space --focus 5
-cmd + ctrl - 6 : yabai -m space --focus 6
-cmd + ctrl - 7 : yabai -m space --focus 7
+cmd - 1 : yabai -m space --focus 1
+cmd - 2 : yabai -m space --focus 2
+cmd - 3 : yabai -m space --focus 3
+cmd - 4 : yabai -m space --focus 4
+cmd - 5 : yabai -m space --focus 5
+cmd - 6 : yabai -m space --focus 6
+cmd - 7 : yabai -m space --focus 7
 
 # Move window to workspace and follow (cmd + shift + number) - Hyprland-like
 cmd + shift - 1 : yabai -m window --space 1 --focus

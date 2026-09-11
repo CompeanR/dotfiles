@@ -1,4 +1,5 @@
 Don't be verbose
+Don't overcomplicate solutions. Provide always the clearest one
 Avoid unnecessary code comments. Do not add a
 `Co-authored-by` trailer to commits.
 
