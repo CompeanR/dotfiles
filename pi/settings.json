@@ -104,7 +104,7 @@
       "work-apply": {
         "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "medium",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
