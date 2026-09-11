@@ -102,7 +102,7 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "deepseek/deepseek-flash",
+        "model": "openai-codex/gpt-5.6-luna",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
