@@ -57,7 +57,7 @@
         "acceptanceRole": "read-only"
       },
       "jd-judge-b": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "deepseek/deepseek-flash",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -93,7 +93,7 @@
         "acceptanceRole": "read-only"
       },
       "review-risk": {
-        "model": "openai-codex/gpt-5.6-luna",
+        "model": "deepseek/deepseek-flash",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -102,7 +102,7 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "cursor/grok-4.6",
+        "model": "deepseek/deepseek-flash",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,

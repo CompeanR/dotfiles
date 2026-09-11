@@ -16,8 +16,8 @@ agent_panel_sort = "priority"
 # Create tabs immediately with generated names (no name prompt).
 prompt_new_tab_name = false
 # prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
-# hidden = zero width. Flip mode with prefix+shift+b.
-sidebar_collapsed_mode = "compact"
+# hidden = zero width. Flip mode with ctrl+alt+b.
+sidebar_collapsed_mode = "hidden"
 
 show_agent_labels_on_pane_borders = false
 status_indicators = "symbols"
@@ -121,7 +121,7 @@ description = "Toggle floating pane"
 
 # Flip collapsed sidebar look: compact (thin rail) ↔ hidden (fully gone).
 [[keys.command]]
-key = "prefix+shift+b"
+key = "ctrl+alt+b"
 type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/flip_sidebar_collapsed_mode.sh\""
 description = "Flip sidebar collapse mode (compact/hidden)"
