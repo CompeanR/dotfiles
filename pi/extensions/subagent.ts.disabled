@@ -1,0 +1,89 @@
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { realpathSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { Type } from "typebox";
+import {
+  DEFAULT_TIMEOUT_MS,
+  createSubagentService,
+} from "./lib/subagent-core.mjs";
+
+// ~/.pi/agent/extensions -> this directory. import.meta.url may be either the
+// symlink path or the real path depending on how pi/jiti loads us; realpath so
+// settings.json and agents/ always resolve to the real repo copies.
+const extensionDir = dirname(realpathSync(fileURLToPath(import.meta.url)));
+const service = createSubagentService({
+  settingsPath: join(extensionDir, "..", "settings.json"),
+  agentsDir: join(extensionDir, "..", "agents"),
+  dispatchPath: undefined,
+  allowWatch: false,
+  enforceSingleWriterPerCwd: true,
+});
+
+function roleSchema(roleNames: readonly string[]) {
+  return Type.Union(
+    roleNames.map((n) => Type.Literal(n)),
+    { description: "Which role to delegate to. See the role table above." },
+  );
+}
+
+function toolDefinition(svc: typeof service) {
+  return {
+    name: "subagent",
+    label: "Subagent",
+    description: svc.description,
+    executionMode: "parallel" as const,
+    parameters: Type.Object(
+      {
+        role: roleSchema(svc.roleNames),
+        brief: Type.String({
+          description:
+            "Self-contained brief for the sub-agent: goal, context, constraints, and return shape. The sub-agent inherits no project context, skills, or history.",
+        }),
+        cwd: Type.Optional(
+          Type.String({
+            description: "Working directory for the sub-agent. Defaults to the current directory.",
+          }),
+        ),
+        watch: Type.Optional(
+          Type.Boolean({
+            description:
+              "Compatibility field. Watch mode is NOT supported in pi; true is rejected.",
+          }),
+        ),
+        timeout_ms: Type.Optional(
+          Type.Number({
+            description: `Max run time before the sub-agent is killed. Default ${DEFAULT_TIMEOUT_MS}.`,
+          }),
+        ),
+      },
+      { additionalProperties: false },
+    ),
+    async execute(
+      _toolCallId: string,
+      params: {
+        role: string;
+        brief: string;
+        cwd?: string;
+        watch?: boolean;
+        timeout_ms?: number;
+      },
+      signal: AbortSignal | undefined,
+      _onUpdate: unknown,
+      ctx: { cwd: string },
+    ) {
+      const result = await svc.dispatch(params, { cwd: ctx.cwd, signal });
+      return { content: [{ type: "text" as const, text: result.text }], details: result.details };
+    },
+  };
+}
+
+// Test seam: production default export always uses `service`. Tests call
+// registerSubagent(pi, stub) so execute() never spawns a real pi child.
+export function registerSubagent(pi: ExtensionAPI, svc: typeof service = service): void {
+  pi.registerTool(toolDefinition(svc));
+}
+
+export default function subagent(pi: ExtensionAPI): void {
+  registerSubagent(pi);
+}
