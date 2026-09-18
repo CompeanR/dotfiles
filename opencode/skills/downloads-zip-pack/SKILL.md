@@ -1,12 +1,6 @@
 ---
 name: downloads-zip-pack
-description: >
-    Extract the latest zip file from ~/Downloads (or a given path), build an image manifest,
-    and make the contained screenshots available as conversation context.
-    Trigger: When the user says they downloaded a zip of screenshots/references and wants
-    the agent to unzip and inspect them. Common phrases: "I downloaded a zip",
-    "the last file in my Downloads is a zip", "extract the latest zip",
-    "descargue un zip", "agrega los screenshots".
+description: 'Extract the latest zip from ~/Downloads and expose its screenshots as context. Trigger: "I downloaded a zip", "extract the latest zip", "descargue un zip", "agrega los screenshots".'
 license: Apache-2.0
 metadata:
     author: gentleman-programming

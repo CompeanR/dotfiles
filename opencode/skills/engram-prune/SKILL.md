@@ -9,6 +9,7 @@ license: Apache-2.0
 metadata:
   author: gentleman-programming
   version: "1.3.0"
+disable-model-invocation: true
 ---
 
 # Engram prune

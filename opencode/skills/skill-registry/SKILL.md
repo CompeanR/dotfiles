@@ -5,6 +5,7 @@ license: MIT
 metadata:
   author: gentleman-programming
   version: "1.0"
+disable-model-invocation: true
 ---
 
 ## Activation Contract

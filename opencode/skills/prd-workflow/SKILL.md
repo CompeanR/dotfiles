@@ -6,6 +6,7 @@ description: >
 metadata:
   owner: compean
   version: "1.1"
+disable-model-invocation: true
 ---
 
 ## Purpose
@@ -33,7 +34,7 @@ Store state only in repo:
 ## Mandatory project grounding (before advice/refinement/conversion)
 Before suggesting enhancements, ALWAYS inspect and summarize project context from repo files.
 Minimum grounding pass:
-1) Read `CLAUDE.md` (or project overview doc)
+1) Read `AGENTS.md` (or project overview doc)
 2) Read `prds/<ID>.request.md` (for refine/new-prd)
 3) Read 2-4 relevant code/docs files tied to requested feature
 4) Check current capabilities/constraints from existing implementation

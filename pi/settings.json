@@ -6,7 +6,8 @@
     "cursor/grok-4.6",
     "openai-codex/gpt-5.6-sol",
     "deepseek/deepseek-flash",
-    "openai-codex/gpt-6-astra"
+    "openai-codex/gpt-6-astra",
+    "anthropic/claude-opus-5"
   ],
   "hideThinkingBlock": true,
   "lastChangelogVersion": "0.85.1",
@@ -18,7 +19,6 @@
     "npm:@juicesharp/rpiv-ask-user-question",
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-btw",
-    "npm:pi-mcp-adapter",
     "npm:pi-undo-redo",
     {
       "source": "git:github.com/DietrichGebert/ponytail",
@@ -32,7 +32,8 @@
       ]
     },
     "npm:pi-claude-auth",
-    "npm:pi-cursor-sdk"
+    "npm:pi-cursor-sdk",
+    "npm:@gotgenes/pi-anthropic-auth"
   ],
   "subagents": {
     "disableBuiltins": true,
@@ -102,22 +103,13 @@
         "acceptanceRole": "read-only"
       },
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-terra",
+        "model": "anthropic/claude-opus-5",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "writer"
-      },
-      "work-design": {
-        "model": "openai-codex/gpt-5.6-sol",
-        "fallbackModels": ["cursor/grok-4.6"],
-        "thinking": "high",
-        "inheritProjectContext": false,
-        "inheritSkills": false,
-        "defaultContext": "fresh",
-        "acceptanceRole": "read-only"
       },
       "work-explore": {
         "model": "openai-codex/gpt-5.6-luna",
@@ -129,7 +121,7 @@
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-sol",
+        "model": "anthropic/claude-opus-5",
         "fallbackModels": ["cursor/grok-4.6"],
         "thinking": "medium",
         "inheritProjectContext": false,
@@ -139,6 +131,7 @@
       }
     }
   },
-  "skills": ["~/.config/opencode/skills/youtube-transcript"],
+  "skills": [],
   "theme": "matte-black"
 }
+

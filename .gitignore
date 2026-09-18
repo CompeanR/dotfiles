@@ -37,3 +37,4 @@ __pycache__/
 # Per-host ghostty selection (created by install.sh)
 ghostty/config-host
 ghostty/gtk-omarchy.css
+/opencode/skills/terminal-browser
