@@ -1,4 +1,3 @@
-Don't be verbose
 Don't overcomplicate solutions. Provide always the clearest one
 Avoid unnecessary code comments. Do not add a
 `Co-authored-by` trailer to commits.
@@ -16,7 +15,7 @@ delegation costs more than the task with the main model.
 Pi workers inherit no project context, conversation, or skills. Make every
 brief self-contained: include the goal, relevant context, explicit constraints
 and allowed files, plus the required output or validation. Choose
-`explore`, `design`, `apply`, or `verify` from the role descriptions in the
+`explore`, `verify`, or `apply` from the role descriptions in the
 tool; do not read Pi settings or agent files because the tool description
 already provides the authoritative routing guidance. `watch: true` is optional
 and slower, so omit it unless visible execution is needed.
