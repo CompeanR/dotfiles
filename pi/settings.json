@@ -41,23 +41,23 @@
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "work-apply": {
-        "model": "anthropic/claude-opus-5",
-        "thinking": "medium",
+        "model": "openai-codex/gpt-5.6-luna",
+        "thinking": "max",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "writer"
       },
       "work-explore": {
-        "model": "anthropic/claude-opus-5",
-        "thinking": "medium",
+        "model": "openai-codex/gpt-5.6-luna",
+        "thinking": "max",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "deepseek/deepseek-flash",
+        "model": "openai-codex/gpt-5.6-luna",
         "thinking": "max",
         "inheritProjectContext": false,
         "inheritSkills": false,
