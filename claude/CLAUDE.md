@@ -28,3 +28,5 @@ correction is trivial.
 
 Deploy pi sub-agents with at least 20min timeout. For design agents we can increase the threshold to 30min.
 Don't be verbose
+
+In typescript always use 'public' keyword on public methods inside classes

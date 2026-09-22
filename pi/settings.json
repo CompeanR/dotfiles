@@ -37,28 +37,28 @@
   ],
   "subagents": {
     "disableBuiltins": true,
-    "defaultModel": "openai-codex/gpt-5.6-terra",
+    "defaultModel": "openai-codex/gpt-6-luna",
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "work-apply": {
-        "model": "openai-codex/gpt-5.6-luna",
-        "thinking": "max",
+        "model": "openai-codex/gpt-6-luna",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "writer"
       },
       "work-explore": {
-        "model": "openai-codex/gpt-5.6-luna",
-        "thinking": "max",
+        "model": "openai-codex/gpt-6-luna",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-5.6-luna",
-        "thinking": "max",
+        "model": "openai-codex/gpt-6-luna",
+        "thinking": "xhigh",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
