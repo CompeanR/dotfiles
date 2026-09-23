@@ -6,87 +6,11 @@
   },
   "permissions": {
     "allow": [
-      "mcp__plugin_engram_engram__*",
-      "mcp__pi__*"
-    ],
-    "deny": [
-      "Agent"
+      "mcp__plugin_engram_engram__*"
     ],
     "defaultMode": "auto"
   },
   "model": "opus",
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|TaskOutput|mcp__pi__subagent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" pre",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|AskUserQuestion|mcp__pi__subagent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" post",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PostToolUseFailure": [
-      {
-        "matcher": "Read|Glob|Grep|WebFetch|WebSearch|Bash|Edit|Write|NotebookEdit|MultiEdit|mcp__pi__subagent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" failure",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" prompt",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" stop",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"$HOME/dotfiles/claude/scripts/pi-routing-gate.py\" cleanup",
-            "timeout": 2
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "engram@engram": true,
     "mattpocock-skills@claude-plugins-official": true,

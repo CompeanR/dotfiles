@@ -28,11 +28,13 @@ install_claude() {
 
   if [[ "$mode" == "safe" ]]; then
     safe_link "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md || status=1
+    safe_link "$ROOT/claude/agents" ~/.claude/agents || status=1
     for skill in "$ROOT"/claude/skills/*/; do
       safe_link "${skill%/}" ~/.claude/skills/"$(basename "$skill")" || status=1
     done
   else
     ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
+    ln -sfn "$ROOT/claude/agents" ~/.claude/agents
     for skill in "$ROOT"/claude/skills/*/; do
       ln -sfn "${skill%/}" ~/.claude/skills/"$(basename "$skill")"
     done
@@ -46,15 +48,6 @@ install_claude() {
     fi
     cp "$ROOT/claude/settings.json" ~/.claude/settings.json
     echo "claude: settings.json synced from dotfiles (previous copy in ~/.claude/backups/)"
-  fi
-
-  # Pi subagent MCP server (~/.claude.json is not tracked, so register it here).
-  if command -v claude >/dev/null 2>&1; then
-    if ! claude mcp list 2>/dev/null | grep -q '^pi:'; then
-      claude mcp add pi --scope user -- node "$ROOT/claude/mcp/pi-subagent/server.mjs" >/dev/null 2>&1 \
-        && echo "claude: registered pi MCP server" \
-        || echo "claude: could not register pi MCP server (run: claude mcp add pi --scope user -- node $ROOT/claude/mcp/pi-subagent/server.mjs)" >&2
-    fi
   fi
 
   # herdr owns ~/.claude/hooks/herdr-agent-state.sh; let it install its own hook.
