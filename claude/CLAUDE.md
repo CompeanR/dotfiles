@@ -5,3 +5,11 @@ Avoid unnecessary code comments. Do not add a
 Don't be verbose
 
 In typescript always use 'public' keyword on public methods inside classes
+Remember we have
+
+work-explore
+work-design
+work-apply
+work-verify
+
+sub-agents. Use them when appropriate
