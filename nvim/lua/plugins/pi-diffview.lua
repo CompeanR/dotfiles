@@ -21,7 +21,7 @@ local scratch_dir = vim.fn.stdpath("cache") .. "/pi-diffview"
 
 -- Keep the lightweight popup independent from the global pi defaults. The model
 -- must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
-local MODEL = "openai-codex/gpt-5.6-luna"
+local MODEL = "openai-codex/gpt-6-sol"
 local THINKING = "high"
 
 -- pi is not detected by screen scraping — it registers itself through the

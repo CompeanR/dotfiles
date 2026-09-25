@@ -3,12 +3,12 @@
   "defaultProvider": "cursor",
   "defaultThinkingLevel": "high",
   "enabledModels": [
-    "cursor/grok-4.6",
-    "openai-codex/gpt-5.6-sol",
     "deepseek/deepseek-flash",
     "openai-codex/gpt-6-astra",
     "anthropic/claude-fable-5",
-    "anthropic/claude-opus-5-5"
+    "anthropic/claude-opus-5-5",
+    "openai-codex/gpt-6-luna",
+    "openai-codex/gpt-6-sol"
   ],
   "hideThinkingBlock": true,
   "lastChangelogVersion": "0.87.1",
@@ -37,28 +37,28 @@
   ],
   "subagents": {
     "disableBuiltins": true,
-    "defaultModel": "openai-codex/gpt-6-luna",
+    "defaultModel": "openai-codex/gpt-6-sol",
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "work-apply": {
-        "model": "openai-codex/gpt-6-luna",
-        "thinking": "max",
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "writer"
       },
       "work-explore": {
-        "model": "openai-codex/gpt-6-luna",
-        "thinking": "max",
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-6-luna",
-        "thinking": "max",
+        "model": "openai-codex/gpt-6-sol",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
