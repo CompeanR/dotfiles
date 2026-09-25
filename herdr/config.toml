@@ -70,6 +70,14 @@ previous_workspace = "shift+alt+["
 # Free prefix+tab from default pane cycle so last-workspace can own it.
 cycle_pane_next = ""
 
+# Delete the focused worktree checkout + branch and close its workspace, no confirmation.
+# Dirty checkouts are kept and reported via notification (never forced).
+[[keys.command]]
+key = "prefix+shift+c"
+type = "shell"
+command = "bash \"$HOME/dotfiles/herdr/scripts/remove_worktree.sh\""
+description = "Delete worktree checkout"
+
 # Last-used workspace toggle (single-slot MRU script).
 [[keys.command]]
 key = "prefix+tab"
