@@ -2,15 +2,15 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-anthropic-auth": "^3.0.1",
+    "@gotgenes/pi-anthropic-auth": "^3.2.2",
     "@juicesharp/rpiv-ask-user-question": "^2.11.0",
     "@juicesharp/rpiv-todo": "^2.11.0",
     "gentle-engram": "^0.1.14",
     "pi-btw": "^0.6.0",
     "pi-cursor-sdk": "^0.3.10",
-    "pi-intercom": "^0.13.0",
-    "pi-subagents": "^0.70.1",
+    "pi-intercom": "^0.14.0",
+    "pi-subagents": "^0.71.0",
     "pi-undo-redo": "^0.1.3",
-    "pi-web-access": "^0.30.0"
+    "pi-web-access": "^0.31.0"
   }
 }
