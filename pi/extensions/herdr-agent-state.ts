@@ -2,10 +2,11 @@
 // managed by herdr; reinstalling or updating the integration overwrites this file.
 // add custom hooks/plugins beside this file instead of editing it.
 // HERDR_INTEGRATION_ID=pi
-// HERDR_INTEGRATION_VERSION=8
+// HERDR_INTEGRATION_VERSION=9
 // @ts-nocheck
 
 import net from "node:net";
+import path from "node:path";
 import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
 
 const HERDR_ENV = process.env.HERDR_ENV;
@@ -69,7 +70,10 @@ function updateSessionRef(ctx: any): void {
   try {
     const file = ctx?.sessionManager?.getSessionFile?.();
     currentAgentSessionPath =
-      typeof file === "string" && file.startsWith("/") ? file : undefined;
+      typeof file === "string" &&
+      (path.posix.isAbsolute(file) || path.win32.isAbsolute(file))
+        ? file
+        : undefined;
   } catch {
     currentAgentSessionPath = undefined;
   }
@@ -122,11 +126,7 @@ function reportSession(sessionStartSource?: string): Promise<void> {
   });
 }
 
-function sendState(
-  state: AgentState,
-  message?: string,
-  seq = nextHerdrReportSequence(),
-): Promise<void> {
+function sendState(state: AgentState, message?: string, seq = nextHerdrReportSequence()): Promise<void> {
   return sendRequest({
     id: `${source}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
     method: "pane.report_agent",
