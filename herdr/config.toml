@@ -50,8 +50,8 @@ navigate_workspace_up = ["k", "up"]
 navigate_workspace_down = ["j", "down"]
 navigate_pane_up = "ctrl+k"
 
-# Tabs ≈ tmux windows. Keep prefix+n/p; add alt+] / alt+[ as instant twins.
-next_tab = ["prefix+n", "alt+]"]
+# Tabs ≈ tmux windows. alt+] / alt+[ are the instant twins; prefix+n opens nvim split.
+next_tab = "alt+]"
 previous_tab = ["prefix+p", "alt+["]
 # Indexed jumps. Tabs own the bare prefix+number (tmux muscle memory).
 # switch_workspace stays UNBOUND on purpose: the default workspace_picker
@@ -77,6 +77,13 @@ key = "prefix+shift+c"
 type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/remove_worktree.sh\""
 description = "Delete worktree checkout"
+
+# Side split (like prefix+v) with nvim running in it, zoomed.
+[[keys.command]]
+key = "prefix+n"
+type = "shell"
+command = "bash \"$HOME/dotfiles/herdr/scripts/split_nvim.sh\""
+description = "Split right with nvim"
 
 # Last-used workspace toggle (single-slot MRU script).
 [[keys.command]]
