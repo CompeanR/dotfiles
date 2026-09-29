@@ -16,7 +16,7 @@ ANIM_CURVE="tanh"
 SPACE_ID=${NAME#space.}
 
 # Get apps in this space from yabai, join with " | "
-APPS=$(yabai -m query --windows --space $SPACE_ID 2>/dev/null | jq -r '.[].app' 2>/dev/null | sort -u | head -3 | paste -sd '|' - | sed 's/|/ | /g')
+APPS=$(yabai -m query --windows --space $SPACE_ID 2>/dev/null | jq -r '.[] | select(."has-ax-reference" and .subrole == "AXStandardWindow") | .app' 2>/dev/null | sort -u | head -3 | paste -sd '|' - | sed 's/|/ | /g')
 
 # Build label with app names
 if [ -n "$APPS" ]; then

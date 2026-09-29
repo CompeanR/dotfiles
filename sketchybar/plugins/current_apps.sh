@@ -13,7 +13,7 @@ CURRENT_SPACE=$(yabai -m query --spaces --space 2>/dev/null | jq -r '.index')
 FOCUSED_APP=$(yabai -m query --windows --window 2>/dev/null | jq -r '.app' 2>/dev/null)
 
 # Get all apps in current space
-APPS=$(yabai -m query --windows --space $CURRENT_SPACE 2>/dev/null | jq -r '.[].app' 2>/dev/null | sort -u)
+APPS=$(yabai -m query --windows --space $CURRENT_SPACE 2>/dev/null | jq -r '.[] | select(."has-ax-reference" and .subrole == "AXStandardWindow") | .app' 2>/dev/null | sort -u)
 
 if [ -z "$APPS" ]; then
   sketchybar --set $NAME label="--"

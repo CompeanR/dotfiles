@@ -2,8 +2,8 @@
 name: work-explore
 description: Investigate a routine coding task without requiring SDD artifacts. Use for read-only investigation of a scoped question: code, config, history, memory, or web.
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation
-model: claude-opus-5-5
-effort: high
+model: claude-sonnet-5-5
+effort: medium
 ---
 
 # Work Explore
