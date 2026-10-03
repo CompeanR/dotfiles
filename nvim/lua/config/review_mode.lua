@@ -65,7 +65,7 @@ end
 ---@field rev string parent; gitsigns base so the commit itself is in the review
 ---@field checkout string the commit to detach onto
 
----Single-commit review, same range as Diffview `sha^!`.
+---Single-commit review, same range as `sha^!`.
 ---@param sha? string
 ---@return CommitReview?
 function M.commit_review(sha)
@@ -496,6 +496,68 @@ local function shared_nav(direction)
   end)
 end
 
+local original_tree_status
+
+local base_diffs = {}
+
+-- neo-tree's git.status() returns early when the raw `git status` text is
+-- unchanged (a save, a refresh, a clean checkout of another PR) and drops the
+-- diff-vs-base result with it, so the tree falls back to working-tree changes
+-- only. Keep our own copy of that diff keyed by base AND HEAD: PRs that share a
+-- base must not show each other's files, and a missing entry is recomputed.
+---@param git table
+local function keep_base_diff(git)
+  if original_tree_status then return end
+  original_tree_status = git.status
+  git.status = function(path, base_lookup, skip_bubbling, ...)
+    local status, root, over_base = original_tree_status(path, base_lookup, skip_bubbling, ...)
+    local base = root and base_lookup and base_lookup[root]
+    if not base then return status, root, over_base end
+
+    local head = vim.trim(vim.fn.system({ "git", "-C", root, "rev-parse", "HEAD" }))
+    local key = table.concat({ root, base, head }, "\0")
+    if over_base then
+      base_diffs[key] = over_base
+    elseif not base_diffs[key] then
+      base_diffs[key] = require("neo-tree.git.diff").diff_name_status(root, base, skip_bubbling)
+    end
+    over_base = base_diffs[key]
+    local worktree = git.worktrees[root]
+    if worktree and over_base then worktree.status_diff[base] = over_base end
+    return status, root, over_base
+  end
+end
+
+---Point the Git Explorer (<leader>ge) at the review base so it lists the review's files.
+---@param sha? string nil restores the plain working-tree status
+local function set_explorer_base(sha)
+  if sha then
+    local ok, command = pcall(require, "neo-tree.command")
+    if not ok then return end
+    keep_base_diff(require("neo-tree.git"))
+    command.execute({ source = "git_status", git_base = sha, action = "show" })
+    return
+  end
+  if original_tree_status then
+    require("neo-tree.git").status = original_tree_status
+    original_tree_status = nil
+  end
+  base_diffs = {}
+  if not package.loaded["neo-tree"] then return end
+  local state = require("neo-tree.sources.manager").get_state("git_status")
+  state.git_base_by_worktree = nil
+  require("neo-tree.command").execute({ source = "git_status", action = "close" })
+end
+
+local function reveal_in_explorer(buf)
+  if vim.bo[buf].buftype ~= "" or not package.loaded["neo-tree"] then return end
+  local name = vim.api.nvim_buf_get_name(buf)
+  if name == "" then return end
+  local state = require("neo-tree.sources.manager").get_state("git_status")
+  local renderer = require("neo-tree.ui.renderer")
+  if state and renderer.window_exists(state) then renderer.focus_node(state, abs_path(name), true) end
+end
+
 local function open_and_land(path)
   vim.cmd.edit(vim.fn.fnameescape(path))
   local actions = package.loaded["git_hunk_nav_actions"]
@@ -542,6 +604,7 @@ end
 ---@class ReviewStartOpts
 ---@field stash? boolean
 ---@field checkout? string detach onto this commit before resolving the base
+---@field base? string PR base branch name (e.g. main); defaults to origin/master
 
 ---@param arg? string
 ---@param opts? ReviewStartOpts
@@ -559,18 +622,20 @@ function M.start(arg, opts)
   end
 
   local target = M.parse_target(arg)
-  local rev = target.rev or "origin/master"
+  local rev = target.rev or (opts.base and "origin/" .. opts.base) or "origin/master"
   if target.pr or opts.stash or opts.checkout then
     if not isolate_working_tree(repo, opts.stash) then return end
   end
-  if opts.checkout then
+  if opts.checkout or target.pr then
     stash_branch = stash_branch or checkout_target(repo)
     stash_repo = stash_repo or repo
     if not stash_branch then
-      vim.notify("cannot checkout commit: could not resolve HEAD", vim.log.levels.ERROR)
+      vim.notify("cannot check out: could not resolve HEAD", vim.log.levels.ERROR)
       restore_working_tree()
       return
     end
+  end
+  if opts.checkout then
     local detached = vim.system({ "git", "-C", repo, "checkout", "--detach", opts.checkout }, { text = true }):wait()
     if detached.code ~= 0 then
       local message = vim.trim(detached.stderr or "")
@@ -580,13 +645,18 @@ function M.start(arg, opts)
     end
   end
   if target.pr then
-    local checkout = vim.system({ "gh", "pr", "checkout", tostring(target.pr) }, { cwd = repo, text = true }):wait()
+    -- Detached, so a branch already checked out in another worktree is no obstacle.
+    local fetched = vim.system({ "git", "-C", repo, "fetch", "--quiet", "origin", "pull/" .. target.pr .. "/head" }, { text = true }):wait()
+    local checkout = fetched.code == 0
+        and vim.system({ "git", "-C", repo, "checkout", "--detach", "FETCH_HEAD" }, { text = true }):wait()
+      or fetched
     if checkout.code ~= 0 then
       local message = vim.trim(checkout.stderr or "")
-      vim.notify(message ~= "" and message or "gh pr checkout failed", vim.log.levels.ERROR)
+      vim.notify(message ~= "" and message or ("could not check out PR #" .. target.pr), vim.log.levels.ERROR)
       restore_working_tree()
       return
     end
+    if opts.base then vim.system({ "git", "-C", repo, "fetch", "--quiet", "origin", opts.base }):wait() end
   end
 
   local merge_base = vim.system({ "git", "-C", repo, "merge-base", rev, "HEAD" }, { text = true }):wait()
@@ -625,6 +695,7 @@ function M.start(arg, opts)
     group = group,
     callback = function(event)
       apply_keymaps(event.buf)
+      reveal_in_explorer(event.buf)
     end,
   })
   -- BufEnter/WinEnter cover returning from the pi popup, which clears the
@@ -641,6 +712,7 @@ function M.start(arg, opts)
   })
   apply_keymaps(vim.api.nvim_get_current_buf())
 
+  set_explorer_base(base_sha)
   open_and_land(files[1])
 end
 
@@ -668,6 +740,7 @@ function M.stop(callback)
   end
   mapped_buffers = {}
   vim.g.review_mode_status = ""
+  set_explorer_base(nil)
   restore_working_tree()
 
   ---@param err? string

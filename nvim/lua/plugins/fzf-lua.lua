@@ -1,5 +1,22 @@
+local pos_dir = vim.fn.tempname()
+
+---Reopen `git_diff` on the entry that was focused when it was last closed.
+local function git_diff_remembering()
+  vim.fn.mkdir(pos_dir, "p")
+  local file = pos_dir .. "/" .. vim.fn.sha256(vim.fn.getcwd())
+  local keymap = { focus = ("execute-silent(printf %%s {n} > %s)"):format(vim.fn.shellescape(file)) }
+  local fh = io.open(file)
+  local index = fh and tonumber(fh:read("*a"))
+  if fh then fh:close() end
+  if index then keymap.load = ("pos(%d)"):format(index + 1) end
+  require("fzf-lua").git_diff({ keymap = { fzf = keymap } })
+end
+
 return {
   "ibhagwan/fzf-lua",
+  keys = {
+    { "<leader>gd", git_diff_remembering, desc = "Git Diff (files)" },
+  },
   config = function()
     local actions = require("fzf-lua.actions")
     -- Default git_diff actions; we move "git hunks" off <ctrl-d> so that key
@@ -31,7 +48,7 @@ return {
         commits = {
           actions = {
             -- LazyVim <leader>gc/<leader>gl and <leader>gd Ctrl-Q → git_commits.
-            -- Enter starts review mode for that commit (sha^!), not Diffview.
+            -- Enter starts review mode for that commit (sha^!).
             ["enter"] = function(selected)
               local utils = require("fzf-lua.utils")
               local review = require("config.review_mode")

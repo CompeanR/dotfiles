@@ -1,15 +1,10 @@
--- pi popup for code questions, with shorter mappings inside diffview panes.
+-- pi popup for code questions.
 --
 -- Global:
 -- <leader>pa  ask pi about a selection or the code around the cursor
 -- <leader>pe  explain a selection or the code around the cursor
 -- <leader>pp  open/toggle the popup;  <C-q> or <C-g> hides it from inside
 --             <C-s> docks the popup to a right split (press again to float)
---
--- Diffview:
--- e           explain the selected/current hunk (bare e, so <leader>e stays the tree)
--- <leader>a   ask pi about the selected/current hunk
--- <leader>F   diffview's focus_files, rehomed since <leader>e is the file tree
 --
 -- The hunk is written to a temp file and passed as a pi `@file` argument, so the
 -- prompt itself stays a single line. That matters: it lets a second question be
@@ -118,13 +113,9 @@ end
 
 ---Describe what is being reviewed, for the prompt header.
 local function review_context()
-  local ok, lib = pcall(require, "diffview.lib")
-  local view = ok and lib.get_current_view() or nil
-  local rev = view and view.rev_arg or nil
   local branch = vim.fn.systemlist("git rev-parse --abbrev-ref HEAD")[1]
   if vim.v.shell_error ~= 0 then branch = nil end
   local parts = {}
-  if rev then parts[#parts + 1] = "diff range: " .. rev end
   if branch then parts[#parts + 1] = "branch: " .. branch end
   local review = package.loaded["config.review_mode"]
   if review and review.is_active() and review.base() then parts[#parts + 1] = "review base: " .. review.base() end
@@ -165,20 +156,11 @@ local function capture()
   local buf = vim.api.nvim_get_current_buf()
   local name = vim.api.nvim_buf_get_name(buf)
 
-  -- diffview:// buffers hold the base revision; note which side we grabbed.
-  -- Their URIs look like diffview:///repo/.git/<object>/path/to/file — strip
-  -- through the git object dir to recover the real repo-relative path.
-  local side = "WORKING"
-  if name:match("^diffview://") then
-    side = "BASE (left pane)"
-  elseif vim.wo.diff then
-    side = "WORKING (right pane)"
-  end
-  local path = name:gsub("^diffview://", ""):gsub("^.-/%.git/[^/]+/", "")
-  path = vim.fn.fnamemodify(path, ":.")
+  local side = vim.wo.diff and "WORKING (right pane)" or "WORKING"
+  local path = vim.fn.fnamemodify(name, ":.")
 
   local s, e = visual_range()
-  if not s and not name:match("^diffview://") then
+  if not s then
     local gs = package.loaded.gitsigns
     local ok, hunks = pcall(function() return gs and gs.get_hunks and gs.get_hunks(buf) or {} end)
     if ok and hunks and #hunks > 0 then
@@ -197,8 +179,6 @@ local function capture()
         return write_excerpt(header)
       end
     end
-    s, e = hunk_range()
-  elseif not s then
     s, e = hunk_range()
   end
 
@@ -391,41 +371,8 @@ vim.api.nvim_create_autocmd("VimLeavePre", {
 })
 
 -- Namespaced globally to preserve LazyVim's <leader>e explorer mapping.
--- Diffview uses bare `e` for explain so it does not steal that mapping either.
 vim.keymap.set({ "n", "x" }, "<leader>pa", M.ask, { desc = "pi: ask about this code" })
 vim.keymap.set({ "n", "x" }, "<leader>pe", M.explain, { desc = "pi: explain this code" })
 vim.keymap.set("n", "<leader>pp", M.toggle, { desc = "pi: open/toggle popup" })
 
-return {
-  {
-    "sindrets/diffview.nvim",
-    opts = function(_, opts)
-      opts.keymaps = opts.keymaps or {}
-
-      local function apply(group, maps)
-        local ours = {}
-        for _, m in ipairs(maps) do
-          ours[m[2]] = true
-        end
-        opts.keymaps[group] = vim.tbl_filter(function(m) return not (type(m) == "table" and ours[m[2]]) end, opts.keymaps[group] or {})
-        for _, m in ipairs(maps) do
-          table.insert(opts.keymaps[group], m)
-        end
-      end
-
-      -- lazy may evaluate opts more than once and hands back a fresh table each
-      -- time, so a "already applied" flag doesn't survive. Drop any entry we own
-      -- before appending, which makes this idempotent however often it runs.
-      apply("view", {
-        { { "n", "x" }, "e", M.explain, { desc = "pi: explain this hunk" } },
-        { { "n", "x" }, "<leader>a", M.ask, { desc = "pi: ask about this hunk" } },
-        -- Diffview default + our old mapping both stole LazyVim's file tree.
-        { "n", "<leader>e", false },
-        { "n", "<leader>F", require("diffview.actions").focus_files, { desc = "Focus file panel" } },
-      })
-      apply("file_panel", { { "n", "<leader>e", false } })
-      apply("file_history_panel", { { "n", "<leader>e", false } })
-      return opts
-    end,
-  },
-}
+return {}

@@ -237,7 +237,7 @@ return {
         land_in_buffer(nil, direction, restore_scroll)
         return
       end
-      gs.attach({ bufnr = vim.api.nvim_get_current_buf() }, function()
+      gs.attach(vim.api.nvim_get_current_buf(), nil, nil, function()
         land_in_buffer(gs, direction, restore_scroll)
       end)
     end
@@ -261,7 +261,7 @@ return {
           land_in_buffer(nil, direction, restore_scroll, nil, callback)
           return
         end
-        gs.attach({ bufnr = vim.api.nvim_get_current_buf() }, function(err)
+        gs.attach(vim.api.nvim_get_current_buf(), nil, nil, function(err)
           if err then
             finish_landing(restore_scroll, callback, err)
             return

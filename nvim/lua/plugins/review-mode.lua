@@ -8,6 +8,16 @@ return {
         function() require("config.review_mode").toggle() end,
         desc = "Toggle review vs origin/master",
       },
+      {
+        "<leader>gp",
+        function() require("config.review_pr").describe() end,
+        desc = "PR: description and CI of this branch",
+      },
+      {
+        "<leader>gP",
+        function() require("config.review_pr").pick() end,
+        desc = "Review: pick GitHub PR",
+      },
     },
     opts = function(_, opts)
       local commands = vim.api.nvim_get_commands({ builtin = false })
