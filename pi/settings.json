@@ -1,5 +1,5 @@
 {
-  "defaultModel": "claude-opus-5-5",
+  "defaultModel": "auto",
   "defaultProvider": "anthropic",
   "defaultThinkingLevel": "high",
   "defaultTools": [
@@ -8,12 +8,13 @@
   "enabledModels": [
     "deepseek/deepseek-flash",
     "openai-codex/gpt-6-astra",
+    "anthropic/auto",
     "anthropic/claude-opus-5-5",
     "openai-codex/gpt-6-luna",
     "openai-codex/gpt-6.1-sol"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "1.0.0",
+  "lastChangelogVersion": "1.0.1",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
