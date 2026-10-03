@@ -16,6 +16,25 @@ Usage: $(basename "$0") [server [bootstrap|doctor|sandbox|help] [options]]
 EOF
 }
 
+# Shared agent skills, installed by `npx skills` into ~/.agents/skills (update: npx skills update -g).
+# Pi and Claude Code are left out: Pi reads ~/.agents/skills already, Claude uses its plugin.
+SKILLS=(
+  ask-matt code-review codebase-design diagnosing-bugs domain-modeling grill-me grill-with-docs
+  grilling handoff implement implement-spec improve-codebase-architecture pr prototype research
+  retro setup-matt-pocock-skills tdd teach to-questionnaire to-spec to-tickets triage wait-what
+  wayfinder wizard writing-for-agents
+)
+SKILL_AGENTS=(amp cline codex cursor droid gemini-cli github-copilot kilo kimi-code-cli opencode warp zed)
+
+install_skills() {
+  if ! command -v npx >/dev/null 2>&1; then
+    echo "Skipping skills: npx not found"
+    return 0
+  fi
+  npx -y skills@latest add mattpocock/skills -g -y -s "${SKILLS[@]}" -a "${SKILL_AGENTS[@]}" >/dev/null \
+    || echo "Warning: skills install failed"
+}
+
 # Claude Code config. Shared by both profiles.
 #
 # settings.json is COPIED, not symlinked: Claude Code rewrites it at runtime
@@ -130,6 +149,7 @@ install_desktop() {
   fi
 
   install_claude force
+  install_skills
 
   echo "Dotfiles have been symlinked!"
 }
@@ -222,6 +242,7 @@ install_server() {
   safe_link "$ROOT/systemd/user/verseguard-metro.service" "$HOME/.config/systemd/user/verseguard-metro.service" || status=1
 
   install_claude safe || status=1
+  install_skills
 
   if (( status == 0 )); then
     echo "Server dotfiles have been symlinked!"
