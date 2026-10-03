@@ -1,5 +1,4 @@
 {
-  "toolDescriptionMode": "custom",
   "maxSubagentSpawnsPerSession": 12,
   "globalConcurrencyLimit": 3,
   "parallel": {

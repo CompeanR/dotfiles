@@ -38,12 +38,13 @@ Engram is `http://127.0.0.1:7437`. If it is down, continue without looping on `m
 
 ## Subagents
 
-Follow `/home/compean/dotfiles/pi/subagent-tool-description.md` for execution policy. From Cursor, this is the launch shape:
+From Cursor, this is the launch shape:
 
 ```
 mcp_pi_subagent({
   async: false,
-  workflowScript: 'return runs.run("main", { agent: "work-explore", task: "Decided goal, scope, acceptance, return shape" })'
+  agent: "work-explore",
+  task: "Decided goal, scope, acceptance, return shape"
 })
 ```
 
@@ -53,7 +54,7 @@ Rules:
 - Launch a known agent: `work-explore`, `work-design`, `work-apply`, `work-verify`, `review-risk`, `review-readability`, `review-reliability`, `review-resilience`. Do not guess names like `explore` or `general`.
 - Never set `model` or `thinking` in the tool args or inside `runs.run`.
 - Give a decided brief. Do not ask the child to invent the plan.
-- One writer per cwd. Prefer one child; more than two needs explicit user approval.
+- One writer per cwd.
 - Do not dump the parent transcript into the child.
 
 Cursor MCP kills blocking calls around **5 minutes**. Use `async: false` only when the child should finish this turn and the work is short. For live SSH, verify, or anything that may run long:
@@ -61,7 +62,8 @@ Cursor MCP kills blocking calls around **5 minutes**. Use `async: false` only wh
 ```
 mcp_pi_subagent({
   async: true,
-  workflowScript: 'return runs.run("main", { agent: "work-verify", task: "..." })'
+  agent: "work-verify",
+  task: "..."
 })
 ```
 

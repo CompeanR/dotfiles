@@ -1,17 +1,19 @@
 {
-  "defaultModel": "cursor/grok-4.6",
-  "defaultProvider": "cursor",
+  "defaultModel": "claude-opus-5-5",
+  "defaultProvider": "anthropic",
   "defaultThinkingLevel": "high",
+  "defaultTools": [
+    "+codemode"
+  ],
   "enabledModels": [
     "deepseek/deepseek-flash",
     "openai-codex/gpt-6-astra",
-    "anthropic/claude-fable-5",
     "anthropic/claude-opus-5-5",
     "openai-codex/gpt-6-luna",
-    "openai-codex/gpt-6-sol"
+    "openai-codex/gpt-6.1-sol"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "0.87.1",
+  "lastChangelogVersion": "1.0.0",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -21,18 +23,6 @@
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-btw",
     "npm:pi-undo-redo",
-    {
-      "source": "git:github.com/DietrichGebert/ponytail",
-      "extensions": ["-pi-extension/index.js"],
-      "skills": [
-        "-skills/ponytail/SKILL.md",
-        "-skills/ponytail-audit/SKILL.md",
-        "-skills/ponytail-debt/SKILL.md",
-        "-skills/ponytail-gain/SKILL.md",
-        "-skills/ponytail-help/SKILL.md"
-      ]
-    },
-    "npm:pi-cursor-sdk",
     "npm:@gotgenes/pi-anthropic-auth"
   ],
   "subagents": {
@@ -41,7 +31,7 @@
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "work-apply": {
-        "model": "anthropic/claude-opus-5-5",
+        "model": "anthropic/claude-sonnet-5-5",
         "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
@@ -49,6 +39,14 @@
         "acceptanceRole": "writer"
       },
       "work-explore": {
+        "model": "anthropic/claude-sonnet-5-5",
+        "thinking": "high",
+        "inheritProjectContext": false,
+        "inheritSkills": false,
+        "defaultContext": "fresh",
+        "acceptanceRole": "read-only"
+      },
+      "work-design": {
         "model": "anthropic/claude-opus-5-5",
         "thinking": "high",
         "inheritProjectContext": false,
@@ -57,8 +55,8 @@
         "acceptanceRole": "read-only"
       },
       "work-verify": {
-        "model": "openai-codex/gpt-6-sol",
-        "thinking": "high",
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -69,4 +67,3 @@
   "skills": [],
   "theme": "matte-black"
 }
-

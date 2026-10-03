@@ -2,15 +2,14 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-anthropic-auth": "^3.3.2",
-    "@juicesharp/rpiv-ask-user-question": "^2.11.0",
-    "@juicesharp/rpiv-todo": "^2.11.0",
-    "gentle-engram": "^0.1.16",
-    "pi-btw": "^0.6.1",
-    "pi-cursor-sdk": "^0.4.0",
-    "pi-intercom": "^0.15.0",
-    "pi-subagents": "^0.73.1",
+    "@gotgenes/pi-anthropic-auth": "^3.4.2",
+    "@juicesharp/rpiv-ask-user-question": "^2.12.0",
+    "@juicesharp/rpiv-todo": "^2.12.0",
+    "gentle-engram": "^0.2.0",
+    "pi-btw": "^0.7.1",
+    "pi-intercom": "^0.16.0",
+    "pi-subagents": "^0.75.0",
     "pi-undo-redo": "^0.1.3",
-    "pi-web-access": "^0.33.0"
+    "pi-web-access": "^0.35.0"
   }
 }

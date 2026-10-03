@@ -98,7 +98,6 @@ install_desktop() {
   # Pi agent config
   mkdir -p ~/.pi/agent/npm
   ln -sf "$ROOT/pi/AGENTS.md" ~/.pi/agent/AGENTS.md
-  ln -sf "$ROOT/pi/subagent-tool-description.md" ~/.pi/agent/subagent-tool-description.md
   ln -sf "$ROOT/pi/settings.json" ~/.pi/agent/settings.json
   ln -sf "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json
   ln -sf "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json
@@ -194,7 +193,6 @@ install_server() {
   # Pi durable files/dirs (runtime state stays local)
   mkdir -p ~/.pi/agent/npm
   safe_link "$ROOT/pi/AGENTS.md" ~/.pi/agent/AGENTS.md || status=1
-  safe_link "$ROOT/pi/subagent-tool-description.md" ~/.pi/agent/subagent-tool-description.md || status=1
   safe_link "$ROOT/pi/settings.json" ~/.pi/agent/settings.json || status=1
   safe_link "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json || status=1
   safe_link "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json || status=1
