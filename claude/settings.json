@@ -38,7 +38,7 @@
     }
   },
   "tui": "fullscreen",
-  "theme": "dark",
+  "theme": "custom:matte-black",
   "remoteControlAtStartup": false,
   "agentPushNotifEnabled": true
 }
