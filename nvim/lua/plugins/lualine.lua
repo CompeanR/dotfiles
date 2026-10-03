@@ -20,5 +20,10 @@ return {
       end,
       cond = function() return (vim.g.review_mode_status or "") ~= "" end,
     })
+
+    -- The PR picker's entries are multi-line, so hide fzf's selected-entry part there.
+    local fzf = vim.deepcopy(require("lualine.extensions.fzf"))
+    fzf.sections.lualine_y = { { fzf.sections.lualine_y[1], cond = function() return not vim.b.pr_picker end } }
+    opts.extensions = vim.tbl_map(function(ext) return ext == "fzf" and fzf or ext end, opts.extensions or {})
   end,
 }
