@@ -17,3 +17,8 @@ path=(
 )
 export PATH
 [[ -f "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
+
+# pi sends OSC 52 only in SSH/mosh sessions; a herdr client may be on another machine.
+if [[ -n $HERDR_PANE_ID ]]; then
+  pi() { MOSH_CONNECTION="${MOSH_CONNECTION:-herdr}" command pi "$@" }
+fi
