@@ -142,13 +142,11 @@ type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/flip_sidebar_collapsed_mode.sh\""
 description = "Flip sidebar collapse mode (compact/hidden)"
 
-# pr-manager TUI.
+# pr-manager TUI: inside Neovim when Neovim is focused, else a popup (plugins/prm).
 [[keys.command]]
 key = "alt+r"
-type = "popup"
-command = "zsh -lc prm"
-width = "90%"
-height = "90%"
+type = "plugin_action"
+command = "prm.open"
 description = "PR control center"
 
 [experimental]
