@@ -34,6 +34,7 @@ gtk-custom-css = ?~/.config/ghostty/gtk-omarchy.css
 # osc52 = "CopyPaste"
 clipboard-read = allow
 clipboard-write = allow
+app-notifications = no-clipboard-copy
 
 # keybindings (matching alacritty.toml)
 keybind = shift+insert=paste_from_clipboard
