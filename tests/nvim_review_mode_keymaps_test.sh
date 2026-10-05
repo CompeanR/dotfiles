@@ -15,6 +15,10 @@ printf 'local value = 1\n' > main.lua
 git add main.lua
 git commit -qm "initial"
 printf 'local value = 2\n' > main.lua
+printf 'local other = 1\n' > other.lua
+git add other.lua
+git commit -qm "second file"
+printf 'local other = 2\n' > other.lua
 
 cat > .git/review_keymaps_test.lua <<'LUA'
 local failed = false
@@ -58,6 +62,23 @@ local function review_maps()
 end
 
 vim.cmd("ReviewStart HEAD")
+local function current_name() return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":t") end
+report("focus returns to the file window after start", vim.bo.filetype ~= "neo-tree" and current_name() ~= "", vim.bo.filetype .. " " .. current_name())
+local first = current_name()
+local first_buf = vim.api.nvim_get_current_buf()
+vim.wait(3000, function() return false end)
+local function has_review_map(buf)
+  for _, map in ipairs(vim.api.nvim_buf_get_keymap(buf, "n")) do
+    if map.desc and map.desc:match("^review: ") and normalize(map.lhs) == "]f" then return true end
+  end
+  return false
+end
+report("first file keeps review keymaps after settling", vim.api.nvim_buf_is_valid(first_buf) and has_review_map(first_buf))
+report("still on the first file after settling", current_name() == first and vim.bo.filetype ~= "neo-tree", current_name())
+vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("]f", true, false, true), "x", false)
+vim.wait(1000, function() return current_name() ~= first end)
+report("]f moves to the next changed file", current_name() ~= first and current_name() ~= "", current_name())
+vim.cmd("buffer " .. first_buf)
 local actual = review_maps()
 report("review keymaps include hunk, file, and commit-review keys", vim.deep_equal(actual, expected), "got " .. vim.inspect(actual))
 

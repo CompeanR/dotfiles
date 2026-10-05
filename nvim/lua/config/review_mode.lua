@@ -1,6 +1,7 @@
 local M = {}
 
 local active = false
+local current_pr
 local stopping = false
 ---@type fun()[]
 local stop_callbacks = {}
@@ -32,6 +33,11 @@ end
 ---@return boolean
 function M.is_active()
   return active or stopping
+end
+
+---@return integer?
+function M.pr()
+  return active and current_pr or nil
 end
 
 ---@return boolean
@@ -145,6 +151,19 @@ local function root()
 end
 
 ---@return string[]
+-- The explorer's order: folders before files at each level, then by name.
+local function tree_order(a, b)
+  local left, right = vim.split(a, "/", { plain = true }), vim.split(b, "/", { plain = true })
+  for i = 1, math.min(#left, #right) do
+    if left[i] ~= right[i] then
+      local left_dir, right_dir = i < #left, i < #right
+      if left_dir ~= right_dir then return left_dir end
+      return left[i] < right[i]
+    end
+  end
+  return #left < #right
+end
+
 function M.files()
   if cached_files then return cached_files end
   cached_files = {}
@@ -155,7 +174,9 @@ function M.files()
   local result = vim.system({ "git", "-C", repo, "diff", "--name-only", "-z", base_sha, "--" }, { text = true }):wait()
   if result.code ~= 0 or not result.stdout then return cached_files end
 
-  for _, rel in ipairs(vim.split(result.stdout, "\0", { plain = true, trimempty = true })) do
+  local rels = vim.split(result.stdout, "\0", { plain = true, trimempty = true })
+  table.sort(rels, tree_order)
+  for _, rel in ipairs(rels) do
     local path = abs_path(repo .. "/" .. rel)
     local stat = vim.uv.fs_stat(path)
     if stat and stat.type == "file" then cached_files[#cached_files + 1] = path end
@@ -225,6 +246,18 @@ local function recovery_command(repo, target, selector)
     vim.fn.shellescape(repo),
     vim.fn.shellescape(selector)
   )
+end
+
+-- Drops any loaded, unmodified buffer whose file no longer exists (typically
+-- files the reviewed branch added), so LSP clients stop asking about them.
+local function drop_vanished_buffers()
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local name = vim.api.nvim_buf_get_name(buf)
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].buftype == "" and name ~= "" and not vim.bo[buf].modified
+      and not vim.uv.fs_stat(name) then
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    end
+  end
 end
 
 local function restore_working_tree()
@@ -360,6 +393,10 @@ local preview_generation = 0
 
 local CLEAR_PREVIEW_DESC = "Clear gitsigns inline preview"
 
+-- The dropped erasers are kept: they are the only thing that closes the float
+-- gitsigns draws for deleted lines, which is anchored to the window, not the buffer.
+local erasers = {}
+
 local function drop_preview_eraser(buf)
   local ok, autocmds = pcall(vim.api.nvim_get_autocmds, {
     buffer = buf,
@@ -367,8 +404,17 @@ local function drop_preview_eraser(buf)
   })
   if not ok then return end
   for _, autocmd in ipairs(autocmds) do
-    if autocmd.desc == CLEAR_PREVIEW_DESC and autocmd.id then pcall(vim.api.nvim_del_autocmd, autocmd.id) end
+    if autocmd.desc == CLEAR_PREVIEW_DESC and autocmd.id then
+      if type(autocmd.callback) == "function" then erasers[#erasers + 1] = autocmd.callback end
+      pcall(vim.api.nvim_del_autocmd, autocmd.id)
+    end
   end
+end
+
+local function erase_previews()
+  local pending = erasers
+  erasers = {}
+  for _, erase in ipairs(pending) do pcall(erase) end
 end
 
 local function showing_preview(buf)
@@ -420,6 +466,7 @@ local function preview_and_pin(hunk, callback)
   end
 
   local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
   hunk = hunk or hunk_at_cursor(gs, buf)
   local signature = hunk and hunk_signature(hunk)
   preview_generation = preview_generation + 1
@@ -436,13 +483,15 @@ local function preview_and_pin(hunk, callback)
       local ns = vim.api.nvim_create_namespace("gitsigns_preview_inline")
       if vim.api.nvim_buf_is_valid(buf) then pcall(vim.api.nvim_buf_clear_namespace, buf, ns, 0, -1) end
     elseif generation == preview_generation then
-      previewed = signature and { buf = buf, signature = signature } or {}
+      previewed = signature and { buf = buf, win = win, signature = signature } or {}
       redrawing = false
     end
 
     if callback then callback(err) end
   end
 
+  drop_preview_eraser(buf)
+  erase_previews()
   local ok, err = pcall(gs.preview_hunk_inline, complete)
   if not ok then complete(err) end
 end
@@ -568,7 +617,18 @@ local function open_and_land(path)
   shared_nav("next")
 end
 
+local function editing_window()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local buf = vim.api.nvim_win_get_buf(win)
+    if vim.bo[buf].buftype == "" and vim.api.nvim_win_get_config(win).relative == "" then return win end
+  end
+end
+
 local function change_file(direction)
+  if vim.bo.filetype == "neo-tree" then
+    local win = editing_window()
+    if win then vim.api.nvim_set_current_win(win) end
+  end
   local current = abs_path(vim.api.nvim_buf_get_name(0))
   local path = require("config.git_hunk_nav").adjacent_path(M.files(), current, direction)
   if not path then
@@ -578,8 +638,23 @@ local function change_file(direction)
   open_and_land(path)
 end
 
+---@param direction "next"|"prev"
+function M.change_file(direction)
+  if not active then
+    vim.notify("review mode is not running", vim.log.levels.WARN)
+    return
+  end
+  change_file(direction)
+end
+
 local function apply_keymaps(buf)
   if not vim.api.nvim_buf_is_valid(buf) then return end
+  if vim.bo[buf].filetype == "neo-tree" then
+    vim.keymap.set("n", "]f", function() change_file("next") end, { buffer = buf, desc = "review: next changed file", silent = true })
+    vim.keymap.set("n", "[f", function() change_file("prev") end, { buffer = buf, desc = "review: previous changed file", silent = true })
+    mapped_buffers[buf] = true
+    return
+  end
   if not vim.bo[buf].buflisted or vim.bo[buf].buftype ~= "" or vim.api.nvim_buf_get_name(buf) == "" then return end
 
   local function map(lhs, rhs, desc)
@@ -689,6 +764,7 @@ function M.start(arg, opts)
   end
 
   active = true
+  current_pr = target.pr
   vim.g.review_mode_status = M.status()
   local group = vim.api.nvim_create_augroup(augroup_name, { clear = true })
   vim.api.nvim_create_autocmd("BufEnter", {
@@ -704,6 +780,12 @@ function M.start(arg, opts)
     group = group,
     callback = follow_preview,
   })
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = group,
+    callback = function(event)
+      if vim.api.nvim_get_current_win() == previewed.win and event.buf ~= previewed.buf then erase_previews() end
+    end,
+  })
   -- Quitting without :ReviewStop would otherwise strand the stash, leaving the
   -- work tree looking clean and the work seemingly gone.
   vim.api.nvim_create_autocmd("VimLeavePre", {
@@ -712,7 +794,11 @@ function M.start(arg, opts)
   })
   apply_keymaps(vim.api.nvim_get_current_buf())
 
+  -- neo-tree's show leaves focus in its window; editing there makes neo-tree
+  -- unload and re-read the file, which drops the review keymaps.
+  local win = vim.api.nvim_get_current_win()
   set_explorer_base(base_sha)
+  if vim.api.nvim_win_is_valid(win) then vim.api.nvim_set_current_win(win) end
   open_and_land(files[1])
 end
 
@@ -722,11 +808,13 @@ function M.stop(callback)
   if stopping then return end
 
   active = false
+  current_pr = nil
   stopping = true
   preview_generation = preview_generation + 1
   redrawing = false
 
   -- The eraser autocmd is gone, so a preview left on screen would never clear.
+  erase_previews()
   local ns = vim.api.nvim_create_namespace("gitsigns_preview_inline")
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buf) then pcall(vim.api.nvim_buf_clear_namespace, buf, ns, 0, -1) end
@@ -742,6 +830,7 @@ function M.stop(callback)
   vim.g.review_mode_status = ""
   set_explorer_base(nil)
   restore_working_tree()
+  drop_vanished_buffers()
 
   ---@param err? string
   local function finish(err)

@@ -19,10 +19,16 @@ local COLORS = {
   PrGateBlocked = { fg = "#f28534", bg = "#3c2a1e" },
   PrGateWait = { fg = "#e9b143", bg = "#3a3420" },
   PrGateReady = { fg = "#b0b846", bg = "#34381b" },
+  PrBoxWait = { bg = "#3a3420" },
+  PrBoxReady = { bg = "#34381b" },
+  PrBoxBlocked = { bg = "#3c2a1e" },
   PrGroupReady = { fg = "#b0b846", bold = true },
   PrGroupWaiting = { fg = "#e9b143", bold = true },
   PrGroupBlocked = { fg = "#f2594b", bold = true },
   PrGroupDraft = { fg = "#d3869b", bold = true },
+  PrPending = { fg = "#665c54" },
+  PrChip = { fg = "#282828", bg = "#f28534", bold = true },
+  PrKey = { fg = "#282828", bg = "#e9b143", bold = true },
 }
 
 local function setup_hl()
@@ -208,13 +214,19 @@ local function checks_of(pr)
   for _, check in ipairs(pr.statusCheckRollup or {}) do
     local name = check.name or check.context or "check"
     local state = check_state(check)
-    local item = { name = name, state = state, detail = check_detail(check, state) }
+    local item = {
+      name = name,
+      state = state,
+      detail = check_detail(check, state),
+      url = check.detailsUrl or check.targetUrl,
+    }
     local prev = by_name[name]
     if not prev then
       by_name[name] = item
       list[#list + 1] = item
     elseif rank[state] > rank[prev.state] then
       prev.state, prev.detail = item.state, item.detail
+      prev.url = item.url
     end
   end
   pr._checks = list
@@ -263,6 +275,60 @@ local function ci_short(checks)
   return { { "✓", "PrGreen" }, { base } }
 end
 
+local function refs_text(behind)
+  local refs, count = behind.refs, behind.count
+  if #refs == 0 then return "" end
+  local shown = count > 3 and 2 or 3
+  local names = vim.list_slice(refs, 1, shown)
+  if count > #names then names[#names + 1] = "+" .. (count - #names) end
+  return table.concat(names, ", ")
+end
+
+local function behind_visible(pr) return pr._behind ~= nil and pr.mergeable ~= "CONFLICTING" end
+
+local function behind_segs(pr)
+  local refs = refs_text(pr._behind)
+  return {
+    { "↓" .. pr._behind.count, "PrYellow" },
+    { " behind " .. pr.baseRefName .. (refs ~= "" and " (" .. refs .. ")" or "") },
+  }
+end
+
+local function behind_graph(pr, now_marker)
+  local counts = tally(checks_of(pr))
+  local mark = { "– no CI", "PrMuted" }
+  if counts.pending > 0 then
+    mark = { "● CI running here", "PrYellow" }
+  elseif counts.total > 0 and counts.pass == counts.total then
+    mark = { "✓ CI ran here", "PrGreen" }
+  end
+  local graph = string.rep("──●", 1 + math.min(3, pr._behind.count))
+  return {
+    {
+      { pr.baseRefName, "PrAqua" }, { " " .. graph, "PrMuted" }, { " " .. refs_text(pr._behind), "PrYellow" },
+      { now_marker and " ← now" or "", "PrMuted" },
+    },
+    {
+      { string.rep(" ", width(pr.baseRefName) + 3) }, { "└──● ", "PrMuted" },
+      { "#" .. pr.number .. " ", "PrYellow" }, mark,
+    },
+  }
+end
+
+local function ran_before(pr)
+  local oldest = pr._behind.refs[#pr._behind.refs]
+  return oldest and ("ran on " .. pr.baseRefName .. " before " .. oldest) or ("ran before " .. pr.baseRefName .. " moved")
+end
+
+local function ci_estimate(pr)
+  local longest
+  for _, check in ipairs(pr.statusCheckRollup or {}) do
+    local started, completed = parse_time(check.startedAt), parse_time(check.completedAt)
+    if started and completed and (not longest or completed - started > longest) then longest = completed - started end
+  end
+  return longest and "~" .. math.max(1, math.ceil(longest / 60)) .. "m" or nil
+end
+
 local function pr_status(pr)
   local checks = checks_of(pr)
   local c = tally(checks)
@@ -290,11 +356,12 @@ local function pr_status(pr)
   if pr.mergeable == "UNKNOWN" then
     return { gate = "wait", group = "waiting", text = "waits for GitHub to compute conflicts, then squash-merges." }
   end
-  if pr._stale then
+  if pr._behind then
+    local estimate = ci_estimate(pr)
     return {
       gate = "wait",
-      group = "waiting",
-      text = "CI ran before " .. pr.baseRefName .. " moved. Merging offers to update the branch first.",
+      group = "ready",
+      text = "updates the branch with " .. pr.baseRefName .. ", re-runs CI" .. (estimate and " (" .. estimate .. ")" or "") .. ", then merges.",
     }
   end
   return { gate = "ready", group = "ready", text = "squash-merges right away." }
@@ -366,19 +433,25 @@ local function outline_of(lines, summary)
   for i, line in ipairs(lines) do
     local hashes, title = line:match("^(#+)%s+(.*)")
     if hashes and not skip[i] then
-      sections[#sections + 1] = { level = math.min(#hashes, 6), title = title, items = 0, lines = 0 }
+      sections[#sections + 1] = { level = math.min(#hashes, 6), title = title, items = 0, lines = 0, fields = {} }
     elseif #sections > 0 then
       local section = sections[#sections]
+      local label, value = vim.trim(line):match("^%*%*([^*]+):%*%*%s*(.+)$")
       if vim.trim(line) ~= "" then section.lines = section.lines + 1 end
-      if not skip[i] and is_list_item(line) then
+      if skip[i] or line:match("^%s*[-*+]%s+%[.%]") then
+      elseif label and #value <= 40 then
+        section.fields[#section.fields + 1] = label .. ": " .. plain_md(value)
+      elseif is_list_item(line) then
         section.items = section.items + 1
-      elseif not skip[i] and not section.text and vim.trim(line) ~= "" then
+      elseif not section.text and vim.trim(line) ~= "" then
         section.text = plain_md(vim.trim(line))
       end
     end
   end
   for _, section in ipairs(sections) do
-    if section.items > 0 then
+    if #section.fields > 0 then
+      section.note = table.concat(section.fields, " · ")
+    elseif section.items > 0 then
       section.note = plural(section.items, "item")
     elseif section.text and summary:sub(1, #section.text) == section.text then
       section.note = plural(section.lines, "line")
@@ -411,9 +484,9 @@ local describe_win
 
 local function now() return vim.uv.hrtime() / 1e9 end
 
-local function system(args, dir, on_done)
-  vim.system(args, { cwd = dir, text = true }, function(result)
-    vim.schedule(function() on_done(result.code == 0, result.stdout or "", result.stderr or "") end)
+local function system(args, dir, on_done, env)
+  vim.system(args, { cwd = dir, text = true, env = env }, function(result)
+    vim.schedule(function() on_done(result.code == 0, result.stdout or "", result.stderr or "", result.code) end)
   end)
 end
 
@@ -446,76 +519,116 @@ local function fetch_pr(dir, sha, known_number, on_done)
   end)
 end
 
--- Merge fallout: stale CI, conflict fixes, stacked PRs
+-- Merge fallout: behind detection, conflict fixes, stacked PRs
 
 local stacked_fixes = {}
 
-local function worktrees(dir)
-  local map, path = {}, nil
-  for _, line in ipairs(vim.fn.systemlist({ "git", "-C", dir, "worktree", "list", "--porcelain" })) do
-    path = line:match("^worktree (.+)") or path
+local function parse_worktrees(text)
+  local map, main, path = {}, nil, nil
+  for _, line in ipairs(vim.split(text, "\n", { plain = true })) do
+    local tree = line:match("^worktree (.+)")
+    if tree then
+      path = tree
+      main = main or tree
+    end
     local branch = line:match("^branch refs/heads/(.+)")
     if branch then map[branch] = path end
   end
-  return map
+  return map, main
 end
 
-local function fix_command(trees, branch, base, onto)
+local function worktrees(dir)
+  return parse_worktrees(table.concat(vim.fn.systemlist({ "git", "-C", dir, "worktree", "list", "--porcelain" }), "\n"))
+end
+
+local function fix_command(trees, main, branch, base, onto)
   local path = trees[branch]
   local origin = vim.fn.shellescape("origin/" .. base)
-  local go = path and ("cd " .. vim.fn.shellescape(path) .. " && git fetch")
-    or ("git fetch && git switch " .. vim.fn.shellescape(branch))
-  local rebase = onto and string.format("git rebase --onto %s %s", origin, onto:sub(1, 12))
-    or ("git rebase " .. origin)
-  return go .. " && " .. rebase .. " && git push --force-with-lease"
-end
-
-local function latest_check_start(pr)
-  local latest
-  for _, check in ipairs(pr.statusCheckRollup or {}) do
-    local started = parse_time(check.startedAt)
-    if started and (not latest or started > latest) then latest = started end
+  local quoted = vim.fn.shellescape(branch)
+  if onto then
+    local go = path and ("cd " .. vim.fn.shellescape(path) .. " && git fetch")
+      or ("git fetch && git switch " .. quoted)
+    return string.format("%s && git rebase --onto %s %s && git push --force-with-lease", go, origin, onto:sub(1, 12))
   end
-  return latest
+  if path then
+    return string.format("cd %s && git fetch origin && git merge %s && git push", vim.fn.shellescape(path), origin)
+  end
+  local new_path = vim.fn.shellescape(main .. "-wt/" .. branch:match("[^/]+$"))
+  return string.format("git fetch origin && git worktree add %s %s && cd %s && git merge %s && git push", new_path, quoted, new_path, origin)
 end
 
-local function base_times(dir, prs, on_done)
-  local times, pending = {}, 0
-  local bases = {}
+local function base_shas(dir, prs, on_done)
+  local shas, pending, bases = {}, 0, {}
   for _, pr in ipairs(prs) do bases[pr.baseRefName] = true end
   for base in pairs(bases) do
     pending = pending + 1
-    system({ "gh", "api", "repos/{owner}/{repo}/branches/" .. base, "--jq", ".commit.commit.committer.date" }, dir,
-      function(ok, out)
-        times[base] = ok and parse_time(vim.trim(out)) or nil
-        pending = pending - 1
-        if pending == 0 then on_done(times) end
-      end)
+    system({ "gh", "api", "repos/{owner}/{repo}/branches/" .. base, "--jq", ".commit.sha" }, dir, function(ok, out)
+      shas[base] = ok and vim.trim(out) or nil
+      pending = pending - 1
+      if pending == 0 then on_done(shas) end
+    end)
   end
-  if pending == 0 then on_done(times) end
+  if pending == 0 then on_done(shas) end
 end
 
--- Sets pr._stale (CI ran before the base branch last moved) and pr._fix (the
+local compare_cache = {}
+
+local function behind_of(dir, head, base_sha, on_done)
+  local key = head .. "..." .. base_sha
+  if compare_cache[key] then return on_done(compare_cache[key]) end
+  local jq = '{count: .ahead_by, subjects: [.commits[].commit.message | split("\n")[0]] | reverse}'
+  system({ "gh", "api", "repos/{owner}/{repo}/compare/" .. key, "--jq", jq }, dir, function(ok, out)
+    local result = ok and decode_json(out) or nil
+    if result then compare_cache[key] = result end
+    on_done(result)
+  end)
+end
+
+local function refs_of(subjects)
+  local refs = {}
+  for _, subject in ipairs(subjects or {}) do
+    local number = subject:match("%(#(%d+)%)%s*$") or subject:match("^Merge pull request #(%d+)")
+    if number then refs[#refs + 1] = "#" .. number end
+  end
+  return refs
+end
+
+-- Sets pr._behind (commits the base has that the head lacks) and pr._fix (the
 -- command that rebases a conflicting or formerly stacked PR in its worktree).
 local function annotate(dir, prs, on_done)
-  base_times(dir, prs, function(times)
-    local trees
-    for _, pr in ipairs(prs) do
-      local moved, started = times[pr.baseRefName], latest_check_start(pr)
-      pr._stale = tally(checks_of(pr)).pending == 0 and moved ~= nil and started ~= nil and started < moved
-      local stacked = (stacked_fixes[dir] or {})[pr.number]
-      pr._fix = stacked and stacked.sha == pr.headRefOid and stacked.cmd or nil
-      if not pr._fix and pr.mergeable == "CONFLICTING" then
-        trees = trees or worktrees(dir)
-        pr._fix = fix_command(trees, pr.headRefName, pr.baseRefName)
+  base_shas(dir, prs, function(shas)
+    local open = vim.tbl_filter(function(pr) return (pr.state or "OPEN") == "OPEN" and shas[pr.baseRefName] ~= nil end, prs)
+    local pending = #open
+
+    local function finish_all()
+      local trees, main
+      for _, pr in ipairs(prs) do
+        local stacked = (stacked_fixes[dir] or {})[pr.number]
+        pr._fix = stacked and stacked.sha == pr.headRefOid and stacked.cmd or nil
+        if not pr._fix and pr.mergeable == "CONFLICTING" then
+          if not trees then trees, main = worktrees(dir) end
+          pr._fix = fix_command(trees, main, pr.headRefName, pr.baseRefName)
+        end
       end
+      on_done(prs)
     end
-    on_done(prs)
+
+    for _, pr in ipairs(prs) do pr._behind = nil end
+    if pending == 0 then return finish_all() end
+    for _, pr in ipairs(open) do
+      behind_of(dir, pr.headRefOid, shas[pr.baseRefName], function(result)
+        if result and type(result.count) == "number" and result.count > 0 then
+          pr._behind = { count = result.count, refs = refs_of(result.subjects) }
+        end
+        pending = pending - 1
+        if pending == 0 then finish_all() end
+      end)
+    end
   end)
 end
 
 local function stacked_children(dir, pr, on_done)
-  system({ "gh", "pr", "list", "--base", pr.headRefName, "--json", "number,headRefName,headRefOid" }, dir,
+  system({ "gh", "pr", "list", "--base", pr.headRefName, "--json", "number,title,headRefName,headRefOid" }, dir,
     function(ok, out) on_done(ok and decode_json(out) or {}) end)
 end
 
@@ -529,215 +642,378 @@ local function conflicting_numbers(prs)
   return set
 end
 
--- After a merge, re-checks the open PRs on the same base and sends one notice.
--- GitHub recomputes mergeability lazily, so it polls while any PR is UNKNOWN.
--- Only reports conflicts the merge introduced and CI that was current until it.
-local function report_fallout(dir, merged, children, before, base_before, polls)
+-- After a merge, re-checks the open PRs on the same base. GitHub recomputes
+-- mergeability lazily, so it polls while any PR is UNKNOWN.
+local function report_fallout(dir, merged, children, before, on_done, polls)
   polls = polls or 0
   system({ "gh", "pr", "list", "--base", merged.baseRefName, "--limit", "50", "--json", LIST_FIELDS }, dir,
     function(ok, out)
       local prs = ok and decode_json(out) or nil
-      if not prs then
-        return vim.notify(string.format("After #%d: could not re-check open PRs", merged.number), vim.log.levels.WARN)
-      end
+      if not prs then return on_done(nil) end
       local unknown = vim.iter(prs):any(function(pr) return pr.mergeable == "UNKNOWN" end)
       if unknown and polls < REPORT_POLLS then
         return vim.defer_fn(function()
-          report_fallout(dir, merged, children, before, base_before, polls + 1)
+          report_fallout(dir, merged, children, before, on_done, polls + 1)
         end, 3000)
       end
       annotate(dir, prs, function()
-        local lines, stale, warn = {}, {}, false
-        local stacked = {}
+        local items, stacked = {}, {}
         for _, child in ipairs(children) do
           stacked[child.number] = true
-          warn = true
-          lines[#lines + 1] = string.format("↳ #%d was stacked on #%d: %s", child.number, merged.number,
-            stacked_fixes[dir][child.number].cmd)
+          items[#items + 1] = {
+            number = child.number,
+            icon = "↳",
+            hl = "PrBlue",
+            text = "was stacked on #" .. merged.number,
+            fix = stacked_fixes[dir][child.number].cmd,
+            onto = stacked_fixes[dir][child.number].onto,
+            branch = child.headRefName,
+            base = merged.baseRefName,
+            title = child.title,
+          }
         end
         for _, pr in ipairs(prs) do
           if not stacked[pr.number] then
             if pr.mergeable == "CONFLICTING" and not before[pr.number] then
-              warn = true
-              lines[#lines + 1] = string.format("✗ #%d conflicts with %s: %s", pr.number, pr.baseRefName, pr._fix)
+              items[#items + 1] = {
+                number = pr.number,
+                icon = "✗",
+                hl = "PrRed",
+                text = "now conflicts with " .. pr.baseRefName,
+                fix = pr._fix,
+                branch = pr.headRefName,
+                base = pr.baseRefName,
+                title = pr.title,
+              }
             elseif pr.mergeable == "UNKNOWN" then
-              lines[#lines + 1] = string.format("○ #%d: GitHub has not computed conflicts yet", pr.number)
-            end
-            local started = latest_check_start(pr)
-            if pr._stale and pr.mergeable ~= "CONFLICTING" and started and base_before and started > base_before then
-              stale[#stale + 1] = "#" .. pr.number
+              items[#items + 1] = { number = pr.number, icon = "○", hl = "PrDim", text = "GitHub has not computed conflicts yet" }
+            elseif pr._behind and pr.mergeable ~= "CONFLICTING" then
+              local refs = refs_text(pr._behind)
+              items[#items + 1] = {
+                number = pr.number,
+                icon = "↓",
+                hl = "PrYellow",
+                text = pr._behind.count .. " behind " .. pr.baseRefName .. (refs ~= "" and " (" .. refs .. ")" or ""),
+                note = pr.isDraft and " · draft" or nil,
+              }
             end
           end
         end
-        if #stale > 0 then lines[#lines + 1] = "● CI ran before this merge: " .. table.concat(stale, ", ") end
-        if #lines == 0 then
-          return vim.notify(string.format("After #%d: other PRs OK", merged.number))
-        end
-        vim.notify(string.format("After #%d:\n%s", merged.number, table.concat(lines, "\n")),
-          warn and vim.log.levels.WARN or vim.log.levels.INFO)
+        on_done(items)
       end)
     end)
 end
 
 local function snapshot(dir, pr, on_done)
   system({ "gh", "pr", "list", "--base", pr.baseRefName, "--limit", "50", "--json", "number,mergeable" }, dir,
-    function(ok, out)
-      local before = conflicting_numbers(ok and decode_json(out) or nil)
-      base_times(dir, { pr }, function(times) on_done(before, times[pr.baseRefName]) end)
-    end)
+    function(ok, out) on_done(conflicting_numbers(ok and decode_json(out) or nil)) end)
 end
+
+-- Merge records: one per merge_pr call, driven by attempt() and shown by config.merges.
+
+M.merges = {}
+M.unseen = nil
+M.settle_ms = 5000
+M.ci_timeout = 3600
 
 local SETTLE_POLLS = 24
-local in_flight = {}
+local STEPS = { "open", "conflicts", "behind", "ci", "squash", "others" }
+M.STEPS = STEPS
 
-M.settle_ms = 5000
+local function changed() vim.api.nvim_exec_autocmds("User", { pattern = "PrMergesChanged", modeline = false }) end
 
--- What must settle before the merge decision can be trusted, or nil.
-local function unsettled(pr, counts, opts)
-  if pr.mergeable == "UNKNOWN" then return "GitHub has not computed conflicts yet" end
-  if opts.updated then
-    if pr.headRefOid == opts.from then return "the branch update has not landed yet" end
-    if counts.total == 0 then return "CI has not started after the branch update" end
-  end
-  if opts.watched and counts.pending > 0 then return "checks are still running" end
+local function set(m, fields)
+  for key, value in pairs(fields) do m[key] = value end
+  changed()
 end
 
--- opts.auto: already confirmed, opts.updated/opts.from: branch updated from that head,
--- opts.watched: already waited for CI once, opts.polls: settle retries so far.
-local function attempt(dir, number, opts, finish, after)
-  local function stop(message, level)
-    vim.notify(message, level or vim.log.levels.WARN)
-    finish()
-  end
-  local function refuse(reason) stop(string.format("Not merging #%d: %s", number, reason)) end
-  local function guard(fn)
-    return function(...)
-      local ok, err = pcall(fn, ...)
-      if not ok then
-        finish()
-        error(err, 0)
-      end
+local function finish(m, state, fields)
+  if m.finished then return end
+  m.answer = nil
+  if m.cleanup then m.cleanup(m) end
+  set(m, vim.tbl_extend("force", fields or {}, { state = state, finished = os.time() }))
+  M.unseen = m
+end
+
+local function guard(m, fn)
+  return function(...)
+    if m.finished then return end
+    local ok, err = pcall(fn, ...)
+    if not ok then
+      finish(m, "failed", { reason = "error: " .. tostring(err) })
+      error(err, 0)
     end
   end
+end
+
+local function clock(secs) return string.format("%d:%02d", math.floor(secs / 60), math.floor(secs % 60)) end
+
+local function capitalize(text) return text:sub(1, 1):upper() .. text:sub(2) end
+
+local function first_failed_url(pr)
+  for _, check in ipairs(checks_of(pr)) do
+    if check.state == "fail" and check.url then return check.url end
+  end
+end
+
+local function names_of(checks, state)
+  local names = {}
+  for _, check in ipairs(checks) do
+    if check.state == state then names[#names + 1] = check.name end
+  end
+  return names
+end
+
+-- What must settle before the merge decision can be trusted: the step it blocks and why.
+local function unsettled(pr, counts, opts)
+  if pr.mergeable == "UNKNOWN" then return "conflicts", "GitHub is computing conflicts" end
+  if opts.updated then
+    if pr.headRefOid == opts.from then return "behind", "the branch update has not landed yet" end
+    if counts.total == 0 then return "ci", "CI has not started after the branch update" end
+  end
+end
+
+-- opts.updated/opts.from: branch updated from that head, opts.force: merge as tested,
+-- opts.polls: settle retries so far.
+local function attempt(m, opts)
+  local dir, number = m.dir, m.number
+
   local function again(next_opts)
-    vim.defer_fn(guard(function() attempt(dir, number, next_opts, finish, after) end), M.settle_ms)
+    vim.defer_fn(guard(m, function() attempt(m, next_opts) end), M.settle_ms)
   end
 
-  view_pr(number, dir, guard(function(pr)
-    if not pr then return stop("Could not read PR #" .. number, vim.log.levels.ERROR) end
-    annotate(dir, { pr }, guard(function()
-      local status = pr_status(pr)
-      if status.gate == "blocked" then
-        local fix = pr.mergeable == "CONFLICTING" and pr._fix and (". Fix: " .. pr._fix) or ""
-        return refuse(status.reason .. fix)
+  local function block(pr, status, counts)
+    local started = opts.updated or m.ci_since or m.answered
+    if not started then
+      if pr.isDraft then return finish(m, "refused", { reason = "draft · nothing started", draft = true }) end
+      if pr.mergeable == "CONFLICTING" then
+        return finish(m, "refused", { reason = "conflicts with " .. pr.baseRefName .. " · f fix", fix = pr._fix, conflict = true })
       end
-      local counts = tally(checks_of(pr))
+      if counts.fail > 0 then
+        return finish(m, "refused", {
+          reason = "CI failed: " .. table.concat(names_of(checks_of(pr), "fail"), ", ") .. " · nothing started",
+          note = "Fix the failing checks and push, then r retries.",
+          log_url = first_failed_url(pr),
+        })
+      end
+      return finish(m, "refused", { reason = status.reason .. " · nothing started" })
+    end
+    if counts.fail > 0 and status.reason:match("failed$") then
+      local note = "Nothing was merged."
+      if m.updated_with and m.passed_before then
+        note = "Passed before the update, so " .. m.updated_with .. " likely broke it. Nothing was merged."
+      end
+      local failed = names_of(checks_of(pr), "fail")
+      return finish(m, "failed", {
+        reason = "CI failed" .. (m.updated_with and " with " .. m.updated_with or "") .. ": " .. table.concat(failed, ", "),
+        note = note,
+        log_url = first_failed_url(pr),
+      })
+    end
+    local fix = pr.mergeable == "CONFLICTING" and pr._fix or nil
+    return finish(m, "failed", { reason = status.reason, fix = fix, note = "Nothing was merged." })
+  end
 
-      local why = unsettled(pr, counts, opts)
+  local function update(pr, counts)
+    local refs = refs_text(pr._behind)
+    set(m, {
+      state = "updating",
+      step = "behind",
+      detail = "Updating the branch with " .. pr.baseRefName .. (refs ~= "" and " (" .. refs .. ")" or "") .. ".",
+      updated_with = refs,
+      passed_before = counts.total > 0 and counts.pass == counts.total,
+      answered = "update",
+    })
+    system({ "gh", "pr", "update-branch", tostring(number) }, dir, guard(m, function(ok, _, err)
+      if not ok then
+        local trees, main = worktrees(dir)
+        return finish(m, "failed", {
+          reason = "could not update with " .. pr.baseRefName .. ": " .. vim.trim(err),
+          fix = fix_command(trees, main, pr.headRefName, pr.baseRefName),
+          note = "Nothing was merged.",
+        })
+      end
+      again({ updated = true, from = pr.headRefOid })
+    end))
+  end
+
+  local function squash(pr, counts)
+    stacked_children(dir, pr, guard(m, function(children)
+      local head = pr.headRefOid
+      local sha7 = head:sub(1, 7)
+      set(m, {
+        state = "squashing",
+        step = "squash",
+        head = head,
+        detail = (counts.total > 0 and "All green on " or "No CI checks on ") .. sha7 .. ". Squash-merging that exact commit.",
+      })
+      snapshot(dir, pr, guard(m, function(before)
+        m.squash_sent = true
+        system({ "gh", "pr", "merge", tostring(number), "--squash", "--match-head-commit", head }, dir,
+          guard(m, function(ok, _, err)
+            if not ok then
+              return finish(m, "failed", { reason = "squash failed: " .. vim.trim(err), note = "Nothing was merged." })
+            end
+            local listed = list_cache[dir]
+            if listed then
+              listed.prs = vim.tbl_filter(function(open) return open.number ~= number end, listed.prs)
+              listed.at = 0
+            end
+            for key, entry in pairs(cache) do
+              if entry.pr.number == number then cache[key] = nil end
+            end
+            if #children > 0 then
+              local trees, main = worktrees(dir)
+              stacked_fixes[dir] = stacked_fixes[dir] or {}
+              for _, child in ipairs(children) do
+                stacked_fixes[dir][child.number] = {
+                  sha = child.headRefOid,
+                  onto = head,
+                  cmd = fix_command(trees, main, child.headRefName, pr.baseRefName, head),
+                }
+              end
+            end
+            local summary = counts.total > 0 and string.format("squashed after CI %d/%d", counts.pass, counts.total)
+              or "squashed, no CI checks"
+            if m.answered == "update" and m.updated_with and m.updated_with ~= "" then
+              summary = summary .. " with " .. m.updated_with
+            elseif m.answered == "tested" and m.behind then
+              summary = summary .. ", without " .. refs_text(m.behind) .. " in CI"
+            end
+            local tree = worktrees(dir)[pr.headRefName]
+            if tree then summary = summary .. " · worktree " .. vim.fn.fnamemodify(tree, ":~") .. " can go" end
+            finish(m, "merged", { summary = summary })
+            system({ "gh", "pr", "view", tostring(number), "--json", "mergeCommit", "--jq", ".mergeCommit.oid" }, dir,
+              function(sha_ok, oid)
+                oid = vim.trim(oid)
+                if sha_ok and oid ~= "" then set(m, { sha = oid:sub(1, 7) }) end
+              end)
+            report_fallout(dir, pr, children, before, function(items)
+              set(m, { fallout = items or false })
+              if items then require("config.pr_fix").probe(m) end
+            end)
+          end))
+      end))
+    end))
+  end
+
+  view_pr(number, dir, guard(m, function(pr)
+    if not pr then return finish(m, "failed", { reason = "could not read PR #" .. number }) end
+    set(m, { pr = pr, title = pr.title, url = pr.url })
+    annotate(dir, { pr }, guard(m, function()
+      local listed = list_cache[dir]
+      for i, open in ipairs(listed and listed.prs or {}) do
+        if open.number == number then listed.prs[i] = pr end
+      end
+      local status = pr_status(pr)
+      local counts = tally(checks_of(pr))
+      m.ci = counts
+      if status.gate == "blocked" then return block(pr, status, counts) end
+
+      local step, why = unsettled(pr, counts, opts)
       if why then
         local polls = (opts.polls or 0) + 1
-        if polls == 1 then vim.notify(string.format("Waiting for GitHub to settle #%d: %s…", number, why)) end
-        if polls > SETTLE_POLLS then return refuse(why) end
+        local limit = clock(SETTLE_POLLS * M.settle_ms / 1000)
+        if polls > SETTLE_POLLS then
+          return finish(m, "failed", { reason = why .. " · gave up at " .. limit, note = "Nothing was merged." })
+        end
+        set(m, {
+          state = opts.updated and "updating" or "checking",
+          step = step,
+          detail = capitalize(why) .. string.format(". Asks every %gs, gives up at %s.", M.settle_ms / 1000, limit),
+        })
         return again(vim.tbl_extend("force", opts, { polls = polls }))
       end
 
-      stacked_children(dir, pr, guard(function(children)
-        local note = ""
-        if #children > 0 then
-          local numbers = vim.tbl_map(function(child) return "#" .. child.number end, children)
-          note = string.format("\n\nStacked on this PR: %s. They will need a rebase --onto after the squash.",
-            table.concat(numbers, ", "))
-        end
-
-        local function watch()
-          vim.notify(string.format("Waiting for CI on #%d…", number))
-          local job = vim.fn.jobstart({ "gh", "pr", "checks", tostring(number), "--watch", "--fail-fast" }, {
-            cwd = dir,
-            on_exit = function(_, code)
-              vim.schedule(guard(function()
-                if code ~= 0 then return stop(string.format("CI did not pass: not merging #%d", number)) end
-                local next_opts = vim.tbl_extend("force", opts, { auto = true, watched = true, polls = 0 })
-                attempt(dir, number, next_opts, finish, after)
-              end))
-            end,
-          })
-          if job <= 0 then stop(string.format("Could not watch CI on #%d", number), vim.log.levels.ERROR) end
-        end
-
-        if counts.pending > 0 then
-          if opts.auto then return watch() end
-          local choice = vim.fn.confirm(
-            string.format("#%d: CI is still running.\nWait for it, then squash and merge if all checks pass?%s", number, note),
-            "&Wait and merge\n&Cancel", 2
-          )
-          if choice == 1 then return watch() end
-          return finish()
-        end
-
-        if pr._stale and not opts.force and not opts.updated then
-          local choice = vim.fn.confirm(
-            string.format("#%d: CI ran before %s moved.\nUpdate the branch, wait for CI, then merge?%s",
-              number, pr.baseRefName, note),
-            "&Update and merge\n&Merge anyway\n&Cancel", 3
-          )
-          if choice == 2 then return attempt(dir, number, { auto = true, force = true }, finish, after) end
-          if choice ~= 1 then return finish() end
-          return system({ "gh", "pr", "update-branch", tostring(number) }, dir, guard(function(ok, _, err)
-            if not ok then
-              return stop(string.format("Could not update #%d: %s\nFix by hand: %s", number, vim.trim(err),
-                fix_command(worktrees(dir), pr.headRefName, pr.baseRefName)))
+      if pr._behind and not opts.force and not opts.updated then
+        m.detail = nil
+        return set(m, {
+          state = "asking",
+          step = "behind",
+          behind = pr._behind,
+          answer = function(choice)
+            m.answer = nil
+            if choice == "tested" then
+              set(m, { state = "checking", answered = "tested" })
+              return attempt(m, vim.tbl_extend("force", opts, { force = true, polls = 0 }))
             end
-            vim.notify(string.format("Updated #%d with %s. Waiting for CI…", number, pr.baseRefName))
-            again({ auto = true, updated = true, from = pr.headRefOid })
-          end))
-        end
+            update(pr, counts)
+          end,
+        })
+      end
 
-        if not opts.auto then
-          local none = counts.total == 0 and "\n(no CI checks reported)" or ""
-          local choice = vim.fn.confirm(
-            string.format("Squash and merge #%d?\n%s%s%s", number, pr.title, none, note), "&Merge\n&Cancel", 2
-          )
-          if choice ~= 1 then return finish() end
+      if counts.pending > 0 then
+        m.ci_since = m.ci_since or os.time()
+        local elapsed = os.time() - m.ci_since
+        if elapsed > M.ci_timeout then
+          return finish(m, "failed", { reason = "CI still running after " .. clock(elapsed), note = "Nothing was merged." })
         end
+        local pending = vim.tbl_filter(function(check) return check.state == "pending" end, checks_of(pr))
+        local more = #pending > 1 and " +" .. (#pending - 1) or ""
+        set(m, {
+          state = "ci",
+          step = "ci",
+          detail = vim.trim(pending[1].name .. " " .. pending[1].detail) .. more .. " · merges by itself when green",
+        })
+        return again(vim.tbl_extend("force", opts, { polls = 0 }))
+      end
 
-        snapshot(dir, pr, guard(function(before, base_before)
-          system({ "gh", "pr", "merge", tostring(number), "--squash", "--match-head-commit", pr.headRefOid }, dir,
-            guard(function(ok, _, err)
-              if not ok then return stop("Merge failed: " .. vim.trim(err), vim.log.levels.ERROR) end
-              list_cache[dir] = nil
-              if #children > 0 then
-                local trees = worktrees(dir)
-                stacked_fixes[dir] = stacked_fixes[dir] or {}
-                for _, child in ipairs(children) do
-                  stacked_fixes[dir][child.number] = {
-                    sha = child.headRefOid,
-                    cmd = fix_command(trees, child.headRefName, pr.baseRefName, pr.headRefOid),
-                  }
-                end
-              end
-              vim.notify(string.format("Merged #%d (squash). Clean up its worktree and branch by hand.", number))
-              finish()
-              report_fallout(dir, pr, children, before, base_before)
-              after()
-            end))
-        end))
-      end))
+      squash(pr, counts)
     end))
   end))
 end
 
--- Squash-merges only a fresh, open, non-draft, conflict-free PR whose checks all
--- passed, pinned to the head that was read. It can wait for running CI or offer to
--- update a branch whose CI ran before the base moved.
-local function merge_pr(dir, number, opts, after)
-  local key = dir .. "#" .. number
-  if in_flight[key] then
-    return vim.notify(string.format("Merge of #%d is already in progress", number), vim.log.levels.INFO)
+local function track(record)
+  local today = os.time(vim.tbl_extend("force", os.date("*t"), { hour = 0, min = 0, sec = 0 }))
+  for i = #M.merges, 1, -1 do
+    local finished = M.merges[i].finished
+    if finished and finished < today then table.remove(M.merges, i) end
   end
-  in_flight[key] = true
-  attempt(dir, number, opts or {}, function() in_flight[key] = nil end, after)
+  table.insert(M.merges, 1, record)
+  changed()
 end
-M.merge_pr = merge_pr
+
+local function untrack(record)
+  for i, m in ipairs(M.merges) do
+    if m == record then return table.remove(M.merges, i) end
+  end
+end
+
+function M.merge_pr(dir, number, opts)
+  for i = #M.merges, 1, -1 do
+    local m = M.merges[i]
+    if m.kind ~= "fix" and m.dir == dir and m.number == number then
+      if not m.finished then return m end
+      if m.state == "refused" then table.remove(M.merges, i) end
+    end
+  end
+  local m = { dir = dir, number = number, title = opts and opts.title or "PR #" .. number, started = os.time(), state = "checking", step = "open" }
+  track(m)
+  attempt(m, {})
+  return m
+end
+
+function M.answer_merge(m, choice)
+  if m.answer then m.answer(choice) end
+end
+
+function M.cancel_merge(m)
+  if m.finished or m.squash_sent then return end
+  finish(m, "failed", { reason = "cancelled", note = "Nothing was merged." })
+end
+
+function M.retry_merge(m)
+  untrack(m)
+  return M.merge_pr(m.dir, m.number, { title = m.title })
+end
+
+function M.ready_and_merge(m, on_done)
+  system({ "gh", "pr", "ready", tostring(m.number) }, m.dir, function(ok, _, err)
+    if not ok then return set(m, { reason = "could not mark ready: " .. vim.trim(err) }) end
+    local retried = M.retry_merge(m)
+    if on_done then on_done(retried) end
+  end)
+end
 
 -- Shared PR header pieces
 
@@ -775,12 +1051,47 @@ local function concat(...)
   return out
 end
 
-local function copy_fix(pr)
-  local fix = pr and pr._fix
+local function copy_fix(fix)
   if not fix then return vim.notify("Nothing to fix on this PR", vim.log.levels.INFO) end
   vim.fn.setreg("+", fix)
   vim.notify("Copied: " .. fix)
 end
+
+M.core = {
+  plural = plural,
+  system = system,
+  set = set,
+  finish = finish,
+  guard = guard,
+  changed = changed,
+  view_pr = view_pr,
+  checks_of = checks_of,
+  tally = tally,
+  names_of = names_of,
+  refs_of = refs_of,
+  refs_text = refs_text,
+  clock = clock,
+  track = track,
+  untrack = untrack,
+  parse_worktrees = parse_worktrees,
+  SETTLE_POLLS = SETTLE_POLLS,
+}
+
+M.ui = {
+  setup_hl = setup_hl,
+  fit = fit,
+  fit_line = fit_line,
+  wrap = wrap,
+  to_buf = to_buf,
+  footer = footer,
+  width = width,
+  clock = clock,
+  copy_fix = copy_fix,
+  behind_segs = behind_segs,
+  behind_graph = behind_graph,
+  refs_text = refs_text,
+  ci_estimate = ci_estimate,
+}
 
 -- <leader>gp: detail float with a pinned header
 
@@ -801,13 +1112,14 @@ local function detail_header(pr, w)
   local right = { { { "merge (squash, head-pinned)", "PrMuted" } }, state_segs(pr) }
   if pr.state == "OPEN" then right[#right + 1] = conflict_segs(pr) end
   right[#right + 1] = ci_summary(checks)
-  if pr._stale then right[#right + 1] = { { "●", "PrYellow" }, { " CI ran before " .. pr.baseRefName .. " moved" } } end
+  if behind_visible(pr) then right[#right + 1] = behind_segs(pr) end
 
   local fixed_rows = #lines + 2 + (pr._fix and 1 or 0)
   local rows = math.max(#right, math.floor(float_height() / 2) - fixed_rows)
   local limit = math.min(rows, MAX_CHECK_ROWS + 1)
   local shown = #checks + 1 > limit and limit - 2 or #checks
   local left = { { { "checks", "PrMuted" } } }
+  if pr._behind then left[1][2] = { " · " .. ran_before(pr), "PrFaint" } end
   for i = 1, shown do
     local check = checks[i]
     left[#left + 1] = {
@@ -959,7 +1271,7 @@ function M.describe()
   end
   map("]]", function() jump_heading(1) end)
   map("[[", function() jump_heading(-1) end)
-  map("<M-y>", function() copy_fix(cache[key] and cache[key].pr) end)
+  map("<M-y>", function() copy_fix(cache[key] and cache[key].pr._fix) end)
   map("<C-b>", function()
     local current = cache[key]
     if not current then return end
@@ -968,11 +1280,9 @@ function M.describe()
   map("M", function()
     local current = cache[key]
     if not current then return vim.notify("Still loading the PR", vim.log.levels.INFO) end
-    merge_pr(dir, current.pr.number, {}, function()
-      view_pr(current.pr.number, dir, function(pr)
-        if pr then refresh(pr) end
-      end)
-    end)
+    close()
+    local m = M.merge_pr(dir, current.pr.number, { title = current.pr.title })
+    require("config.merges").open(m)
   end)
 
   if entry and now() - entry.at < CACHE_TTL then return end
@@ -991,6 +1301,7 @@ end
 -- <leader>gP: picker grouped by what you can do next
 
 local GROUPS = {
+  { key = "merging", label = "◐ in progress", hl = "PrGroupWaiting" },
   { key = "ready", label = "✓ ready to merge", hl = "PrGroupReady" },
   { key = "waiting", label = "● waiting on CI", hl = "PrGroupWaiting" },
   { key = "blocked", label = "✗ needs work", hl = "PrGroupBlocked" },
@@ -1003,7 +1314,32 @@ local function group_header(group, count, w)
   return { { label, group.hl }, { string.rep("─", rule), "PrFaint" }, { tail, "PrMuted" } }
 end
 
-local function pick_row(pr, group, w)
+local MERGE_STATES = { checking = "checking", updating = "updating the branch", asking = "needs you", squashing = "squashing" }
+
+local FIX_STATES = {
+  fetching = "fetching", merging = "merging master", rebasing = "rebasing", resolving = "needs you", ready = "ready to push",
+  pushing = "pushing", dirty = "needs you", no_worktree = "needs you", paused = "paused",
+}
+
+local function running_merge(dir, number)
+  return vim.iter(M.merges):find(function(m) return m.dir == dir and m.number == number and not m.finished end)
+end
+
+local function job_label(m)
+  local ci = m.ci and string.format("CI %d/%d", m.ci.pass, m.ci.total)
+  if m.kind ~= "fix" then return "merging · " .. (m.state == "ci" and ci or MERGE_STATES[m.state] or m.state) end
+  local claude = m.ai and require("config.pr_ai").label(m)
+  if claude then return "Claude · " .. claude end
+  return "fixing · " .. (m.state == "ci" and ci or FIX_STATES[m.state] or m.state)
+end
+
+local function merging_status(m)
+  local label = job_label(m)
+  local waiting = label:match("needs you") or label:match("unsure") or label:match("ready") or label:match("gave up") or label:match("failed")
+  return { { "      " }, { "●", "PrYellow" }, { " " .. label, waiting and "PrTitle" or "PrDim" }, { "  <leader>gM", "PrMuted" } }
+end
+
+local function pick_row(pr, group, w, merge)
   local branch_w = w >= 90 and 22 or 0
   local title_w = w - 4 - 2 - (branch_w > 0 and branch_w + 2 or 0) - 12 - 2 - 4 - 2
   local diff = "+" .. pr.additions .. " -" .. pr.deletions
@@ -1018,13 +1354,14 @@ local function pick_row(pr, group, w)
     { fit(ago(pr.updatedAt), 4, true), "PrSoft" },
   })
 
+  if merge then return { first, fit_line(merging_status(merge), w) } end
   local status = concat({ { "      " } }, ci_short(checks_of(pr)), { { "  " } }, review_status(pr))
   if pr.mergeable == "CONFLICTING" then
     status = concat(status, { { "  " }, { "✗", "PrRed" }, { " conflicts" } })
-  elseif group == "ready" and pr.mergeable == "MERGEABLE" then
+  elseif group == "ready" and pr.mergeable == "MERGEABLE" and not pr._behind then
     status = concat(status, { { "  " }, { "✓", "PrGreen" }, { " mergeable" } })
   end
-  if pr._stale then status = concat(status, { { "  " }, { "●", "PrYellow" }, { " stale CI" } }) end
+  if behind_visible(pr) then status = concat(status, { { "  " } }, behind_segs(pr)) end
   for i = 2, #status do
     if not status[i][2] then status[i] = { status[i][1], "PrDim" } end
   end
@@ -1077,11 +1414,27 @@ local function pick_summary(pr, cols)
   end
 
   local right = { { { "checks", "PrMuted" } } }
+  if pr._behind then right[1][2] = { " · " .. ran_before(pr), "PrFaint" } end
   local checks = checks_of(pr)
   for _, check in ipairs(checks) do
     right[#right + 1] = { { ICON[check.state], ICON_HL[check.state] }, { " " .. check.name } }
   end
   if #checks == 0 then right[#right + 1] = { { "–", "PrMuted" }, { " no checks" } } end
+  if behind_visible(pr) then
+    right[#right + 1] = {}
+    right[#right + 1] = { { "base", "PrMuted" } }
+    vim.list_extend(right, behind_graph(pr, true))
+    local counts = tally(checks)
+    if counts.total > 0 and counts.pass == counts.total then
+      local refs = refs_text(pr._behind)
+      local lacking = refs ~= "" and refs or "those commits"
+      local sentence = string.format(
+        "↓%d behind %s. CI passed without %s, so #%d and %s have not been tested together.",
+        pr._behind.count, pr.baseRefName, lacking, pr.number, lacking
+      )
+      for _, part in ipairs(wrap(sentence, right_w)) do right[#right + 1] = { { part, "PrMuted" } } end
+    end
+  end
   right[#right + 1] = {}
   right[#right + 1] = { { "merge", "PrMuted" } }
   local status = pr_status(pr)
@@ -1128,10 +1481,11 @@ local function list_prs(dir, on_done)
   end)
 end
 
-local function pick_entries(prs, list_w)
-  local grouped = {}
+local function pick_entries(prs, list_w, dir)
+  local grouped, merging = {}, {}
   for _, pr in ipairs(prs) do
-    local key = pr_status(pr).group
+    merging[pr.number] = dir and running_merge(dir, pr.number)
+    local key = merging[pr.number] and "merging" or pr_status(pr).group
     grouped[key] = grouped[key] or {}
     table.insert(grouped[key], pr)
   end
@@ -1140,7 +1494,7 @@ local function pick_entries(prs, list_w)
     for i, pr in ipairs(grouped[group.key] or {}) do
       local lines = {}
       if i == 1 then lines[1] = to_ansi(group_header(group, #grouped[group.key], list_w)) end
-      for _, segs in ipairs(pick_row(pr, group.key, list_w)) do lines[#lines + 1] = to_ansi(segs) end
+      for _, segs in ipairs(pick_row(pr, group.key, list_w, merging[pr.number])) do lines[#lines + 1] = to_ansi(segs) end
       entries[#entries + 1] = pr.number .. "\t" .. table.concat(lines, "\n")
     end
   end
@@ -1149,12 +1503,29 @@ end
 
 local pick_buf
 
-local function open_picker(dir)
+local function merges_signature(dir)
+  local parts = {}
+  for _, m in ipairs(M.merges) do
+    if m.dir == dir then
+      local phase = m.ai and m.ai.phase or ""
+      parts[#parts + 1] = table.concat({ m.number, m.finished and "done" or m.state, phase, m.ci and m.ci.pass or "" }, ":")
+    end
+  end
+  return table.concat(parts, ",")
+end
+
+-- when_ready(fn) runs fn once the PR list has loaded; the picker opens before
+-- that and shows "loading" while the marker file exists.
+local function open_picker(dir, when_ready, loading_marker)
   setup_hl()
   local list_w = math.floor(vim.o.columns * 0.84) - 6
-  local prs = list_cache[dir].prs
-  local repo = (prs[1].url or ""):match("github%.com/([^/]+/[^/]+)/") or ""
-  local info = string.format(
+  local remote = vim.trim(vim.fn.system({ "git", "-C", dir, "remote", "get-url", "origin" }))
+  local repo = remote:match("github%.com[:/]([^/]+/[^/]-)%.git$") or remote:match("github%.com[:/]([^/]+/[^/]+)$") or ""
+  local loading = loading_marker
+      and string.format([[[ -e %s ] && { printf '%s%s · loading from GitHub…%s'; exit; }; ]],
+        vim.fn.shellescape(loading_marker), "\27[38;2;146;131;116m", repo, "\27[0m")
+    or ""
+  local info = loading .. string.format(
     [[c=$FZF_TOTAL_COUNT; [ "$FZF_MATCH_COUNT" = "$c" ] || c="$FZF_MATCH_COUNT/$c"; printf '%s%s · %s%s open%s' "$c"]],
     "\27[38;2;146;131;116m", repo, "\27[38;2;176;184;70m", "%s", "\27[0m"
   )
@@ -1168,9 +1539,13 @@ local function open_picker(dir)
   end
 
   local function contents(fzf_cb)
-    local entry = list_cache[dir]
-    for _, line in ipairs(entry and pick_entries(entry.prs, list_w) or {}) do fzf_cb(line) end
-    fzf_cb()
+    local function feed()
+      local entry = list_cache[dir]
+      for _, line in ipairs(entry and pick_entries(entry.prs, list_w, dir) or {}) do fzf_cb(line) end
+      fzf_cb()
+    end
+    if when_ready then return when_ready(feed) end
+    feed()
   end
 
   require("fzf-lua").fzf_exec(contents, {
@@ -1190,9 +1565,20 @@ local function open_picker(dir)
       on_create = function(e)
         pick_buf = e.bufnr
         vim.b[e.bufnr].pr_picker = true
+        local shown = merges_signature(dir)
+        vim.api.nvim_create_autocmd("User", {
+          pattern = "PrMergesChanged",
+          callback = function()
+            if not vim.api.nvim_buf_is_valid(e.bufnr) then return true end
+            local now_shown = merges_signature(dir)
+            if now_shown == shown then return end
+            shown = now_shown
+            pcall(vim.api.nvim_chan_send, vim.bo[e.bufnr].channel, "\18")
+          end,
+        })
         pcall(vim.api.nvim_win_set_config, e.winid, {
           footer = footer({
-            { "enter", "review" }, { "^b", "browser" }, { "alt-m", "merge when CI passes" }, { "alt-y", "copy fix" },
+            { "enter", "review" }, { "^b", "browser" }, { "alt-m", "merge when CI passes" }, { "alt-c", "Claude fixes conflicts" }, { "alt-r", "merges" },
             { "^p", "full preview" },
           }),
           footer_pos = "center",
@@ -1211,7 +1597,7 @@ local function open_picker(dir)
     actions = {
       ["enter"] = function(selected)
         local pr = pr_of(selected)
-        if pr then require("config.review_mode").start(tostring(pr.number), { base = pr.baseRefName }) end
+        if pr then M.review(dir, pr) end
       end,
       ["ctrl-b"] = {
         fn = function(selected)
@@ -1220,13 +1606,20 @@ local function open_picker(dir)
         end,
         exec_silent = true,
       },
-      ["alt-y"] = {
-        fn = function(selected) copy_fix(pr_of(selected)) end,
-        exec_silent = true,
-      },
+      ["alt-r"] = function() vim.schedule(function() require("config.merges").open() end) end,
       ["alt-m"] = function(selected)
         local pr = pr_of(selected)
-        if pr then merge_pr(dir, pr.number, {}, function() end) end
+        if pr then
+          local m = M.merge_pr(dir, pr.number, { title = pr.title })
+          vim.schedule(function() require("config.merges").open(m) end)
+        end
+      end,
+      ["alt-c"] = function(selected)
+        local pr = pr_of(selected)
+        if pr and pr.mergeable == "CONFLICTING" then
+          local r = require("config.pr_ai").start_pr(dir, pr)
+          vim.schedule(function() require("config.merges").open(r) end)
+        end
       end,
       ["ctrl-p"] = {
         fn = function() full = not full end,
@@ -1236,6 +1629,47 @@ local function open_picker(dir)
       ["ctrl-r"] = { fn = function() end, reload = true },
     },
   })
+end
+
+local history_path = vim.fn.stdpath("state") .. "/review_pr_history.json"
+
+local function read_history()
+  local file = io.open(history_path, "r")
+  if not file then return {} end
+  local data = decode_json(file:read("*a"))
+  file:close()
+  return type(data) == "table" and data or {}
+end
+
+local function entries_of(history, dir)
+  if type(history[dir]) ~= "table" then return {} end
+  return vim.tbl_filter(function(entry) return type(entry) == "table" and type(entry.number) == "number" end, history[dir])
+end
+
+local function remember(dir, pr)
+  local history = read_history()
+  local seen = vim.tbl_filter(function(entry) return entry.number ~= pr.number end, entries_of(history, dir))
+  table.insert(seen, 1, { number = pr.number, base = pr.baseRefName, title = pr.title })
+  history[dir] = vim.list_slice(seen, 1, 5)
+  local file = io.open(history_path, "w")
+  if file then
+    file:write(vim.json.encode(history))
+    file:close()
+  end
+end
+
+function M.review(dir, pr)
+  remember(dir, pr)
+  require("config.review_mode").start(tostring(pr.number), { base = pr.baseRefName })
+end
+
+-- Reviews the most recent PR other than the one under review now.
+function M.review_last()
+  local dir = vim.fs.root(0, ".git") or vim.uv.cwd()
+  local current = require("config.review_mode").pr()
+  local target = vim.iter(entries_of(read_history(), dir)):find(function(entry) return entry.number ~= current end)
+  if not target then return vim.notify("No other reviewed PR in this repo", vim.log.levels.INFO) end
+  M.review(dir, { number = target.number, baseRefName = target.base, title = target.title })
 end
 
 -- Cached per repo like the detail view: reopening is instant, and a stale copy
@@ -1270,11 +1704,21 @@ function M.pick()
     return
   end
 
+  local marker = vim.fn.tempname()
+  vim.fn.writefile({}, marker)
+  local loaded, waiting = false, {}
   refresh(function(_, err)
-    if err then return vim.notify(err, vim.log.levels.ERROR) end
-    if #list_cache[dir].prs == 0 then return vim.notify("No open PRs", vim.log.levels.INFO) end
-    open_picker(dir)
+    loaded = true
+    vim.fn.delete(marker)
+    if err then vim.notify(err, vim.log.levels.ERROR) end
+    for _, feed in ipairs(waiting) do feed() end
   end)
+  open_picker(dir, function(feed)
+    if loaded then return feed() end
+    waiting[#waiting + 1] = feed
+  end, marker)
 end
+
+M.views = { pick_row = pick_row, pick_summary = pick_summary, detail_header = detail_header }
 
 return M

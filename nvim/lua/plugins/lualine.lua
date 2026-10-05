@@ -21,6 +21,15 @@ return {
       cond = function() return (vim.g.review_mode_status or "") ~= "" end,
     })
 
+    table.insert(opts.sections.lualine_x, 1, {
+      function() return require("config.merges").statusline() end,
+      cond = function()
+        local merges = package.loaded["config.merges"]
+        return merges ~= nil and merges.statusline() ~= ""
+      end,
+      color = function() return require("config.merges").statusline_color() end,
+    })
+
     -- The PR picker's entries are multi-line, so hide fzf's selected-entry part there.
     local fzf = vim.deepcopy(require("lualine.extensions.fzf"))
     fzf.sections.lualine_y = { { fzf.sections.lualine_y[1], cond = function() return not vim.b.pr_picker end } }

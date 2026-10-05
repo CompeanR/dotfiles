@@ -1,12 +1,17 @@
 return {
   {
     "lewis6991/gitsigns.nvim",
-    cmd = { "ReviewStart", "ReviewStop" },
+    cmd = { "ReviewStart", "ReviewStop", "ReviewNext", "ReviewPrev" },
     keys = {
       {
         "<leader>rv",
         function() require("config.review_mode").toggle() end,
         desc = "Toggle review vs origin/master",
+      },
+      {
+        "<leader>rs",
+        function() require("config.review_mode").stop() end,
+        desc = "Stop review",
       },
       {
         "<leader>gp",
@@ -17,6 +22,16 @@ return {
         "<leader>gP",
         function() require("config.review_pr").pick() end,
         desc = "Review: pick GitHub PR",
+      },
+      {
+        "<leader>gR",
+        function() require("config.review_pr").review_last() end,
+        desc = "Review: back to the last reviewed PR",
+      },
+      {
+        "<leader>gM",
+        function() require("config.merges").open() end,
+        desc = "PR: merges",
       },
     },
     opts = function(_, opts)
@@ -29,6 +44,16 @@ return {
       if not commands.ReviewStop then
         pcall(vim.api.nvim_create_user_command, "ReviewStop", function()
           require("config.review_mode").stop()
+        end, {})
+      end
+      if not commands.ReviewNext then
+        pcall(vim.api.nvim_create_user_command, "ReviewNext", function()
+          require("config.review_mode").change_file("next")
+        end, {})
+      end
+      if not commands.ReviewPrev then
+        pcall(vim.api.nvim_create_user_command, "ReviewPrev", function()
+          require("config.review_mode").change_file("prev")
         end, {})
       end
       return opts
