@@ -22,6 +22,11 @@ return {
     })
 
     table.insert(opts.sections.lualine_x, 1, {
+      function() return require("prm").statusline() end,
+      cond = function() return package.loaded.prm ~= nil and require("prm").statusline() ~= "" end,
+    })
+
+    table.insert(opts.sections.lualine_x, 1, {
       function() return require("config.merges").statusline() end,
       cond = function()
         local merges = package.loaded["config.merges"]
