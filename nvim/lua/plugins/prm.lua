@@ -6,7 +6,7 @@ return {
     opts = {
       on_review = function(dir, pr)
         vim.cmd.tcd(vim.fn.fnameescape(dir))
-        require("config.review_mode").start(tostring(pr.number), { base = pr.base })
+        require("config.review_pr").review(dir, { number = pr.number, baseRefName = pr.base, title = pr.title })
       end,
     },
     config = function(_, opts)

@@ -19,19 +19,9 @@ return {
         desc = "PR: description and CI of this branch",
       },
       {
-        "<leader>gP",
-        function() require("config.review_pr").pick() end,
-        desc = "Review: pick GitHub PR",
-      },
-      {
         "<leader>gR",
         function() require("config.review_pr").review_last() end,
         desc = "Review: back to the last reviewed PR",
-      },
-      {
-        "<leader>gM",
-        function() require("config.merges").open() end,
-        desc = "PR: merges",
       },
     },
     opts = function(_, opts)
