@@ -12,6 +12,7 @@ Usage: $(basename "$0") [server [bootstrap|doctor|sandbox|help] [options]]
   server doctor [--json]
   server sandbox [--dry-run|--apply]
   server help
+  claude-settings                   Copy claude/settings.json to ~/.claude
   help
 EOF
 }
@@ -48,18 +49,29 @@ install_claude() {
   if [[ "$mode" == "safe" ]]; then
     safe_link "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md || status=1
     safe_link "$ROOT/claude/agents" ~/.claude/agents || status=1
+    safe_link "$ROOT/claude/themes" ~/.claude/themes || status=1
     for skill in "$ROOT"/claude/skills/*/; do
       safe_link "${skill%/}" ~/.claude/skills/"$(basename "$skill")" || status=1
     done
   else
     ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
     ln -sfn "$ROOT/claude/agents" ~/.claude/agents
+    ln -sfn "$ROOT/claude/themes" ~/.claude/themes
     for skill in "$ROOT"/claude/skills/*/; do
       ln -sfn "${skill%/}" ~/.claude/skills/"$(basename "$skill")"
     done
   fi
 
-  # settings.json: copy, backing up anything that differs.
+  # Re-sync settings.json after every `git pull`.
+  ln -sf "$ROOT/git-hooks/post-merge" "$ROOT/.git/hooks/post-merge"
+
+  sync_claude_settings
+  return "$status"
+}
+
+# settings.json: copy, backing up anything that differs.
+sync_claude_settings() {
+  mkdir -p ~/.claude
   if ! cmp -s "$ROOT/claude/settings.json" ~/.claude/settings.json; then
     if [[ -e ~/.claude/settings.json ]]; then
       mkdir -p ~/.claude/backups
@@ -73,8 +85,6 @@ install_claude() {
   if command -v herdr >/dev/null 2>&1; then
     herdr integration install claude >/dev/null 2>&1 || true
   fi
-
-  return "$status"
 }
 
 # Desktop: force-link map (unchanged destinations; sources resolved from script location).
@@ -256,6 +266,9 @@ case "${1:-}" in
     ;;
   help|-h|--help)
     usage
+    ;;
+  claude-settings)
+    sync_claude_settings
     ;;
   server)
     shift
