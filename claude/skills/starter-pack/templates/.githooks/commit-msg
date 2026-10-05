@@ -1,0 +1,17 @@
+#!/bin/sh
+subject=$(head -n 1 "$1")
+case "$subject" in
+    "Merge "* | "Revert "* | "fixup! "* | "squash! "* | "amend! "*) exit 0 ;;
+esac
+if ! printf '%s\n' "$subject" | grep -qE '^(feat|fix|refactor|test|docs|style|chore|ci|build|perf)(\([a-z0-9/_-]+\))?!?: .+'; then
+    echo "Commit subject must be 'type(scope): outcome', e.g. 'feat({{SCOPE_EXAMPLE}}): add the first outcome'." >&2
+    exit 1
+fi
+if [ "${#subject}" -gt 72 ]; then
+    echo "Commit subject is ${#subject} characters; the limit is 72." >&2
+    exit 1
+fi
+if grep -qi '^co-authored-by:' "$1"; then
+    echo "Remove the Co-authored-by trailer." >&2
+    exit 1
+fi

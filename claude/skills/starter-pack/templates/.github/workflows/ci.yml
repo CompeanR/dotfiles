@@ -1,0 +1,76 @@
+name: CI
+
+on:
+    push:
+        branches:
+            - '**'
+    pull_request:
+        branches:
+            - {{DEFAULT_BRANCH}}
+        types:
+            - opened
+            - synchronize
+            - reopened
+            - labeled
+            - unlabeled
+
+concurrency:
+    group: ci-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    verify:
+        name: Verify
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
+
+            {{SETUP_STEPS}}
+
+            - name: Check
+              run: make check
+
+            - name: No stray whitespace or generated drift
+              run: git diff --check && git diff --exit-code
+
+    scope:
+        name: PR scope
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        timeout-minutes: 5
+        env:
+            BASE_SHA: ${{ github.event.pull_request.base.sha }}
+            HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+            HAS_SCOPE_EXCEPTION: ${{ contains(github.event.pull_request.labels.*.name, 'scope-exception') }}
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+                  ref: ${{ github.event.pull_request.head.sha }}
+
+            - name: Commit messages
+              run: |
+                  git show "$BASE_SHA:.githooks/commit-msg" >"$RUNNER_TEMP/commit-msg" 2>/dev/null || cp .githooks/commit-msg "$RUNNER_TEMP/commit-msg"
+                  for sha in $(git rev-list --reverse "$BASE_SHA..$HEAD_SHA"); do
+                    git log -1 --format=%B "$sha" >"$RUNNER_TEMP/message"
+                    sh "$RUNNER_TEMP/commit-msg" "$RUNNER_TEMP/message" || { echo "::error::Commit $sha does not follow docs/pull-requests.md."; exit 1; }
+                  done
+
+            - name: Count hand-written lines
+              run: |
+                  set -o pipefail
+                  git show "$BASE_SHA:scripts/pr-brief.sh" >"$RUNNER_TEMP/pr-brief.sh" 2>/dev/null || cp scripts/pr-brief.sh "$RUNNER_TEMP/pr-brief.sh"
+                  gate=--gate
+                  if [ "$HAS_SCOPE_EXCEPTION" = "true" ]; then
+                    gate=
+                    echo "scope-exception label present; the PR body must give the rationale."
+                  fi
+                  bash "$RUNNER_TEMP/pr-brief.sh" $gate "$BASE_SHA" "$HEAD_SHA" | tee -a "$GITHUB_STEP_SUMMARY"

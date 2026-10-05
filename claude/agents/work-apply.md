@@ -2,7 +2,7 @@
 name: work-apply
 description: Implement a routine scoped edit without requiring SDD artifacts. Use to implement one clearly scoped change with its tests and validation.
 tools: Read, Grep, Glob, Edit, Write, Bash, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation
-model: claude-sonnet-5-5
+model: claude-opus-5-5
 effort: medium
 ---
 

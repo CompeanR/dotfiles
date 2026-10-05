@@ -6,6 +6,8 @@ Avoid unnecessary code comments. Do not add a
 
 Every project lives in a GitHub repo (account CompeanR, private by default; create it if missing). Track issues, wayfinder maps and tickets as GitHub issues, never as local markdown.
 
+Write every PR body with the `pr` skill, including PRs opened by sub-agents and by other skills.
+
 In typescript always use 'public' keyword on public methods inside classes
 Remember we have
 
@@ -24,4 +26,5 @@ Stop and ask only when you can't continue without me, or before anything
 destructive: deleting data, force-pushing, or changing anything outside
 this repository.
 
-Always run a verify agent after an implementation
+Run work-verify on sensitive tasks (git state, pushes, deletes, agents on my files).
+Stop re-verifying once findings are no longer things normal use would hit, or after 3 rounds; list the rest for me.
