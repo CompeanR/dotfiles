@@ -5,5 +5,11 @@
     "maxTasks": 4,
     "concurrency": 2
   },
-  "proactiveSkillSubagents": false
+  "proactiveSkillSubagents": false,
+  "inlineToolDisplay": "summary",
+  "asyncWidget": false,
+  "fleetView": true,
+  "mainWindowRenderer": {
+    "horizontalSpacing": 0
+  }
 }
