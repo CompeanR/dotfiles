@@ -4,7 +4,6 @@
     "CLAUDISH_PROVIDER": "openai",
     "CLAUDISH_MODEL": "gpt-5.6-luna"
   },
-  "ultracode": true,
   "permissions": {
     "allow": ["mcp__plugin_engram_engram__*"],
     "defaultMode": "auto"
