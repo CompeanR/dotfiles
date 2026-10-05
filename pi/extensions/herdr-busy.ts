@@ -92,6 +92,7 @@ export default function (pi: ExtensionAPI) {
 
   let busyActive = false;
   let parentActive = false;
+  let blockedCount = 0;
   let lastCtx: ExtensionContext | undefined;
 
   function remember(ctx: ExtensionContext | undefined): void {
@@ -100,12 +101,25 @@ export default function (pi: ExtensionAPI) {
 
   pi.events.on("herdr:busy", (data: { active?: boolean } | undefined) => {
     busyActive = !!data?.active;
+    if (blockedCount > 0) return;
     if (busyActive) {
       reportAgent("working", lastCtx);
       return;
     }
     if (!parentActive) {
       reportAgent("idle", lastCtx);
+    }
+  });
+
+  // herdr-agent-state republishes idle when the last block clears; this seq lands after it.
+  pi.events.on("herdr:blocked", (data: { active?: boolean } | undefined) => {
+    if (data?.active) {
+      blockedCount += 1;
+      return;
+    }
+    blockedCount = Math.max(0, blockedCount - 1);
+    if (blockedCount === 0 && busyActive && !parentActive) {
+      reportAgent("working", lastCtx);
     }
   });
 
@@ -128,7 +142,7 @@ export default function (pi: ExtensionAPI) {
       parentActive = false;
     }
     // herdr-agent-state already queued idle; this seq must land after it.
-    if (busyActive) {
+    if (busyActive && blockedCount === 0) {
       reportAgent("working", ctx);
     }
   });

@@ -308,6 +308,24 @@ test("a settled parent stays working in herdr while async subagents are busy", a
     `Herdr lost the Pi session anchor; reports: ${JSON.stringify(reports)}`,
   );
 
+  events.emit("herdr:blocked", { active: true, label: "work-apply needs attention" });
+  await waitFor(() => visibleState === "blocked", "subagent attention did not block herdr");
+  events.emit("herdr:busy", { active: false });
+  events.emit("herdr:busy", { active: true, label: "⏳ 2 subagents (work-apply, work-verify)" });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(
+    visibleState,
+    "blocked",
+    `a busy label change hid subagent attention; reports: ${JSON.stringify(reports)}`,
+  );
+  events.emit("herdr:blocked", { active: false });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(
+    visibleState,
+    "working",
+    `clearing subagent attention idled herdr while a subagent was busy; reports: ${JSON.stringify(reports)}`,
+  );
+
   events.emit("herdr:busy", { active: false });
   await waitFor(
     () => visibleState === "idle",
