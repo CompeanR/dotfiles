@@ -25,8 +25,11 @@ alt - right : yabai -m window --resize right:50:0; yabai -m window --resize left
 alt - up : yabai -m window --resize top:0:-50; yabai -m window --resize bottom:0:-50
 alt - down : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
 
-# Rotate layout 90/270 degrees (alt + r)
-alt - r : yabai -m space --rotate 90
+# Rotate layout 90/270 degrees (alt + r); Ghostty keeps alt + r for herdr's prm
+alt - r [
+  "ghostty" ~
+  *         : yabai -m space --rotate 90
+]
 
 # Flip layout horizontally/vertically (alt + x/y)
 alt - x : yabai -m space --mirror x-axis
