@@ -175,6 +175,15 @@ Execution-based evidence is A-tier. Test results, console output. Show the exact
 
 Describe whether it's a one-way or two-way door. You can walk back through two-way doors, but not one-way doors. A PR that is cheap to roll back is lower risk. Changes that involve destructive actions or hard-to-reverse decisions are one-way doors.
 
+Decide the door from the whole diff against the base (`git diff origin/<base>...HEAD`), not from what the PR set out to do. It is one-way when the diff:
+
+- changes a stored or wire shape the old code can't read (database schema, migrations, files on disk, API contracts),
+- deletes, overwrites, pushes or force-pushes data, branches or files outside the repo,
+- changes dependencies, CI, hooks or deploy config,
+- does anything a revert can't undo once merged (sent messages, published packages, charged money).
+
+Name the change that makes it one-way. The repo's PR docs may add their own rules; the strictest door wins.
+
 The blast radius is the potential impact or scope of the changes introduced by this PR. Consider all possibilities. Examples are layout shift, breakages for consumers, mobile responsiveness, etc.
 
 ### Claude Design checkbox
