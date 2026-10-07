@@ -1,0 +1,7 @@
+{
+  "tui.altScreen.pageUp": ["shift+pageUp"],
+  "tui.altScreen.pageDown": ["shift+pageDown"],
+  "tui.altScreen.halfPageUp": ["pageUp"],
+  "tui.altScreen.halfPageDown": ["pageDown"],
+  "app.clipboard.pasteImage": []
+}
