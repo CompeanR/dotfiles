@@ -46,6 +46,7 @@ jobs:
         timeout-minutes: 5
         env:
             BASE_SHA: ${{ github.event.pull_request.base.sha }}
+            BASE_REF: ${{ github.base_ref }}
             HEAD_SHA: ${{ github.event.pull_request.head.sha }}
             HAS_SCOPE_EXCEPTION: ${{ contains(github.event.pull_request.labels.*.name, 'scope-exception') }}
             HAS_ONE_WAY: ${{ contains(github.event.pull_request.labels.*.name, 'one-way') }}
@@ -70,8 +71,12 @@ jobs:
               run: |
                   set -o pipefail
                   git show "$BASE_SHA:scripts/pr-brief.sh" >"$RUNNER_TEMP/pr-brief.sh" 2>/dev/null || cp scripts/pr-brief.sh "$RUNNER_TEMP/pr-brief.sh"
-                  git show "$BASE_SHA:scripts/one-way.sh" >"$RUNNER_TEMP/one-way.sh" 2>/dev/null || cp scripts/one-way.sh "$RUNNER_TEMP/one-way.sh"
-                  files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | bash "$RUNNER_TEMP/one-way.sh")
+                  files=
+                  if git show "origin/$BASE_REF:scripts/one-way.sh" >"$RUNNER_TEMP/one-way.sh" 2>/dev/null; then
+                    files=$(git diff --name-only "origin/$BASE_REF...$HEAD_SHA" | bash "$RUNNER_TEMP/one-way.sh")
+                  else
+                    echo "No scripts/one-way.sh on $BASE_REF yet; the body and the reviewer name the door."
+                  fi
                   one_way=false
                   if [ "$HAS_ONE_WAY" = "true" ] || [ -n "$files" ] || printf '%s' "$BODY" | grep -qiE '\*\*Door:\*\*[[:space:]]*one-way'; then
                     one_way=true
@@ -95,7 +100,7 @@ jobs:
             contents: read
             pull-requests: write
         env:
-            BASE_SHA: ${{ github.event.pull_request.base.sha }}
+            BASE_REF: ${{ github.base_ref }}
             HEAD_SHA: ${{ github.event.pull_request.head.sha }}
             PR: ${{ github.event.pull_request.number }}
             GH_TOKEN: ${{ github.token }}
@@ -109,8 +114,11 @@ jobs:
 
             - name: Label one-way files
               run: |
-                  git show "$BASE_SHA:scripts/one-way.sh" >"$RUNNER_TEMP/one-way.sh" 2>/dev/null || cp scripts/one-way.sh "$RUNNER_TEMP/one-way.sh"
-                  files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | bash "$RUNNER_TEMP/one-way.sh")
+                  if ! git show "origin/$BASE_REF:scripts/one-way.sh" >"$RUNNER_TEMP/one-way.sh" 2>/dev/null; then
+                    echo "No scripts/one-way.sh on $BASE_REF yet; the body and the reviewer name the door." | tee -a "$GITHUB_STEP_SUMMARY"
+                    exit 0
+                  fi
+                  files=$(git diff --name-only "origin/$BASE_REF...$HEAD_SHA" | bash "$RUNNER_TEMP/one-way.sh")
                   if [ -z "$files" ]; then
                     echo "No one-way files; the body and the reviewer name the door." | tee -a "$GITHUB_STEP_SUMMARY"
                     exit 0
