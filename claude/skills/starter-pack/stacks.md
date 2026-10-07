@@ -281,6 +281,105 @@ Values:
   and these review limits: 4 parameters, 3 results, complexity 10, nesting 3. Local-substitutable: databases, files.
   True external: third-party APIs, the clock, notifications.
 
+## TypeScript / Bun + npm packages
+
+For repos whose packages keep their own package manager per folder: `bun.lock` in one folder, `package-lock.json` in
+another (for example `server/` on Bun, `web/` on npm), with no workspace manager at the root. Nothing is migrated.
+Reference: `/Users/compean/Development/triploqueron-2027`. Prettier runs from the root through `bunx`, pinned in the
+Makefile, so the root needs no lock file.
+
+Makefile (set `BUN_PACKAGES` and `NPM_PACKAGES` to the repo's folders):
+
+```make
+BUN_PACKAGES := server
+NPM_PACKAGES := web
+PRETTIER := bunx prettier@3.9.9
+
+.PHONY: setup fmt lint test check brief
+
+setup:
+	for d in $(BUN_PACKAGES); do (cd $$d && bun install) || exit 1; done
+	for d in $(NPM_PACKAGES); do (cd $$d && npm install) || exit 1; done
+	git config core.hooksPath .githooks
+
+fmt:
+	$(PRETTIER) --write .
+
+lint:
+	for d in $(BUN_PACKAGES); do (cd $$d && bun run --if-present lint) || exit 1; done
+	for d in $(NPM_PACKAGES); do (cd $$d && npm run --if-present lint) || exit 1; done
+
+test:
+	for d in $(BUN_PACKAGES); do (cd $$d && bun run --if-present test) || exit 1; done
+	for d in $(NPM_PACKAGES); do (cd $$d && npm run --if-present test) || exit 1; done
+
+check:
+	$(PRETTIER) --check .
+	for d in $(BUN_PACKAGES); do (cd $$d && bun run --if-present typecheck) || exit 1; done
+	for d in $(NPM_PACKAGES); do (cd $$d && npm run --if-present typecheck) || exit 1; done
+	$(MAKE) --no-print-directory lint test
+
+brief:
+	scripts/pr-brief.sh
+```
+
+Each package keeps its own `lint` and `test` scripts (a package's `test` may itself call `bun test`). Add a
+`"typecheck"` script to every package that lacks one: `tsc --noEmit`, or `tsc -b` when its `tsconfig.json` only holds
+project references (the Vite template). The `.prettierrc` is the TypeScript / pnpm one, at the root.
+
+`.prettierignore`:
+
+```
+node_modules/
+dist/
+build/
+coverage/
+bun.lock
+package-lock.json
+docs/
+.github/pull_request_template.md
+.claude/
+design/
+**/fixtures/
+```
+
+Add the repo's non-code folders too (notes, research): Prettier would rewrite them. `**/fixtures/` keeps test
+fixtures byte for byte, since tests compare against them.
+
+Values:
+
+- `{{TEST_PATTERN}}`: `\.(test|spec)\.|(^|\/)(tests?|e2e|__tests__)\/`
+- `{{DEPS_PATHSPEC}}`: `'package.json' '*/package.json'`
+- `{{ONE_WAY_FILES}}`: `(^|/)package\.json$|(^|/)bun\.lockb?$|(^|/)package-lock\.json$|(^|/)\.bun-version$`, plus
+  `|(^|/)migrations/` (or the repo's own migration folder) when the repo has one
+- `{{GROUP_DIRS}}`: the package folders, e.g. `server|web`
+- `{{CONFIG_FILES}}`: `\.prettierrc|\.prettierignore|\.oxlintrc\.json|eslint\.config\.[a-z]+|tsconfig[^\/]*\.json`
+- `{{SETUP_STEPS}}` (one install line per package):
+
+```yaml
+- name: Set up Bun
+  uses: oven-sh/setup-bun@v2
+
+- name: Set up Node.js
+  uses: actions/setup-node@v7
+  with:
+      node-version: 22
+
+- name: Install dependencies
+  run: |
+      (cd server && bun install --frozen-lockfile)
+      (cd web && npm ci)
+```
+
+- `{{EDITORCONFIG_OVERRIDES}}`: `[Makefile]` with `indent_style = tab`
+- `{{GENERATED_FILES}}`: `bun.lock linguist-generated` and `package-lock.json linguist-generated`
+- Hooks: `make setup` runs `git config core.hooksPath .githooks`.
+- `.gitignore`: `node_modules/`, `dist/`, `coverage/`.
+- AGENTS.md command lines: `make setup` install each package's dependencies and the git hooks; `make fmt` Prettier
+  write; `make lint` each package's `lint` script; `make test` each package's `test` script; `make check` Prettier
+  check, each package's typecheck, lint and test: what CI and pre-push run; `make brief` PR size report.
+- Architecture values: the TypeScript / pnpm ones.
+
 ## C / ESP-IDF
 
 `uvx` runs a pinned clang-format with no install and needs network. `make check` format-checks, scans the pure

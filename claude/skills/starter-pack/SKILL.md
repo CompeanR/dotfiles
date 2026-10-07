@@ -20,8 +20,8 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 ## 1. Inspect
 
 - Stack: detect it from manifests: `go.mod`; `package.json` with `pnpm-lock.yaml` or a `packageManager` pnpm field;
-  `CMakeLists.txt` that calls `idf_component_register` or has an `sdkconfig` or `app_main`. With no code, ask the user for
-  the stack.
+  `bun.lock` and `package-lock.json` in different folders (Bun + npm packages); `CMakeLists.txt` that calls
+  `idf_component_register` or has an `sdkconfig` or `app_main`. With no code, ask the user for the stack.
 - Default branch: `git symbolic-ref --short refs/remotes/origin/HEAD`, else `main`.
 - Remote: `gh repo view --json nameWithOwner`. When missing, create it: `gh repo create CompeanR/<directory name>
   --private --source . --remote origin`. Commit existing files as `chore(repo): initial commit` when the repo has no
