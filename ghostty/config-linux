@@ -4,6 +4,7 @@ config-file = ~/.config/ghostty/config-common
 
 # Theme follows the active Omarchy theme, like Alacritty's general.import does.
 config-file = ~/.local/state/omarchy/current/theme/ghostty.conf
+config-file = ?~/.config/ghostty/palette-overrides
 
 font-family = Liga SFMono Nerd Font
 font-style = Regular

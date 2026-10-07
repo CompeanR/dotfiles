@@ -1,0 +1,3 @@
+# Loaded after the Omarchy theme. Claude Code (dark-ansi base) renders inline
+# code in bright blue; keep it Pi's mdCode yellow instead of Omarchy's orange.
+palette = 12=#FFC107
