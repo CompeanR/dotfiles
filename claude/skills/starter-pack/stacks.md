@@ -13,6 +13,7 @@ Placeholders filled from here:
 |---|---|---|
 | `{{TEST_PATTERN}}` | `scripts/pr-brief.sh` | awk regex of test paths, counted as tests |
 | `{{DEPS_PATHSPEC}}` | `scripts/pr-brief.sh` | git pathspecs that flag a dependency change |
+| `{{ONE_WAY_FILES}}` | `scripts/one-way.sh` | ERE of the stack's dependency and build files that make a PR one-way |
 | `{{GROUP_DIRS}}` | `scripts/pr-brief.sh` | top-level dirs grouped one level deeper, joined with `\|` |
 | `{{CONFIG_FILES}}` | `scripts/pr-brief.sh` | regex of the stack's lint and format configs, flagged as guardrails |
 | `{{SETUP_STEPS}}` | `ci.yml` | the stack's setup steps; replace the whole line and indent every line of the steps by 12 spaces |
@@ -132,6 +133,7 @@ Values:
 
 - `{{TEST_PATTERN}}`: `_test\.go$|(^|\/)testdata\/`
 - `{{DEPS_PATHSPEC}}`: `'go.mod'`
+- `{{ONE_WAY_FILES}}`: `(^|/)go\.(mod|sum)$`
 - `{{GROUP_DIRS}}`: `internal|cmd`
 - `{{CONFIG_FILES}}`: `\.golangci\.yml`
 - `{{SETUP_STEPS}}`:
@@ -246,6 +248,7 @@ Values:
 
 - `{{TEST_PATTERN}}`: `\.(test|spec)\.|(^|\/)(tests?|e2e|__tests__)\/`
 - `{{DEPS_PATHSPEC}}`: `'package.json' '*/package.json'`
+- `{{ONE_WAY_FILES}}`: `(^|/)package\.json$|(^|/)pnpm-(lock|workspace)\.yaml$`
 - `{{GROUP_DIRS}}`: `apps|packages` for a workspace, `src` for a single package
 - `{{CONFIG_FILES}}`: `\.prettierrc|\.prettierignore|eslint\.config\.[a-z]+`
 - `{{SETUP_STEPS}}`:
@@ -327,6 +330,7 @@ Values:
 
 - `{{TEST_PATTERN}}`: `(^|\/)(test|tests|host_test|test_apps)\/|(^|\/)test_[^\/]*\.c$`
 - `{{DEPS_PATHSPEC}}`: `'*idf_component.yml'`
+- `{{ONE_WAY_FILES}}`: `idf_component\.yml$|(^|/)sdkconfig(\.defaults)?$|(^|/)partitions[^/]*\.csv$`
 - `{{GROUP_DIRS}}`: `components`
 - `{{CONFIG_FILES}}`: `\.clang-format`
 - `{{SETUP_STEPS}}`:

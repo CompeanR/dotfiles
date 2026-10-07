@@ -36,7 +36,7 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 
 ## 3. Guardrails PR
 
-- Copy from `templates/` with `cp -pr`: `.githooks/`, `scripts/pr-brief.sh`, `.github/pull_request_template.md`,
+- Copy from `templates/` with `cp -pr`: `.githooks/`, `scripts/pr-brief.sh`, `scripts/one-way.sh`, `.github/pull_request_template.md`,
   `.github/workflows/ci.yml`, `docs/pull-requests.md`, `.editorconfig`, `.gitattributes`. Keep the executable bits.
 - Add the stack wiring from `stacks.md`: Makefile, tool configs, the `.gitignore` entries and the CI setup step. When a
   file exists, merge into it.
@@ -58,7 +58,11 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 - When `make fmt` changed tracked source files, commit those files alone first as `style(repo): apply the formatter`.
 - `git add` the copied files, the stack wiring, `.gitignore` and the lock file `make setup` created; check `git status
   --short` shows only those. Commit as `chore(repo): guard commits, pushes and PR size`.
+- Create the labels the CI reads, when missing: `gh label create one-way --color B60205 --description "Owner merges after
+  review; agents stop at the review loop"` and `gh label create scope-exception --color D93F0B --description "Owner-approved
+  one-way PR over the 1,500 hand-line limit"`.
 - `git push -u origin chore/starter-pack`, then open the PR against the default branch. Write the body with the `pr` skill.
+  The PR touches `.github/` and `.githooks/`, so it is one-way: the owner merges it.
 - `gh pr checks --watch`.
 - Done when CI is green. When an action tag fails to resolve, pin an existing release tag (see `stacks.md`), commit
   `ci(repo): pin <action> to <tag>` and push again.

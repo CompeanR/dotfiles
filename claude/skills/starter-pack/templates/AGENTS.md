@@ -11,6 +11,8 @@
 - No code comments.
 - New UI is designed in Claude Design first.
 - Every PR follows `docs/pull-requests.md`. Write the body with the `pr` skill.
+- Merge your own two-way PRs once CI and the review loop pass; one-way PRs wait for the owner. Rules in
+  `docs/pull-requests.md`.
 - Work on a branch. Pushing to `{{DEFAULT_BRANCH}}` is blocked by the pre-push hook.
 - Commits: `type(scope): outcome`, 72 characters max, no Co-authored-by. The commit-msg hook checks it.
 - Track work as GitHub issues.
