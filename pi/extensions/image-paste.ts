@@ -28,9 +28,14 @@ export default function (pi: ExtensionAPI) {
       const clipboard = getNativeClipboard();
       if (!clipboard) return;
 
+      const paste = (text: string) => {
+        ctx.ui.pasteToEditor(text);
+        ctx.ui.setStatus("image-paste", undefined);
+      };
+
       const files = await clipboard.getFilePaths?.().catch(() => null);
       if (files?.length) {
-        ctx.ui.pasteToEditor(files.join("\n"));
+        paste(files.join("\n"));
         return;
       }
 
@@ -40,17 +45,17 @@ export default function (pi: ExtensionAPI) {
         if (!mimeType) {
           const path = join(tmpdir(), `pi-clipboard-${randomUUID()}.png`);
           writeFileSync(path, bytes);
-          ctx.ui.pasteToEditor(path);
+          paste(path);
           return;
         }
         const id = next++;
         images.set(id, { type: "image", data: Buffer.from(bytes).toString("base64"), mimeType });
-        ctx.ui.pasteToEditor(`[image ${id}]`);
+        paste(`[image ${id}]`);
         return;
       }
 
       const text = await clipboard.getText().catch(() => null);
-      if (text) ctx.ui.pasteToEditor(text);
+      if (text) paste(text);
     },
   });
 
