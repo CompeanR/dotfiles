@@ -11,7 +11,7 @@ Fetch the most recent image uploads and read them. Default source is all user up
 ## Run
 
 ```bash
-python3 "/home/compean/.claude/skills/latest-images/latest-images.py" <COUNT> [--type user|iphone|window|other|all] [--order oldest|newest]
+python3 "$HOME/.agents/skills/latest-images/latest-images.py" <COUNT> [--type user|iphone|window|other|all] [--order oldest|newest]
 ```
 
 - **COUNT** — how many of the latest images to return (default `1`). For a set the user
@@ -46,11 +46,11 @@ describe each image and transcribe important visible text.
 
 ```bash
 # The user says "the latest 6 are the screenshots" — grab that batch in capture order:
-python3 "/home/compean/.claude/skills/latest-images/latest-images.py" 6
+python3 "$HOME/.agents/skills/latest-images/latest-images.py" 6
 
 # Just the single newest upload of any kind:
-python3 "/home/compean/.claude/skills/latest-images/latest-images.py" 1 --type all
+python3 "$HOME/.agents/skills/latest-images/latest-images.py" 1 --type all
 
 # The last 3 remote-viewer screen grabs, newest first:
-python3 "/home/compean/.claude/skills/latest-images/latest-images.py" 3 --type window --order newest
+python3 "$HOME/.agents/skills/latest-images/latest-images.py" 3 --type window --order newest
 ```

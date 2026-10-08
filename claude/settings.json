@@ -11,7 +11,7 @@
   "model": "opus",
   "enabledPlugins": {
     "engram@engram": true,
-    "mattpocock-skills@claude-plugins-official": true,
+    "mattpocock-skills@claude-plugins-official": false,
     "swift-lsp@claude-plugins-official": true,
     "claudish-to-english@gvzdv-plugins": true
   },

@@ -17,11 +17,14 @@ Usage: $(basename "$0") [server [bootstrap|doctor|sandbox|help] [options]]
 EOF
 }
 
-# Shared agent skills, installed by `npx skills` into ~/.agents/skills (update: npx skills update -g).
-# Pi and Claude Code are left out: Pi reads ~/.agents/skills already, Claude uses its plugin.
+# ~/.agents/skills is the one skills folder every agent reads.
+# Upstream skills: installed there by `npx skills` (update: npx skills update -g).
+# Our own skills: agents/skills/ in this repo, linked in by link_agent_skills.
+# pr is ours (agents/skills/pr), so npx must not install the upstream one.
+# Pi reads ~/.agents/skills itself; Claude Code gets a link per skill in ~/.claude/skills.
 SKILLS=(
   ask-matt code-review codebase-design diagnosing-bugs domain-modeling grill-me grill-with-docs
-  grilling handoff implement implement-spec improve-codebase-architecture pr prototype research
+  grilling handoff implement implement-spec improve-codebase-architecture prototype research
   retro setup-matt-pocock-skills tdd teach to-questionnaire to-spec to-tickets triage wait-what
   wayfinder wizard writing-for-agents
 )
@@ -36,6 +39,38 @@ install_skills() {
     || echo "Warning: skills install failed"
 }
 
+# Link our skills into ~/.agents/skills, then every skill there into ~/.claude/skills.
+# ~/.claude/skills stays a real folder: the Claude app keeps its own synced/ in it.
+link_agent_skills() {
+  local mode="${1:-force}"   # force (desktop) | safe (server)
+  local status=0 skill link
+  mkdir -p ~/.agents/skills ~/.claude/skills
+
+  for skill in "$ROOT"/agents/skills/*/; do
+    skill="${skill%/}"
+    link=~/.agents/skills/"$(basename "$skill")"
+    if [[ -d "$link" && ! -L "$link" ]]; then
+      echo "refusing: $link is a real folder; run: npx skills remove -g $(basename "$skill")" >&2
+      status=1
+    elif [[ "$mode" == "safe" ]]; then
+      safe_link "$skill" "$link" || status=1
+    else
+      ln -sfn "$skill" "$link"
+    fi
+  done
+
+  for skill in ~/.agents/skills/*/; do
+    skill="${skill%/}"
+    link=~/.claude/skills/"$(basename "$skill")"
+    if [[ "$mode" == "safe" ]]; then
+      safe_link "$skill" "$link" || status=1
+    else
+      ln -sfn "$skill" "$link"
+    fi
+  done
+  return "$status"
+}
+
 # Claude Code config. Shared by both profiles.
 #
 # settings.json is COPIED, not symlinked: Claude Code rewrites it at runtime
@@ -44,22 +79,16 @@ install_skills() {
 install_claude() {
   local mode="${1:-force}"   # force (desktop) | safe (server)
   local status=0
-  mkdir -p ~/.claude/skills
+  mkdir -p ~/.claude
 
   if [[ "$mode" == "safe" ]]; then
     safe_link "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md || status=1
     safe_link "$ROOT/claude/agents" ~/.claude/agents || status=1
     safe_link "$ROOT/claude/themes" ~/.claude/themes || status=1
-    for skill in "$ROOT"/claude/skills/*/; do
-      safe_link "${skill%/}" ~/.claude/skills/"$(basename "$skill")" || status=1
-    done
   else
     ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
     ln -sfn "$ROOT/claude/agents" ~/.claude/agents
     ln -sfn "$ROOT/claude/themes" ~/.claude/themes
-    for skill in "$ROOT"/claude/skills/*/; do
-      ln -sfn "${skill%/}" ~/.claude/skills/"$(basename "$skill")"
-    done
   fi
 
   # Re-sync settings.json after every `git pull`.
@@ -130,6 +159,7 @@ install_desktop() {
   ln -sf "$ROOT/pi/settings.json" ~/.pi/agent/settings.json
   ln -sf "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json
   ln -sf "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json
+  ln -sf "$ROOT/pi/keybindings.json" ~/.pi/agent/keybindings.json
   ln -sfn "$ROOT/pi/agents" ~/.pi/agent/agents
   ln -sfn "$ROOT/pi/chains" ~/.pi/agent/chains
   ln -sfn "$ROOT/pi/extensions" ~/.pi/agent/extensions
@@ -160,6 +190,7 @@ install_desktop() {
 
   install_claude force
   install_skills
+  link_agent_skills force
 
   echo "Dotfiles have been symlinked!"
 }
@@ -253,6 +284,7 @@ install_server() {
 
   install_claude safe || status=1
   install_skills
+  link_agent_skills safe || status=1
 
   if (( status == 0 )); then
     echo "Server dotfiles have been symlinked!"
