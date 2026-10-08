@@ -62,7 +62,10 @@ link_agent_skills() {
   for skill in ~/.agents/skills/*/; do
     skill="${skill%/}"
     link=~/.claude/skills/"$(basename "$skill")"
-    if [[ "$mode" == "safe" ]]; then
+    if [[ -d "$link" && ! -L "$link" ]]; then
+      echo "refusing: $link is a real folder" >&2
+      status=1
+    elif [[ "$mode" == "safe" ]]; then
       safe_link "$skill" "$link" || status=1
     else
       ln -sfn "$skill" "$link"
