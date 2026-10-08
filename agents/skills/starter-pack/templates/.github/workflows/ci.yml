@@ -24,7 +24,7 @@ permissions:
 jobs:
     verify:
         name: Verify
-        runs-on: ubuntu-latest
+        runs-on: [self-hosted, mac-mini]
         timeout-minutes: 15
 
         steps:
@@ -42,7 +42,7 @@ jobs:
     scope:
         name: PR scope
         if: github.event_name == 'pull_request'
-        runs-on: ubuntu-latest
+        runs-on: [self-hosted, mac-mini]
         timeout-minutes: 5
         env:
             BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -94,7 +94,7 @@ jobs:
     door:
         name: Door
         if: github.event_name == 'pull_request'
-        runs-on: ubuntu-latest
+        runs-on: [self-hosted, mac-mini]
         timeout-minutes: 5
         permissions:
             contents: read

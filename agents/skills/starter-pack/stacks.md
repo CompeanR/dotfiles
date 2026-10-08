@@ -31,6 +31,28 @@ Placeholders filled from here:
 The architecture.md prompts (`{{How this stack ...}}`, rules, readability limits, dependency examples) take the stack's
 "Architecture values" below.
 
+## CI on the mac-mini
+
+The jobs run on the mac-mini as the user `compean`, on macOS ARM64, with the Homebrew tools installed there.
+
+- No `services:` and no `container:`: they need Docker on a Linux runner. Use the mac-mini's own services.
+- Postgres 17 (Homebrew): `postgres://compean@localhost:5432/<db>`, no password, pgvector available. Give CI its
+  own database, `<repo>_ci`. Never touch the live app databases.
+- Redis (Homebrew): `redis://localhost:6379/<n>`. Pick `n` from 1 to 15 where `redis-cli -n <n> dbsize` prints 0
+  and no other repo's `ci.yml` uses it. Database 0 holds live app queues.
+- The runner keeps state between runs. Reset it in a step before the tests:
+
+  ```yaml
+  - name: Fresh CI database and Redis
+    run: |
+        dropdb --if-exists --force <repo>_ci
+        createdb <repo>_ci
+        redis-cli -n <n> flushdb
+  ```
+
+- No `apt-get` and no `playwright install --with-deps`: the runner is macOS, and Chromium needs no system packages
+  there.
+
 ## Go
 
 Reference: `/Users/compean/Development/pr-manager`. Copy `.golangci.yml` from there and change the module path and the

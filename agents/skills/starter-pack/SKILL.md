@@ -16,6 +16,11 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 - Every stack exposes `make setup|fmt|check|brief`, plus `lint` and `test` where the stack has them. Hooks and CI call
   `make check`.
 - List files with `git ls-files`, since `ls` may be aliased.
+- CI runs on the user's mac-mini, a self-hosted runner, with `runs-on: [self-hosted, mac-mini]`. The Actions billing
+  limit blocks GitHub-hosted runners: their jobs fail before the first step, with the reason only in the run's
+  annotations. A personal account cannot share a runner between repos, so every repo registers its own. One runner
+  runs one job at a time.
+- A re-run reuses the workflow file of the commit it first ran on. After a `ci.yml` change, open PRs need a rebase.
 
 ## 1. Inspect
 
@@ -61,6 +66,26 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 - Create the labels the CI reads, when missing: `gh label create one-way --color B60205 --description "Owner merges after
   review; agents stop at the review loop"` and `gh label create scope-exception --color D93F0B --description "Owner-approved
   one-way PR over the 1,500 hand-line limit"`.
+- Register the repo's CI runner on the mac-mini, unless `gh api repos/CompeanR/<repo>/actions/runners --jq
+  '.runners[].name'` already lists `mac-mini-<repo>`. Run this on the mac-mini (`hostname -s` prints `Javiers-Mac-mini`;
+  from another machine, over `ssh mac-mini`). Run it as one script: a multi-line paste into the user's terminal
+  wraps and breaks the URL.
+
+  ```bash
+  set -e
+  repo=<repo>
+  v=$(gh api repos/actions/runner/releases/latest --jq '.tag_name | ltrimstr("v")')
+  mkdir -p ~/actions-runner/$repo && cd ~/actions-runner/$repo
+  curl -sfLo runner.tar.gz "https://github.com/actions/runner/releases/download/v$v/actions-runner-osx-arm64-$v.tar.gz"
+  tar xzf runner.tar.gz && rm runner.tar.gz
+  token=$(gh api -X POST repos/CompeanR/$repo/actions/runners/registration-token --jq .token)
+  ./config.sh --unattended --url https://github.com/CompeanR/$repo --token "$token" --name mac-mini-$repo --labels mac-mini
+  ./svc.sh install && ./svc.sh start
+  ```
+
+  Done when `gh api repos/CompeanR/<repo>/actions/runners --jq '.runners[] | "\(.name) \(.status)"'` prints
+  `mac-mini-<repo> online`. When `config.sh` says the folder is already configured but GitHub lists no runner,
+  run `./svc.sh uninstall` and `./config.sh remove --token "$token"` in it, then register again.
 - `git push -u origin chore/starter-pack`, then open the PR against the default branch. Write the body with the `pr` skill.
   The PR touches `.github/` and `.githooks/`, so it is one-way: the owner merges it.
 - `gh pr checks --watch`.
@@ -91,6 +116,6 @@ wiring and placeholder values are in `stacks.md`. Both live next to this file.
 
 ## 6. Report
 
-- List the PR links.
+- List the PR links and the runner (`mac-mini-<repo>` in `~/actions-runner/<repo>`).
 - List what is not enforced: no branch protection, hooks bypassed by `--no-verify`, CI advisory, and anything skipped
   (no tests, no linter, no build in CI).
