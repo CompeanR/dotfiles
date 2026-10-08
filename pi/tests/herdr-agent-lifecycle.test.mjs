@@ -212,15 +212,19 @@ test("a settled parent stays working in herdr while async subagents are busy", a
             seq,
             state,
           } = request.params;
-          const sessionMatches = visibleSessionPath !== undefined
-            && (sessionPath === undefined || sessionPath === visibleSessionPath);
-          const accepted = sessionMatches && seq > highestSequence;
-          if (accepted) {
-            highestSequence = seq;
-            visibleState = state;
-            visibleSessionPath = sessionPath;
-          }
-          reports.push({ accepted, method: request.method, seq, sessionPath, state });
+          // Herdr 0.9.3 ignores seq: the report that lands last wins. Idle lands late here,
+          // as the queued agent-state report can when it races the busy overlay's socket.
+          const apply = () => {
+            const accepted = visibleSessionPath !== undefined
+              && (sessionPath === undefined || sessionPath === visibleSessionPath);
+            if (accepted) {
+              visibleState = state;
+              visibleSessionPath = sessionPath;
+            }
+            reports.push({ accepted, method: request.method, seq, sessionPath, state });
+          };
+          if (state === "idle") setTimeout(apply, 50);
+          else apply();
         }
 
         socket.write(`${JSON.stringify({ id: request.id, result: {} })}\n`);
@@ -320,9 +324,8 @@ test("a settled parent stays working in herdr while async subagents are busy", a
   );
   events.emit("herdr:blocked", { active: false });
   await new Promise((resolve) => setTimeout(resolve, 100));
-  assert.equal(
-    visibleState,
-    "working",
+  await waitFor(
+    () => visibleState === "working",
     `clearing subagent attention idled herdr while a subagent was busy; reports: ${JSON.stringify(reports)}`,
   );
 

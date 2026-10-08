@@ -1,5 +1,7 @@
 // Sibling overlay for herdr-agent-state.ts (managed by herdr).
 // Treats pi-subagents `herdr:busy` as semantic working after the parent settles.
+// Herdr 0.9.3 ignores seq, so agent-state's idle can land after our working report;
+// while subagents are busy and the parent is idle we keep reasserting working.
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import net from "node:net";
 import { nextHerdrReportSequence } from "./lib/herdr-report-sequence.ts";
@@ -10,6 +12,7 @@ const socketEndpoint =
   process.platform === "win32" && socketPath ? `\\\\.\\pipe\\${socketPath}` : socketPath;
 const paneId = process.env.HERDR_PANE_ID;
 const source = "herdr:pi";
+const HOLD_MS = 500;
 
 function herdrEnabled(): boolean {
   return HERDR_ENV === "1" && !!socketEndpoint && !!paneId;
@@ -94,9 +97,27 @@ export default function (pi: ExtensionAPI) {
   let parentActive = false;
   let blockedCount = 0;
   let lastCtx: ExtensionContext | undefined;
+  let hold: ReturnType<typeof setInterval> | undefined;
 
   function remember(ctx: ExtensionContext | undefined): void {
     if (ctx) lastCtx = ctx;
+  }
+
+  function stopHold(): void {
+    if (hold) clearInterval(hold);
+    hold = undefined;
+  }
+
+  function syncHold(): void {
+    if (!busyActive || parentActive || blockedCount > 0) {
+      stopHold();
+      return;
+    }
+    reportAgent("working", lastCtx);
+    if (!hold) {
+      hold = setInterval(() => reportAgent("working", lastCtx), HOLD_MS);
+      hold.unref?.();
+    }
   }
 
   pi.events.on("herdr:busy", (data: { active?: boolean } | undefined) => {
@@ -104,23 +125,15 @@ export default function (pi: ExtensionAPI) {
     if (blockedCount > 0) return;
     if (busyActive) {
       reportAgent("working", lastCtx);
-      return;
-    }
-    if (!parentActive) {
+    } else if (!parentActive) {
       reportAgent("idle", lastCtx);
     }
+    syncHold();
   });
 
-  // herdr-agent-state republishes idle when the last block clears; this seq lands after it.
   pi.events.on("herdr:blocked", (data: { active?: boolean } | undefined) => {
-    if (data?.active) {
-      blockedCount += 1;
-      return;
-    }
-    blockedCount = Math.max(0, blockedCount - 1);
-    if (blockedCount === 0 && busyActive && !parentActive) {
-      reportAgent("working", lastCtx);
-    }
+    blockedCount = data?.active ? blockedCount + 1 : Math.max(0, blockedCount - 1);
+    syncHold();
   });
 
   pi.on("session_start", (_event, ctx) => {
@@ -129,11 +142,13 @@ export default function (pi: ExtensionAPI) {
     if (busyActive) {
       reportAgent("working", ctx);
     }
+    syncHold();
   });
 
   pi.on("agent_start", (_event, ctx) => {
     remember(ctx);
     parentActive = true;
+    syncHold();
   });
 
   pi.on("agent_settled", (_event, ctx) => {
@@ -141,9 +156,10 @@ export default function (pi: ExtensionAPI) {
     if (ctx?.isIdle?.() === true) {
       parentActive = false;
     }
-    // herdr-agent-state already queued idle; this seq must land after it.
-    if (busyActive && blockedCount === 0) {
-      reportAgent("working", ctx);
-    }
+    syncHold();
+  });
+
+  pi.on("session_shutdown", () => {
+    stopHold();
   });
 }
