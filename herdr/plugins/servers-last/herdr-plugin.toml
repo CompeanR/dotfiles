@@ -1,0 +1,10 @@
+id = "servers-last"
+name = "Servers last"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Keep the servers workspace at the bottom of the sidebar."
+platforms = ["linux", "macos"]
+
+[[events]]
+on = "workspace.created"
+command = ["python3", "servers_last.py"]

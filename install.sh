@@ -189,6 +189,7 @@ install_desktop() {
       herdr plugin install Tyru5/herdr-floax -y >/dev/null 2>&1 || true
     fi
     herdr plugin link "$ROOT/herdr/plugins/ram-status" --enabled >/dev/null 2>&1 || true
+    herdr plugin link "$ROOT/herdr/plugins/servers-last" --enabled >/dev/null 2>&1 || true
   fi
 
   install_claude force
@@ -280,6 +281,7 @@ install_server() {
   safe_link "$ROOT/herdr/agent-detection/pi.toml" ~/.config/herdr/agent-detection/pi.toml || status=1
   if command -v herdr >/dev/null 2>&1; then
     herdr plugin link "$ROOT/herdr/plugins/ram-status" --enabled >/dev/null 2>&1 || true
+    herdr plugin link "$ROOT/herdr/plugins/servers-last" --enabled >/dev/null 2>&1 || true
   fi
 
   # VerseGuard Metro user unit (link only; do not enable/start)
