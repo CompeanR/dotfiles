@@ -24,7 +24,8 @@
     "npm:@juicesharp/rpiv-todo",
     "npm:pi-btw",
     "npm:pi-undo-redo",
-    "npm:@gotgenes/pi-anthropic-auth"
+    "npm:@gotgenes/pi-anthropic-auth",
+    "npm:@gotgenes/pi-permission-system"
   ],
   "subagents": {
     "disableBuiltins": true,

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gotgenes/pi-permission-system/main/schemas/permissions.schema.json",
+  "permissionReviewLog": false,
+  "yoloMode": false,
+  "permission": {
+    "*": "allow",
+    "path": {
+      "*": "allow",
+      "~/.ssh/*": "deny",
+      "~/.ssh": "deny",
+      "~/.aws/*": "deny",
+      "~/.aws": "deny",
+      "~/.gnupg/*": "deny",
+      "~/.gnupg": "deny",
+      "~/.pi/agent/auth.json": "deny",
+      "~/.pi/agent/mcp-auth.json": "deny",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      "*.env.example": "allow"
+    },
+    "bash": {
+      "*": "allow",
+      "sudo *": "ask",
+      "rm -rf *": "ask",
+      "rm -fr *": "ask",
+      "git push *": "ask",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "git reset --hard*": "ask",
+      "git clean *": "ask",
+      "git branch -D *": "ask",
+      "gh pr merge *": "ask",
+      "gh repo delete *": "deny"
+    },
+    "external_directory": "allow"
+  }
+}
