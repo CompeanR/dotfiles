@@ -36,19 +36,40 @@ The architecture.md prompts (`{{How this stack ...}}`, rules, readability limits
 The jobs run on the mac-mini as the user `compean`, on macOS ARM64, with the Homebrew tools installed there.
 
 - No `services:` and no `container:`: they need Docker on a Linux runner. Use the mac-mini's own services.
-- Postgres 17 (Homebrew): `postgres://compean@localhost:5432/<db>`, no password, pgvector available. Give CI its
-  own database, `<repo>_ci`. Never touch the live app databases.
-- Redis (Homebrew): `redis://localhost:6379/<n>`. Pick `n` from 1 to 15 where `redis-cli -n <n> dbsize` prints 0
-  and no other repo's `ci.yml` uses it. Database 0 holds live app queues.
-- The runner keeps state between runs. Reset it in a step before the tests:
+- Two runners run jobs side by side, so each runner gets its own slot: slot 1 for `mac-mini-<repo>`, slot 2 for
+  `mac-mini-<repo>-2`. Everything a job resets or binds is per slot.
+- Postgres 17 (Homebrew): `postgres://compean@localhost:5432/<db>`, no password, pgvector available. CI uses
+  `<repo>_ci_<slot>`. Never touch the live app databases.
+- Redis (Homebrew): `redis://localhost:6379/<n>`. Pick two adjacent databases `<n>` and `<n>+1` from 1 to 15 where
+  `redis-cli -n <n> dbsize` prints 0 and no other repo's `ci.yml` uses them. Database 0 holds live app queues.
+- A test that binds a fixed port reads it from the environment; the slot step sets it.
+- The runner keeps state between runs. Pick the slot right after checkout and reset its state before the tests. Set
+  these variables only in the slot step: a job-level `env:` value overrides `$GITHUB_ENV`.
 
   ```yaml
+  - name: Give this runner its own database, Redis db and ports
+    run: |
+        slot=${RUNNER_NAME#mac-mini-${GITHUB_REPOSITORY#*/}-}
+        case "$slot" in '' | *[!0-9]*) slot=1 ;; esac
+        {
+            echo "CI_DATABASE=<repo>_ci_$slot"
+            echo "DATABASE_URL=postgres://compean@localhost:5432/<repo>_ci_$slot"
+            echo "REDIS_DB=$((<n> - 1 + slot))"
+            echo "REDIS_URL=redis://localhost:6379/$((<n> - 1 + slot))"
+            echo "<NAME>_PORT=$((<base> + 10 * slot))"
+        } | tee -a "$GITHUB_ENV"
+
   - name: Fresh CI database and Redis
     run: |
-        dropdb --if-exists --force <repo>_ci
-        createdb <repo>_ci
-        redis-cli -n <n> flushdb
+        dropdb --if-exists --force "$CI_DATABASE"
+        createdb "$CI_DATABASE"
+        redis-cli -n "$REDIS_DB" flushdb
   ```
+
+- Use the tools already installed on the mac-mini, installing a missing one with `HOMEBREW_NO_AUTO_UPDATE=1 brew
+  install <tool>`. Both runners share one Homebrew, and a setup action that runs `brew update` (e.g.
+  `rhysd/action-setup-vim`) fails when the other runner holds its lock.
+- Both runners share the CPU: give browser and timing waits in tests seconds, not milliseconds.
 
 - No `apt-get` and no `playwright install --with-deps`: the runner is macOS, and Chromium needs no system packages
   there.
