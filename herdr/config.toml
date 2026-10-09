@@ -68,7 +68,7 @@ close_pane = ["prefix+x", "alt+q"]
 next_workspace = "shift+alt+]"
 previous_workspace = "shift+alt+["
 
-# Free prefix+tab from default pane cycle so last-workspace can own it.
+# Free prefix+tab from default pane cycle so last-location can own it.
 cycle_pane_next = ""
 
 # Delete the focused worktree checkout + branch and close its workspace, no confirmation.
@@ -86,12 +86,12 @@ type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/split_nvim.sh\""
 description = "Split right with nvim"
 
-# Last-used workspace toggle (single-slot MRU script).
+# Jump back to the previously focused tab, in any Space (plugins/last-location).
 [[keys.command]]
 key = "prefix+tab"
-type = "shell"
-command = "bash \"$HOME/dotfiles/herdr/scripts/toggle_last_workspace.sh\""
-description = "Toggle last workspace"
+type = "plugin_action"
+command = "last-location.toggle"
+description = "Last location"
 
 # vim-herdr-navigation: Ctrl-h/k/l only. Bare ctrl+j is newline (Pi/readline); use
 # prefix+j or nvim edge handoff for pane-down.

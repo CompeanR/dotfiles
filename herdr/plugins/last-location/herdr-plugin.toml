@@ -1,0 +1,20 @@
+id = "last-location"
+name = "Last location"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "prefix+tab: jump back to the previously focused tab, in any Space."
+platforms = ["linux", "macos"]
+
+[[events]]
+on = "tab.focused"
+command = ["python3", "last_location.py"]
+
+[[events]]
+on = "workspace.focused"
+command = ["python3", "last_location.py"]
+
+[[actions]]
+id = "toggle"
+title = "Last location"
+description = "Focus the previously focused tab."
+command = ["python3", "last_location.py", "toggle"]
