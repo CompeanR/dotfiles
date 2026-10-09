@@ -42,7 +42,9 @@ The jobs run on the mac-mini as the user `compean`, on macOS ARM64, with the Hom
   `<repo>_ci_<slot>`. Never touch the live app databases.
 - Redis (Homebrew): `redis://localhost:6379/<n>`. Pick two adjacent databases `<n>` and `<n>+1` from 1 to 15 where
   `redis-cli -n <n> dbsize` prints 0 and no other repo's `ci.yml` uses them. Database 0 holds live app queues.
-- A test that binds a fixed port reads it from the environment; the slot step sets it.
+- Every repo's runners share the mac-mini, so ports come from the OS: a test server listens on port 0 and reads back
+  the port it got. When a tool needs the port up front (Playwright's `webServer`), the slot step asks the OS for a
+  free one and exports it.
 - The runner keeps state between runs. Pick the slot right after checkout and reset its state before the tests. Set
   these variables only in the slot step: a job-level `env:` value overrides `$GITHUB_ENV`.
 
@@ -56,7 +58,7 @@ The jobs run on the mac-mini as the user `compean`, on macOS ARM64, with the Hom
             echo "DATABASE_URL=postgres://compean@localhost:5432/<repo>_ci_$slot"
             echo "REDIS_DB=$((<n> - 1 + slot))"
             echo "REDIS_URL=redis://localhost:6379/$((<n> - 1 + slot))"
-            echo "<NAME>_PORT=$((<base> + 10 * slot))"
+            echo "<NAME>_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1])')"
         } | tee -a "$GITHUB_ENV"
 
   - name: Fresh CI database and Redis
