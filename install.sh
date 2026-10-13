@@ -88,10 +88,14 @@ install_claude() {
     safe_link "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md || status=1
     safe_link "$ROOT/claude/agents" ~/.claude/agents || status=1
     safe_link "$ROOT/claude/themes" ~/.claude/themes || status=1
+    mkdir -p ~/.claude/hooks
+    safe_link "$ROOT/claude/hooks/moshi-alert.py" ~/.claude/hooks/moshi-alert.py || status=1
   else
     ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
     ln -sfn "$ROOT/claude/agents" ~/.claude/agents
     ln -sfn "$ROOT/claude/themes" ~/.claude/themes
+    mkdir -p ~/.claude/hooks
+    ln -sf "$ROOT/claude/hooks/moshi-alert.py" ~/.claude/hooks/moshi-alert.py
   fi
 
   # Re-sync settings.json after every `git pull`.

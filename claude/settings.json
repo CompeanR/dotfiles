@@ -2,7 +2,9 @@
   "env": {
     "CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS": "2000",
     "CLAUDISH_PROVIDER": "openai",
-    "CLAUDISH_MODEL": "gpt-5.6-luna"
+    "CLAUDISH_MODEL": "gpt-5.6-luna",
+    "MOSHI_LONG_TURN_SECONDS": "1200",
+    "MOSHI_NOTIFY_TYPES": ""
   },
   "permissions": {
     "allow": ["mcp__plugin_engram_engram__*"],
@@ -42,5 +44,40 @@
   "tui": "fullscreen",
   "theme": "custom:matte-black",
   "remoteControlAtStartup": false,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/moshi-alert.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/moshi-alert.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/moshi-alert.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
 }
