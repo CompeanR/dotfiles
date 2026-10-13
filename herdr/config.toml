@@ -64,7 +64,7 @@ new_tab = ["prefix+c", "alt+w"]
 # Close focused pane. alt+q instant twin of prefix+x.
 close_pane = ["prefix+x", "alt+q"]
 
-# prefix+shift+n is a popup (below) that also names the Space's first tab.
+# prefix+shift+n is a popup (below) that names the Space's first tab.
 new_workspace = ""
 
 # Spaces (workspaces): shift+alt+] / [ — vertical list, same family as tab brackets.
@@ -82,7 +82,7 @@ type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/remove_worktree.sh\""
 description = "Delete worktree checkout"
 
-# New Space in the current cwd; prompts for the Space name and its first tab name.
+# New Space in the current cwd; prompts for its first tab name.
 [[keys.command]]
 key = "prefix+shift+n"
 type = "popup"
