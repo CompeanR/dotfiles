@@ -90,12 +90,18 @@ install_claude() {
     safe_link "$ROOT/claude/themes" ~/.claude/themes || status=1
     mkdir -p ~/.claude/hooks
     safe_link "$ROOT/claude/hooks/moshi-alert.py" ~/.claude/hooks/moshi-alert.py || status=1
+    for skill in "$ROOT"/claude/skills/*/; do
+      safe_link "${skill%/}" ~/.claude/skills/"$(basename "$skill")" || status=1
+    done
   else
     ln -sf "$ROOT/claude/CLAUDE.md" ~/.claude/CLAUDE.md
     ln -sfn "$ROOT/claude/agents" ~/.claude/agents
     ln -sfn "$ROOT/claude/themes" ~/.claude/themes
     mkdir -p ~/.claude/hooks
     ln -sf "$ROOT/claude/hooks/moshi-alert.py" ~/.claude/hooks/moshi-alert.py
+    for skill in "$ROOT"/claude/skills/*/; do
+      ln -sfn "${skill%/}" ~/.claude/skills/"$(basename "$skill")"
+    done
   fi
 
   # Re-sync settings.json after every `git pull`.

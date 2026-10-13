@@ -211,7 +211,7 @@ def run_cli(action):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
-        sys.exit(run_cli(sys.argv[1].lower()))
+        sys.exit(run_cli(sys.argv[-1].lower()))
     try:
         run_hook()
     except Exception as error:
