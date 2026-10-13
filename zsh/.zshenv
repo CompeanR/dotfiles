@@ -22,3 +22,6 @@ export PATH
 if [[ -n $HERDR_PANE_ID ]]; then
   pi() { MOSH_CONNECTION="${MOSH_CONNECTION:-herdr}" command pi "$@" }
 fi
+
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin"
