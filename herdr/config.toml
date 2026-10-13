@@ -13,8 +13,8 @@ surface0 = "#515151"
 [ui]
 accent = "#fabd2f"
 agent_panel_sort = "priority"
-# Create tabs immediately with generated names (no name prompt).
-prompt_new_tab_name = false
+# Ask for a name when opening a new tab.
+prompt_new_tab_name = true
 # prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
 # hidden = zero width. Flip mode with ctrl+alt+b.
 sidebar_collapsed_mode = "hidden"
@@ -59,7 +59,7 @@ previous_tab = ["prefix+p", "alt+["]
 # (prefix+w, then a number) already covers indexed Space jumps, and binding it
 # here is what stole the numbers from tabs.
 switch_tab = "prefix+1..9"
-# New tab with generated name (no prompt). alt+w instant twin of prefix+c.
+# New tab, prompts for a name. alt+w instant twin of prefix+c.
 new_tab = ["prefix+c", "alt+w"]
 # Close focused pane. alt+q instant twin of prefix+x.
 close_pane = ["prefix+x", "alt+q"]
