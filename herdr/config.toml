@@ -82,7 +82,8 @@ type = "shell"
 command = "bash \"$HOME/dotfiles/herdr/scripts/remove_worktree.sh\""
 description = "Delete worktree checkout"
 
-# New Space in the current cwd; prompts for its first tab name.
+# New Space in the current cwd; prompts for its first tab name like the new-tab
+# prompt. Esc closes it without creating anything.
 [[keys.command]]
 key = "prefix+shift+n"
 type = "popup"
