@@ -1,0 +1,7 @@
+{
+  "name": "findings",
+  "version": "0.1.0",
+  "description": "Keeps the important findings of a long task in a pane and shapes the final answer around them",
+  "author": { "name": "CompeanR" },
+  "types": "./types/index.d.ts"
+}
