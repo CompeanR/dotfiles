@@ -65,6 +65,23 @@ test('Do it sends one finding and removes it; Discuss drafts a decision', async 
   expect(await card.find({ key: 'act-2' })).toBeDefined()
 })
 
+test('Skip it removes a finding without sending anything', async ($, on) => {
+  const submitted: string[] = []
+  on('prompt.submit', ($, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+
+  await $.tool.call({ ...NOTE, kind: 'next', text: 'Add the plugin dir' })
+  await $.tool.call({ ...NOTE, kind: 'next', text: 'Port the skill' })
+  const card = await $.ui.mount({ ...CARD, surface: 'terminal' })
+  await card.press({ key: 'skip-1' })
+
+  expect(submitted).toEqual([])
+  expect(await card.find({ key: 'act-1' })).toBeUndefined()
+  expect(await card.find({ key: 'act-2' })).toBeDefined()
+})
+
 test('digest puts a plain summary at the top of the card, and Clear removes it', async ($, on) => {
   on('ui.render', ($, e) => h($.ui.resolve(e).Text, {}, 'engine band') as never)
 

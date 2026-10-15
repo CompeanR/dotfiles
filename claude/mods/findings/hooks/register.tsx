@@ -220,6 +220,7 @@ export const register: Register = on => {
       await update($, notes, all => all.filter(other => other.id !== one.id))
       await $.prompt.submit({ text, asUser: true })
     }
+    const skip = (one: Finding) => update($, notes, all => all.filter(other => other.id !== one.id))
     const copy = async (surface: typeof e.surface) => {
       const text = digest === '' ? toMarkdown(list) : `**SUMMARY**\n${digest}\n\n${toMarkdown(list)}`
       const copied = await $.ui.copy({ text: text.trim(), surface })
@@ -262,8 +263,11 @@ export const register: Register = on => {
                     </Box>
                   </Box>
                   {group.button !== undefined && (
-                    <Box marginLeft={2}>
+                    <Box flexDirection="row" gap={2} marginLeft={2}>
                       <Button key={`act-${one.id}`} label={group.button} hotkey={hotkey} onPress={() => act(one)} />
+                      {group.button === 'Do it' && (
+                        <Button key={`skip-${one.id}`} label="Skip it" onPress={() => skip(one)} />
+                      )}
                     </Box>
                   )}
                 </Box>
