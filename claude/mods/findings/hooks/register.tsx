@@ -6,8 +6,10 @@ import type { Finding } from '../types'
 const TOOL = 'mcp__findings__note'
 
 const notes = atom({ plugin: 'findings', key: 'notes' } as const, [])
-const isExpanded = atom({ plugin: 'findings', key: 'isExpanded' } as const, false)
-const isDismissed = atom({ plugin: 'findings', key: 'isDismissed' } as const, false)
+const isPaneShown = atom({ plugin: 'findings', key: 'isPaneShown' } as const, false)
+const isAutoOpenOff = atom({ plugin: 'findings', key: 'isAutoOpenOff' } as const, false)
+
+const PANE = 'findings'
 
 const KINDS = [
   { kind: 'needs-you', label: 'NEEDS YOU', mark: '!', color: 'warning' },
@@ -48,16 +50,19 @@ const bullets = (list: readonly Finding[], kind: Finding['kind']) =>
     .join('\n')
 
 export const register: Register = on => {
+  let isFullscreen = false
+  let hasAutoOpened = false
+
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'findings',
-      description: 'Show or hide the findings above the prompt, or clear them with /findings clear',
+      description: 'Toggle the Findings pane, or clear it with /findings clear',
       argumentHint: '[clear]',
     })
     await $.tool.register({
       name: 'note',
       description:
-        'Record a finding the user must not lose during a multi-step task. It shows above their prompt right away.',
+        'Record a finding the user must not lose during a multi-step task. It shows in their Findings pane right away.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -104,15 +109,6 @@ export const register: Register = on => {
     return next({ ...e, instructions: e.instructions ? `${e.instructions}\n\n${keep}` : keep })
   })
 
-  on('turn.complete', async ($, e, next) => {
-    const hasNeeds = (await read($, notes)).some(one => one.kind === 'needs-you')
-    if (e.agentId === undefined && hasNeeds && !(await read($, isDismissed))) {
-      await update($, isExpanded, () => true)
-    }
-
-    return next(e)
-  })
-
   on('tool.call', { tool: TOOL }, async ($, e) => {
     const kind = KINDS.find(group => group.kind === e.kind)?.kind
     const text = typeof e.text === 'string' ? e.text.trim() : ''
@@ -121,8 +117,21 @@ export const register: Register = on => {
     }
 
     await update($, notes, list => [...list, { id: `${list.length}-${text.slice(0, 24)}`, kind, text }])
-    if (kind === 'needs-you') {
-      await update($, isDismissed, () => false)
+
+    const shouldAutoOpen =
+      isFullscreen && !hasAutoOpened && !(await read($, isPaneShown)) && !(await read($, isAutoOpenOff))
+    if (shouldAutoOpen) {
+      hasAutoOpened = true
+      try {
+        const opened = await $.ui.open({ id: PANE, title: 'Findings' })
+        if (opened.isPlaced) {
+          await update($, isPaneShown, () => true)
+        } else {
+          await $.ui.close({ id: PANE })
+        }
+      } catch {
+        // No surface draws panes here (claude -p, SDK); the note still counts.
+      }
     }
 
     const result = e.agentId === undefined ? 'Noted.' : 'Noted for the user. Also include it in your final report.'
@@ -130,50 +139,68 @@ export const register: Register = on => {
     return { result }
   }).catch(() => ({ deny: 'The finding could not be recorded.' }))
 
+  on('ui.close', { id: PANE }, async ($, e, next) => {
+    await update($, isPaneShown, () => false)
+    if (e.origin.kind === 'person') {
+      await update($, isAutoOpenOff, () => true)
+    }
+
+    return next(e)
+  })
+
   on('command.run', { command: 'findings' }, async ($, e) => {
     if (e.args.trim() === 'clear') {
       await update($, notes, () => [])
 
       return { text: 'Findings cleared.' }
     }
-    const expanded = !(await read($, isExpanded))
-    await update($, isExpanded, () => expanded)
-    if (!expanded) {
-      await update($, isDismissed, () => true)
-    }
+    if (await read($, isPaneShown)) {
+      await update($, isAutoOpenOff, () => true)
+      await $.ui.close({ id: PANE })
 
-    return { text: expanded ? 'Findings shown.' : 'Findings hidden.' }
+      return { text: 'Findings pane closed.' }
+    }
+    const opened = await $.ui.open({ id: PANE, title: 'Findings' })
+    await update($, isPaneShown, () => opened.isPlaced)
+
+    return { text: opened.isPlaced ? 'Findings pane opened.' : 'The Findings pane cannot be shown here.' }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    isFullscreen = e.viewport?.isFullscreen === true
     const list = await read($, notes)
-    if (e.props.hasSurvey || list.length === 0) {
+    if (e.props.hasSurvey || list.length === 0 || (await read($, isPaneShown))) {
       return next(e)
     }
 
     const { Box, Text, Button } = $.ui.resolve(e)
     const needs = list.filter(one => one.kind === 'needs-you')
-    const show = () => update($, isExpanded, () => true)
-    const hide = async () => {
-      await update($, isExpanded, () => false)
-      await update($, isDismissed, () => true)
+    const latest = list[list.length - 1]
+    const openPane = async () => {
+      const opened = await $.ui.open({ id: PANE, title: 'Findings' })
+      await update($, isPaneShown, () => opened.isPlaced)
     }
 
-    if (!(await read($, isExpanded))) {
-      const latest = list[list.length - 1]
-
-      return (
-        <Box flexDirection="row" gap={2}>
-          <Box flexShrink={1}>
-            <Text wrap="truncate-end">
-              Findings <Text dimColor>{list.length} noted</Text>
-              {needs.length > 0 && <Text color="warning">{`  ! ${needs.length} need you`}</Text>}
-              <Text dimColor>{`  latest: ${latest?.text ?? ''}`}</Text>
-            </Text>
-          </Box>
-          <Button key="show" label="Show" hotkey="s" onPress={show} />
+    return (
+      <Box flexDirection="row" gap={2}>
+        <Box flexShrink={1}>
+          <Text wrap="truncate-end">
+            Findings <Text dimColor>{list.length} noted</Text>
+            {needs.length > 0 && <Text color="warning">{`  ! ${needs.length} need you`}</Text>}
+            <Text dimColor>{`  latest: ${latest?.text ?? ''}`}</Text>
+          </Text>
         </Box>
-      )
+        <Button key="open" label="Open" hotkey="o" onPress={openPane} />
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const { Box, Text, Button } = $.ui.resolve(e)
+    const list = await read($, notes)
+
+    if (list.length === 0) {
+      return <Text dimColor>No findings yet. They show up here as Claude notes them.</Text>
     }
 
     const send = async (text: string, toast: string) => {
@@ -195,7 +222,10 @@ export const register: Register = on => {
     }
 
     return (
-      <Box flexDirection="column">
+      <Box flexDirection="column" gap={1}>
+        <Text weight="bold">
+          Findings <Text dimColor>{list.length}</Text>
+        </Text>
         {byKind(list).map(group => (
           <Box flexDirection="column">
             <Text color={group.color} weight="bold">{`${group.label} · ${group.items.length}`}</Text>
@@ -223,7 +253,6 @@ export const register: Register = on => {
         <Box flexDirection="row" gap={2}>
           <Button key="copy" label="Copy" hotkey="c" onPress={press => copy(press.surface)} />
           <Button key="clear" label="Clear" hotkey="x" onPress={() => update($, notes, () => [])} />
-          <Button key="hide" label="Hide" hotkey="h" onPress={hide} />
         </Box>
       </Box>
     )

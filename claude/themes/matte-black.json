@@ -32,6 +32,7 @@
     "diffRemovedWord": "#5c3030",
     "userMessageBackground": "#212121",
     "userMessageBackgroundHover": "#292929",
+    "composerSidebarBackground": "#3a3a3a",
     "bashMessageBackgroundColor": "#212121",
     "memoryBackgroundColor": "#212121",
     "selectionBg": "#515151",

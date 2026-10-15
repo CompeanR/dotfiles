@@ -6,8 +6,8 @@ declare module 'claude-code' {
   interface PluginState {
     findings: {
       notes: Finding[]
-      isExpanded: boolean
-      isDismissed: boolean
+      isPaneShown: boolean
+      isAutoOpenOff: boolean
     }
   }
 }

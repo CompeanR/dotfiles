@@ -14,6 +14,20 @@ const BAND = {
   },
 } as const
 
+const PANE = {
+  plugin: 'findings',
+  component: 'Pane',
+  requestId: 'findings',
+  props: {
+    title: 'Findings',
+    isFocused: false,
+    bodyColumns: 60,
+    placement: 'dock',
+    scroll: { offset: 0, bodyRows: 30 },
+    view: {},
+  },
+} as const
+
 const COMPOSE: PromptComposeInput = {
   model: 'claude-opus-5-5',
   promptModel: 'claude-opus-5-5',
@@ -25,28 +39,19 @@ const COMPOSE: PromptComposeInput = {
 
 const NOTE = { tool: 'mcp__findings__note', tool_use_id: 'u1', kind: 'needs-you', text: 'Set DATABASE_URL' } as const
 
-test('a note shows collapsed, then grouped once shown', async $ => {
+test('a note shows in the pane, with a one-line summary above the prompt', async $ => {
   const result = await $.tool.call(NOTE)
   expect(result.deny).toBeUndefined()
 
   for (const surface of ['terminal', 'desktop'] as const) {
+    const pane = await $.ui.mount({ ...PANE, surface })
+    expect(await pane.find({ text: /NEEDS YOU · 1/ })).toBeDefined()
+    await pane.unmount()
     const band = await $.ui.mount({ ...BAND, surface })
     expect(await band.find({ text: /1 need you/ })).toBeDefined()
-    await band.press({ key: 'show' })
-    expect(await band.find({ text: /NEEDS YOU · 1/ })).toBeDefined()
-    await band.press({ key: 'hide' })
+    expect(await band.find({ key: 'open' })).toBeDefined()
     await band.unmount()
   }
-})
-
-test('a turn that leaves something for the person shows the findings', async ($, on) => {
-  on('turn.complete', ($, e) => ({ text: e.answer }))
-
-  await $.tool.call(NOTE)
-  await $.turn.complete({ answer: 'done', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
-
-  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await band.find({ key: 'do-needs' })).toBeDefined()
 })
 
 test('Do it, Apply them and Discuss hand the findings to Claude', async ($, on) => {
@@ -63,11 +68,10 @@ test('Do it, Apply them and Discuss hand the findings to Claude', async ($, on) 
 
   await $.tool.call(NOTE)
   await $.tool.call({ ...NOTE, kind: 'decision', text: 'Keep per-feature folders' })
-  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await band.press({ key: 'show' })
-  await band.press({ key: 'do-needs' })
-  await band.press({ key: 'apply-decisions' })
-  await band.press({ key: 'discuss-decisions' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await pane.press({ key: 'do-needs' })
+  await pane.press({ key: 'apply-decisions' })
+  await pane.press({ key: 'discuss-decisions' })
 
   expect(submitted).toEqual([
     'Go ahead and do these yourself:\n- Set DATABASE_URL',
@@ -84,13 +88,12 @@ test('a note with an unknown kind is refused', async $ => {
 
 test('/clear empties the findings', async ($, on) => {
   on('session.end', ($, e) => ({ sessionId: e.sessionId }))
-  on('ui.render', ($, e) => h($.ui.resolve(e).Text, {}, 'engine band') as never)
 
   await $.tool.call(NOTE)
   await $.session.end({ reason: 'clear', sessionId: 's1', resume: { isResumable: false } } as never)
 
-  const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await band.find({ text: /engine band/ })).toBeDefined()
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect(await pane.find({ text: /No findings yet/ })).toBeDefined()
 })
 
 test('compaction is told to keep the findings', async ($, on) => {
