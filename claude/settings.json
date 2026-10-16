@@ -11,12 +11,12 @@
     "allow": ["mcp__plugin_engram_engram__*"],
     "defaultMode": "auto"
   },
+  "ultracode": true,
   "model": "opus",
   "enabledPlugins": {
     "engram@engram": true,
     "mattpocock-skills@claude-plugins-official": false,
-    "swift-lsp@claude-plugins-official": true,
-    "claudish-to-english@gvzdv-plugins": true
+    "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "engram": {
