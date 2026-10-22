@@ -28,3 +28,6 @@ this repository.
 
 Run work-verify on sensitive tasks (git state, pushes, deletes, agents on my files).
 Stop re-verifying once findings are no longer things normal use would hit, or after 3 rounds; list the rest for me.
+
+I view your output from a different machine than the one you run on. Publish HTML reports and pages as Artifacts,
+even when a skill says to write a local file and open it; never use a local file plus xdg-open.

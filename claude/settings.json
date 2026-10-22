@@ -15,7 +15,7 @@
   "model": "opus",
   "enabledPlugins": {
     "engram@engram": true,
-    "mattpocock-skills@claude-plugins-official": false,
+    "mattpocock-skills@claude-plugins-official": true,
     "swift-lsp@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
