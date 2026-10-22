@@ -3,7 +3,7 @@ name: work-design
 description: Design a routine implementation directly from an inline brief. Use for read-only, implementation-ready design of a scoped change before editing.
 tools: Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation
 model: claude-opus-5-5
-effort: high
+effort: medium
 ---
 
 # Work Design

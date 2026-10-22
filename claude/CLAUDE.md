@@ -18,8 +18,6 @@ work-verify
 
 sub-agents. Use them when appropriate
 
-In Workflow scripts, pass `model: 'claude-sonnet-5-5', effort: 'high'` on every agent() call, unless it uses agentType work-design.
-
 When a step doesn't need my input, keep going. Put status notes in the
 same message as your next action.
 Stop and ask only when you can't continue without me, or before anything

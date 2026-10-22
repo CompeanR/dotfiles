@@ -3,7 +3,7 @@ name: work-verify
 description: Independently verify a routine change against its inline requirements. Use to independently verify a finished change against its acceptance criteria.
 tools: Read, Grep, Glob, Bash
 model: claude-opus-5-5
-effort: high
+effort: medium
 ---
 
 # Work Verify
