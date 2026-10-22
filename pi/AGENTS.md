@@ -15,3 +15,6 @@ work-apply
 work-verify
 
 sub-agents. Use them when appropriate
+Send big tasks to sub-agents. Do not block our main thread with huge tasks.
+
+Run work-verify on sensitive tasks (git state, pushes, deletes, agents on my files).

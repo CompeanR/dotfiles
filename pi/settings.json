@@ -1,5 +1,5 @@
 {
-  "defaultModel": "auto",
+  "defaultModel": "claude-opus-5-5",
   "defaultProvider": "anthropic",
   "defaultThinkingLevel": "high",
   "defaultTools": [
@@ -14,7 +14,7 @@
     "openai-codex/gpt-6.1-sol"
   ],
   "hideThinkingBlock": true,
-  "lastChangelogVersion": "1.0.1",
+  "lastChangelogVersion": "1.3.0",
   "packages": [
     "npm:pi-web-access",
     "npm:gentle-engram",
@@ -25,7 +25,7 @@
     "npm:pi-btw",
     "npm:pi-undo-redo",
     "npm:@gotgenes/pi-anthropic-auth",
-    "npm:@gotgenes/pi-permission-system"
+    "npm:pi-workflow-engine"
   ],
   "subagents": {
     "disableBuiltins": true,
@@ -33,8 +33,8 @@
     "globalConcurrencyLimit": 5,
     "agentOverrides": {
       "work-apply": {
-        "model": "anthropic/claude-sonnet-5-5",
-        "thinking": "high",
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "medium",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",
@@ -58,7 +58,7 @@
       },
       "work-verify": {
         "model": "anthropic/claude-opus-5-5",
-        "thinking": "medium",
+        "thinking": "high",
         "inheritProjectContext": false,
         "inheritSkills": false,
         "defaultContext": "fresh",

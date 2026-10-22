@@ -1,5 +1,5 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { appendFile, chmod, mkdir, readFile } from "node:fs/promises";
+import { appendFile, chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -25,6 +25,28 @@ function tokenPath(): string {
     process.env.MOSHI_PUSH_TOKEN_FILE ??
     join(homedir(), ".config", "moshi", "push-token")
   );
+}
+
+function alwaysOnPath(): string {
+  return join(homedir(), ".config", "moshi", "push-always");
+}
+
+async function readAlwaysOn(): Promise<boolean> {
+  try {
+    await readFile(alwaysOnPath());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function writeAlwaysOn(on: boolean): Promise<void> {
+  if (on) {
+    await mkdir(dirname(alwaysOnPath()), { recursive: true, mode: 0o700 });
+    await writeFile(alwaysOnPath(), "on\n", { mode: 0o600 });
+  } else {
+    await rm(alwaysOnPath(), { force: true });
+  }
 }
 
 function logPath(): string {
@@ -128,7 +150,33 @@ async function sendPush(
 export default function moshiCompletionAlert(pi: ExtensionAPI): void {
   const longTurnThresholdMs = configuredThresholdMs();
   let pushNext = false;
+  let pushAlways = false;
+  void readAlwaysOn().then((on) => {
+    pushAlways = on;
+  });
   let runStartedAt: number | undefined;
+
+  pi.registerCommand("push", {
+    description: "Moshi push after every Pi turn: /push on|off|status",
+    handler: async (args, ctx) => {
+      const action = args.trim().toLowerCase() || "status";
+
+      if (action === "on" || action === "off") {
+        pushAlways = action === "on";
+        await writeAlwaysOn(pushAlways);
+        ctx.ui.notify(`Moshi push after every turn: ${action}`, "info");
+        await writeLog("info", `push_always_${action}`);
+        return;
+      }
+
+      if (action === "status") {
+        ctx.ui.notify(`Moshi push after every turn: ${pushAlways ? "on" : "off"}`, "info");
+        return;
+      }
+
+      ctx.ui.notify("Usage: /push on|off|status", "warning");
+    },
+  });
   let prompt = "";
   let lastAssistantMessage = "";
 
@@ -185,7 +233,7 @@ export default function moshiCompletionAlert(pi: ExtensionAPI): void {
   pi.on("agent_settled", async (_event, ctx) => {
     const startedAt = runStartedAt;
     const elapsedMs = startedAt === undefined ? 0 : Date.now() - startedAt;
-    const explicit = pushNext;
+    const explicit = pushNext || pushAlways;
     const longRunning =
       startedAt !== undefined && elapsedMs >= longTurnThresholdMs;
 
@@ -199,7 +247,7 @@ export default function moshiCompletionAlert(pi: ExtensionAPI): void {
     }
 
     const project = basename(ctx.cwd) || "Pi";
-    const reason = explicit ? "push-next" : "long-turn";
+    const reason = pushAlways ? "push-always" : explicit ? "push-next" : "long-turn";
     const detail =
       lastAssistantMessage ||
       (prompt ? `Finished: ${prompt}` : "Pi finished its turn");

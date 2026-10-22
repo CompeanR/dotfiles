@@ -3,14 +3,14 @@
   "private": true,
   "dependencies": {
     "@gotgenes/pi-anthropic-auth": "^3.4.2",
-    "@gotgenes/pi-permission-system": "^40.2.0",
-    "@juicesharp/rpiv-ask-user-question": "^2.12.0",
-    "@juicesharp/rpiv-todo": "^2.12.0",
-    "gentle-engram": "^0.2.0",
-    "pi-btw": "^0.7.1",
-    "pi-intercom": "^0.16.0",
-    "pi-subagents": "^0.75.0",
-    "pi-undo-redo": "^0.1.3",
-    "pi-web-access": "^0.35.0"
+    "@juicesharp/rpiv-ask-user-question": "^2.13.8",
+    "@juicesharp/rpiv-todo": "^2.13.8",
+    "gentle-engram": "^0.4.2",
+    "pi-btw": "^0.8.0",
+    "pi-intercom": "^0.17.1",
+    "pi-subagents": "^0.78.0",
+    "pi-undo-redo": "^0.1.4",
+    "pi-web-access": "^0.41.0",
+    "pi-workflow-engine": "^1.1.0"
   }
 }
