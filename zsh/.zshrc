@@ -26,3 +26,4 @@ ZSH_DOTFILES="${${(%):-%x}:A:h}"
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
 alias n="nvim"
+alias c="claude"
