@@ -257,8 +257,13 @@ local function open_pi(args)
   }
   vim.list_extend(cmd, args or {})
 
+  -- pi leaves plain text in the terminal's default foreground, which inside nvim
+  -- is the colorscheme's Normal (gruvbox beige), not pi's matte-black theme text.
+  vim.api.nvim_set_hl(0, "PiNormal", { fg = "#bebebe" })
+
   local term = terminal.open(cmd, {
     win = vim.tbl_extend("force", FLOAT, {
+      wo = { winhighlight = "Normal:PiNormal,NormalNC:PiNormal,NormalFloat:PiNormal" },
       on_buf = function(self) attach_terminal_scroll(self.buf) end,
       on_win = function(self)
         local schedule_scroll = terminal_scrollers[self.buf]

@@ -19,6 +19,9 @@ return {
     opts.presets = opts.presets or {}
     opts.presets.lsp_doc_border = true
 
+    opts.lsp = opts.lsp or {}
+    opts.lsp.progress = { enabled = false }
+
     -- Your other noice configurations...
 
     return opts

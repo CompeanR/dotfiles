@@ -16,6 +16,9 @@ keymap.set("n", "<c-a>", "gg<S-v>G", { desc = "Select All" })
 keymap.del("n", "H")
 keymap.del("n", "L")
 
+-- No macro recording: a stray q<reg> silently disables the which-key popup
+keymap.set("n", "q", "<Nop>", { desc = "Disable macro recording" })
+
 -- Debugger Keymaps
 keymap.del("n", "<leader>db")
 keymap.del("n", "<leader>do")

@@ -148,6 +148,12 @@ install_desktop() {
   esac
   ln -sf "$ROOT/ghostty/$ghostty_host" "$ROOT/ghostty/config-host"
 
+  # Superwhisper re-shows its main window on every activation while it has a Dock icon,
+  # and yabai space switches briefly activate it through its sticky recording pill.
+  if [[ $ghostty_host == "config-macos" ]]; then
+    defaults write com.superduper.superwhisper showApplicationInDock -bool false
+  fi
+
   # Linux only: keep Ghostty's GTK chrome in sync with the Omarchy theme.
   if [[ $ghostty_host == "config-linux" ]] && [[ -d ~/.config/omarchy ]]; then
     mkdir -p ~/.config/omarchy/hooks/theme-set.d
@@ -272,6 +278,7 @@ install_server() {
   safe_link "$ROOT/pi/settings.json" ~/.pi/agent/settings.json || status=1
   safe_link "$ROOT/pi/mcp.json" ~/.pi/agent/mcp.json || status=1
   safe_link "$ROOT/pi/cursor-sdk.json" ~/.pi/agent/cursor-sdk.json || status=1
+  safe_link "$ROOT/pi/keybindings.json" ~/.pi/agent/keybindings.json || status=1
   safe_link "$ROOT/pi/agents" ~/.pi/agent/agents || status=1
   safe_link "$ROOT/pi/chains" ~/.pi/agent/chains || status=1
   safe_link "$ROOT/pi/extensions" ~/.pi/agent/extensions || status=1

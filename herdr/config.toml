@@ -17,7 +17,7 @@ agent_panel_sort = "priority"
 prompt_new_tab_name = true
 # prefix+b toggles expand/collapse. Collapsed look: compact = thin rail (default),
 # hidden = zero width. Flip mode with ctrl+alt+b.
-sidebar_collapsed_mode = "hidden"
+sidebar_collapsed_mode = "compact"
 
 show_agent_labels_on_pane_borders = false
 status_indicators = "symbols"
