@@ -5,13 +5,13 @@ auto_switch = false
 
 [theme.custom]
 panel_bg = "reset"
-accent = "#fabd2f"
-yellow = "#fabd2f"
+accent = "#FFC107"
+yellow = "#FFC107"
 # terminal theme leaves surface0=reset, so workspace-nav selection has no row bg
 surface0 = "#515151"
 
 [ui]
-accent = "#fabd2f"
+accent = "#FFC107"
 agent_panel_sort = "priority"
 # Ask for a name when opening a new tab.
 prompt_new_tab_name = true
@@ -27,8 +27,8 @@ status_indicators = "symbols"
 [ui.sidebar.agents]
 rows = [
   ["state_icon", { token = "machine", rules = [
-    { equals = "Local", ignore_case = true, fg = "#fabd2f" },
-    { equals = "mac-mini", ignore_case = true, fg = "#8ec07c" },
+    { equals = "Local", ignore_case = true, fg = "#FFC107" },
+    { equals = "mac-mini", ignore_case = true, fg = "#1EA7A0" },
   ] }, "workspace", "tab"],
   ["agent"],
 ]

@@ -1,6 +1,10 @@
 return {
   "nvim-lualine/lualine.nvim",
   opts = function(_, opts)
+    opts.options.theme = require("config.theme").lualine()
+    opts.options.section_separators = ""
+    opts.options.component_separators = ""
+
     -- Remove the clock from lualine_z
     opts.sections.lualine_z = {}
 
