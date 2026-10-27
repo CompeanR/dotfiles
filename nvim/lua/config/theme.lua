@@ -85,7 +85,15 @@ local function apply_overrides()
   hl({ "TSVariableBuiltin", "@variable.builtin" }, { fg = c.operator, italic = true })
   hl({ "Function", "TSFunction", "TSFunctionCall", "TSMethod", "TSMethodCall", "TSFuncBuiltin", "TSConstructor" }, { fg = c.func })
   hl({ "String", "Character", "TSString" }, { fg = c.string })
-  hl({ "Type", "TSType", "TSTypeBuiltin", "TSTypeDefinition", "TSNamespace" }, { fg = c.bright, italic = true })
+  hl({ "Type", "TSType", "TSTypeBuiltin", "TSNamespace" }, { fg = c.muted, italic = true })
+  hl({
+    "TSTypeDefinition",
+    "@lsp.typemod.class.declaration",
+    "@lsp.typemod.interface.declaration",
+    "@lsp.typemod.type.declaration",
+    "@lsp.typemod.enum.declaration",
+  }, { fg = c.bright, bold = true })
+  hl({ "@lsp.type.typeParameter" }, { link = "TSType" })
   hl({ "Identifier", "Constant", "TSField", "TSProperty", "TSParameter", "TSVariable" }, { fg = c.fg })
   hl({ "Comment", "SpecialComment", "TSComment" }, { fg = c.comment, italic = true })
   hl({ "CurrentWord", "LspReferenceText", "LspReferenceRead", "LspReferenceWrite" }, { bg = c.selection })
