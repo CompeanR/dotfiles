@@ -1,4 +1,4 @@
--- Matte-black on top of gruvbox-material, aligned with Pi, herdr and Omarchy.
+-- gruvbox-material syntax on matte-black neutrals, with Pi/herdr's yellow accent.
 -- Dark is the default; Omarchy's light.mode switches to stock gruvbox-material light.
 local M = {}
 
@@ -9,18 +9,14 @@ M.colors = {
   selection = "#333333",
   border = "#414141",
   fg = "#bebebe",
-  bright = "#eaeaea",
   comment = "#8a8a8d",
   muted = "#a5a5a5",
-  keyword = "#c96b6b",
-  operator = "#c98a5a",
-  func = "#d8a657",
-  string = "#c8b48f",
   accent = "#FFC107",
-  error = "#D35F5F",
-  info = "#3B82F6",
-  hint = "#1EA7A0",
-  added = "#10B981",
+  scope = "#d8a657",
+  insert = "#10B981",
+  visual = "#c96b6b",
+  replace = "#D35F5F",
+  command = "#c98a5a",
 }
 
 local light_mode_path = vim.fn.expand("~/.local/state/omarchy/current/theme/light.mode")
@@ -29,6 +25,7 @@ function M.is_light()
   return vim.uv.fs_stat(light_mode_path) ~= nil
 end
 
+-- Only the neutrals: gruvbox's warm browns become matte-black greys, hues stay gruvbox.
 local function palette_override()
   local c = M.colors
   local palette = {
@@ -43,23 +40,7 @@ local function palette_override()
     bg_statusline2 = c.panel,
     bg_statusline3 = c.element,
     bg_current_word = c.selection,
-    bg_visual_red = "#3c2323",
-    bg_visual_yellow = "#3a3020",
-    bg_visual_green = "#1c3329",
-    bg_visual_blue = "#1e2a3f",
-    bg_red = c.error,
-    bg_green = c.added,
-    bg_yellow = c.accent,
-    fg0 = c.fg,
-    fg1 = c.bright,
-    red = c.keyword,
-    orange = c.operator,
-    yellow = c.func,
-    green = c.added,
-    aqua = c.hint,
-    blue = c.info,
-    purple = c.keyword,
-    grey0 = c.border,
+    grey0 = "#6f6f72",
     grey1 = c.comment,
     grey2 = c.muted,
   }
@@ -74,44 +55,8 @@ local function apply_overrides()
     return
   end
   local c = M.colors
-  local function hl(groups, spec)
-    for _, group in ipairs(groups) do
-      vim.api.nvim_set_hl(0, group, spec)
-    end
-  end
-
-  hl({ "Keyword", "Conditional", "Repeat", "Statement", "Exception", "Include", "Typedef", "PreProc", "Define" }, { fg = c.keyword })
-  hl({ "Number", "Float", "Boolean", "TSConstBuiltin", "@constant.builtin" }, { fg = c.keyword })
-  hl({ "TSVariableBuiltin", "@variable.builtin" }, { fg = c.operator, italic = true })
-  hl({ "Function", "TSFunction", "TSFunctionCall", "TSMethod", "TSMethodCall", "TSFuncBuiltin", "TSConstructor" }, { fg = c.func })
-  hl({ "String", "Character", "TSString" }, { fg = c.string })
-  hl({ "Type", "TSType", "TSTypeBuiltin", "TSNamespace" }, { fg = c.muted, italic = true })
-  hl({
-    "TSTypeDefinition",
-    "@lsp.typemod.class.declaration",
-    "@lsp.typemod.interface.declaration",
-    "@lsp.typemod.type.declaration",
-    "@lsp.typemod.enum.declaration",
-  }, { fg = c.bright, bold = true })
-  hl({ "@lsp.type.typeParameter" }, { link = "TSType" })
-  hl({ "Identifier", "Constant", "TSField", "TSProperty", "TSParameter", "TSVariable" }, { fg = c.fg })
-  hl({ "Comment", "SpecialComment", "TSComment" }, { fg = c.comment, italic = true })
-  hl({ "CurrentWord", "LspReferenceText", "LspReferenceRead", "LspReferenceWrite" }, { bg = c.selection })
-
-  local diagnostics = { Error = c.error, Warn = c.operator, Info = c.info, Hint = c.hint }
-  for name, color in pairs(diagnostics) do
-    hl({ "Diagnostic" .. name, "DiagnosticSign" .. name, "DiagnosticFloating" .. name, "DiagnosticVirtualText" .. name }, { fg = color })
-    hl({ "DiagnosticUnderline" .. name }, { sp = color, undercurl = true })
-  end
-
-  hl({ "GitSignsAdd", "GitSignsAddNr" }, { fg = c.added })
-  hl({ "GitSignsChange", "GitSignsChangeNr" }, { fg = c.func })
-  hl({ "GitSignsDelete", "GitSignsDeleteNr" }, { fg = c.error })
-
-  hl({ "CursorLineNr" }, { fg = c.accent })
-  hl({ "Search" }, { fg = c.bg, bg = c.accent })
-  hl({ "IncSearch", "CurSearch" }, { fg = c.bg, bg = c.operator })
-  hl({ "FloatBorder", "WinSeparator" }, { fg = c.border })
+  vim.api.nvim_set_hl(0, "CursorLineNr", { fg = c.accent })
+  vim.api.nvim_set_hl(0, "SnacksIndentScope", { fg = c.scope })
 end
 
 function M.load()
@@ -129,24 +74,24 @@ function M.lualine()
   local function mode(color)
     return { a = { fg = c.bg, bg = color, gui = "bold" }, b = { fg = c.muted, bg = "NONE" }, c = plain }
   end
+  local dim = { fg = c.comment, bg = "NONE" }
   return {
     normal = mode(c.accent),
-    insert = mode(c.added),
-    visual = mode(c.keyword),
-    replace = mode(c.error),
-    command = mode(c.operator),
-    inactive = { a = { fg = c.comment, bg = "NONE" }, b = { fg = c.comment, bg = "NONE" }, c = { fg = c.comment, bg = "NONE" } },
+    insert = mode(c.insert),
+    visual = mode(c.visual),
+    replace = mode(c.replace),
+    command = mode(c.command),
+    inactive = { a = dim, b = dim, c = dim },
   }
 end
 
 function M.setup()
   vim.g.gruvbox_material_background = "hard"
-  vim.g.gruvbox_material_foreground = "mix"
   vim.g.gruvbox_material_ui_contrast = "high"
-  vim.g.gruvbox_material_enable_bold = 0
+  vim.g.gruvbox_material_enable_bold = 1
   vim.g.gruvbox_material_enable_italic = 1
   vim.g.gruvbox_material_sign_column_background = "none"
-  vim.g.gruvbox_material_current_word = "grey background"
+  vim.g.gruvbox_material_current_word = "bold"
   -- 2 (not 1) so floats are transparent too; 'blend' links NormalFloat to Normal
   -- instead of painting floats bg3.
   vim.g.gruvbox_material_transparent_background = 2
