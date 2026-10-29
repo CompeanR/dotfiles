@@ -40,6 +40,8 @@ local function palette_override()
     bg_statusline2 = c.panel,
     bg_statusline3 = c.element,
     bg_current_word = c.selection,
+    fg0 = c.fg,
+    fg1 = c.fg,
     grey0 = "#6f6f72",
     grey1 = c.comment,
     grey2 = c.muted,
@@ -57,6 +59,12 @@ local function apply_overrides()
   local c = M.colors
   vim.api.nvim_set_hl(0, "CursorLineNr", { fg = c.accent })
   vim.api.nvim_set_hl(0, "SnacksIndentScope", { fg = c.scope })
+  for level = 1, 6 do
+    vim.api.nvim_set_hl(0, "RenderMarkdownH" .. level .. "Bg", { bg = c.panel })
+  end
+  vim.api.nvim_set_hl(0, "RenderMarkdownH1", { fg = c.accent, bold = true })
+  vim.api.nvim_set_hl(0, "RenderMarkdownH2", { fg = c.scope, bold = true })
+  vim.api.nvim_set_hl(0, "@markup.strong", { fg = c.accent, bold = true })
 end
 
 function M.load()
