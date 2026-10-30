@@ -6,6 +6,8 @@ Chapters 11, 15, 19, 20.
 
 For every major interface, sketch at least two radically different designs (even if you're sure there's only one sensible option) and compare them. The main criterion is ease of use for the code above; then simplicity, generality and efficiency. The winner may combine ideas, or the comparison may reveal a third design. Repeat for the implementation, where simplicity and performance matter most. For a class this takes an hour or two, not days. For parallel exploration, see `codebase-design`'s DESIGN-IT-TWICE.md.
 
+**The user picks major interfaces.** For a module boundary, public API, data model or report shape in a new project or feature, present the alternatives before implementing: for each, a signature sketch, a short call-site example, and what it hides or leaks. Compare them, recommend one, then wait for the user's pick. Interfaces internal to a module, you choose yourself after comparing alternatives.
+
 ## The increment is an abstraction, not a feature
 
 Develop incrementally, but each increment adds or reshapes an abstraction. You can defer thinking about an abstraction until a feature needs it. When it does, design it whole: a reasonably complete, somewhat general core rather than one piece per feature.
