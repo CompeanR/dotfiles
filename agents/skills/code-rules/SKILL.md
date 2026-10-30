@@ -11,7 +11,7 @@ Source: John Ousterhout, _A Philosophy of Software Design_, 2nd ed. Shared vocab
 
 ## How to apply
 
-- **Writing or designing**: read the topic file for the work in front of you (table below) before you write the module. Before calling the work done, check the diff against every red flag.
+- **Writing or designing**: read the topic file for the work in front of you (table below) before you write the module. For a major interface in a new project or feature, design it twice and let the user pick (`process.md`). Before calling the work done, check the diff against every red flag.
 - **Modifying existing code**: finish with the structure the code would have had if it had been designed with this change in mind. Leave the design a little better than you found it; a change that doesn't improve it is making it worse.
 - **Reviewing**: check every hunk against every red flag. Report each hit with the flag name, the quoted hunk, and the fix. Each hit is a judgement call; a repo's own documented standard wins.
 
