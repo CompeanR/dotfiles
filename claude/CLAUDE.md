@@ -8,6 +8,8 @@ Every project lives in a GitHub repo (account CompeanR, private by default; crea
 
 Write every PR body with the `pr` skill, including PRs opened by sub-agents and by other skills.
 
+Load the `code-rules` skill before writing, designing or reviewing code, and add its red flags to every code review.
+
 In typescript always use 'public' keyword on public methods inside classes
 Remember we have
 
