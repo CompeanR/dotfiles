@@ -37,20 +37,22 @@ Let many errors travel to one handler instead of catching each one where it happ
 
 - Request-driven systems (HTTP servers, job runners, CLIs, UI actions): one handler at the top of the request loop turns any request-aborting error into the response. Route handlers and helpers just throw.
 - The code that detects the error writes the human-readable message into the error; the top handler only formats and sends it. Neither knows the other's details.
-- Define one base error class for "abort this request" (subclasses for specific conditions), clearly separate from errors that are fatal to the process.
+- Define one error class for "abort this request", `UserError(message, status)`, clearly separate from bugs and from errors that are fatal to the process. Add subclasses only when a handler must tell conditions apart; the status usually carries that.
 - New code that throws the same way plugs in with no handler changes.
+- Anything that isn't a `UserError` is a bug: report it, and answer with a generic message. Never send a bug's raw message to the user.
 
 ```ts
 // One boundary for every route
-app.onError((err, c) =>
-  err instanceof RequestError
-    ? c.json({ error: err.message }, err.status)
-    : c.json({ error: 'Internal error' }, 500));
+app.onError((err, c) => {
+  if (err instanceof UserError) return c.json({ message: err.message }, err.status);
+  reporter.report(err, { where: `${c.req.method} ${c.req.path}` });
+  return c.json({ message: 'Something went wrong' }, 500);
+});
 
 // Deep inside any handler
 public getIntParameter(name: string): number {
   const raw = this.params.get(name);
-  if (raw === undefined) throw new RequestError(`parameter '${name}' not present`, 400);
+  if (raw === undefined) throw new UserError(`parameter '${name}' not present`, 400);
   ...
 }
 ```
