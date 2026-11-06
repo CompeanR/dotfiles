@@ -34,6 +34,7 @@ A red flag is a symptom that code is more complex than it needs to be. When you 
 - **Special-case sprawl**: flags and `if` checks for edge cases (`hasSelection`, `isEmpty`) that a better normal case would absorb. → `errors.md`
 - **Scattered error handling**: many handlers doing the same thing, a `try/catch` per call, or errors thrown where the operation could have been defined to succeed. → `errors.md`
 - **Comment repeats code**: everything in the comment is obvious from the code beside it, often reusing the name's own words. → `comments.md`
+- **Missing knowledge**: a reader must dig (another file, the body, a run) to learn what something promises, what a value means at its edges, its side effects, how it fails, why it's this way, or what else must change with it. → `comments.md`
 - **Implementation contaminates interface**: an interface comment describes how, when the caller only needs what. → `comments.md`
 - **Hard to describe**: a complete comment for the method or variable would have to be long. → `comments.md`
 - **Vague name**: a name broad enough to mean many things (`data`, `count`, `status`, `result` in a void function). → `names.md`
