@@ -32,7 +32,7 @@
       }
     }
   },
-  "outputStyle": "Concise",
+  "outputStyle": "Default",
   "effortLevel": "high",
   "modelSettings": {
     "claude-opus-4-6": {

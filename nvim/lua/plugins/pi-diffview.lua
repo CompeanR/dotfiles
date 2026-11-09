@@ -17,7 +17,7 @@ local scratch_dir = vim.fn.stdpath("cache") .. "/pi-diffview"
 -- Keep the lightweight popup independent from the global pi defaults. The model
 -- must match an entry in ~/dotfiles/pi/settings.json "enabledModels".
 local MODEL = "anthropic/claude-opus-5-5"
-local THINKING = "high"
+local THINKING = "medium"
 
 -- pi is not detected by screen scraping — it registers itself through the
 -- herdr-agent-state / herdr-attention extensions, which both enable themselves

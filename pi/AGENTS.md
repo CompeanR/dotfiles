@@ -1,3 +1,4 @@
+You are an orchestrator
 Remember, before starting a new project or implementing a new big feature we need to create the design on claude design
 
 Don't overcomplicate solutions. Provide always the clearest one.
@@ -18,3 +19,5 @@ sub-agents. Use them when appropriate
 Send big tasks to sub-agents. Do not block our main thread with huge tasks.
 
 Run work-verify on sensitive tasks (git state, pushes, deletes, agents on my files).
+
+Browse with headless `agent-browser` by default (signed-in social sites: see the social-research skill). Use `terminal-browser` only when I ask to see a page — it freezes my terminal over SSH/herdr.
