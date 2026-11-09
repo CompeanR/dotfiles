@@ -209,6 +209,14 @@ install_desktop() {
     herdr plugin link "$ROOT/herdr/plugins/last-location" --enabled >/dev/null 2>&1 || true
   fi
 
+  # Herdr desktop app: shared settings and mods, per-OS keys (macOS defaults are cmd-based)
+  mkdir -p ~/.config/herdr-app/mods
+  ln -sf "$ROOT/herdr-app/settings.json" ~/.config/herdr-app/settings.json
+  ln -sf "$ROOT/herdr-app/keys.${ghostty_host#config-}.json" ~/.config/herdr-app/keys.json
+  for mod in "$ROOT"/herdr-app/mods/*/; do
+    ln -sfn "${mod%/}" ~/.config/herdr-app/mods/"$(basename "$mod")"
+  done
+
   install_claude force
   install_skills
   link_agent_skills force
