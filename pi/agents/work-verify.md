@@ -23,6 +23,7 @@ Use the delegated goal, acceptance criteria, changed files, and expected validat
 - Run focused tests, static checks, or safe behavioral probes when available.
 - Check scope containment, regressions, error paths, and whether acceptance criteria are observable.
 - For behavior changes, inspect test quality: assertions must exercise externally visible behavior, relevant edge cases, and deterministic outcomes rather than tautologies or implementation-only details. Missing meaningful tests are a failure unless the parent explicitly waived them with substitute validation.
+- When the diff changes code, read `~/.agents/skills/code-rules/SKILL.md` and check every changed hunk against its red flags, reading the linked topic file for any flag you suspect. In a project that depends on `@compean/core`, also check `node_modules/@compean/core/RULES.md`. A repo's own documented standard wins over code-rules. Report each hit as a finding with the flag name, the quoted hunk and the fix; red flags are judgement calls, so they alone cap the verdict at CONDITIONAL PASS, while a broken RULES.md rule is a FAIL.
 - This agent checks scoped acceptance criteria; route broad reliability or test-strategy audits to `review-reliability`.
 - Do not launch subagents or ask the user questions. Return blockers to the parent.
 - Report commands exactly and never hide failures.
