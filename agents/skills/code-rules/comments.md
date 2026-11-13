@@ -19,7 +19,7 @@ A comment answers at least one of these; one that answers none is deleted.
 | 5. Why is it this way? A non-obvious choice, a rejected alternative, a workaround (link the issue). | Next to the surprising code; inside a long body, one line before the block it explains. |
 | 6. What else must change with it? A decision spread across modules. | Where developers go anyway (beside the enum everyone extends), or a design-notes section the code points to: "See 'X' in the README's design notes." |
 
-A public interface gets a comment when a caller would otherwise have to read the body to answer question 1, 3 or 4; a precise name and type often answer them already. A private helper with a precise name usually doesn't. A field gets one for questions 2 or 5.
+Public interfaces nearly always answer questions 1, 3 or 4, so they nearly always get a comment. A private helper with a precise name usually doesn't. A field gets one for questions 2 or 5.
 
 ## How to write one
 
