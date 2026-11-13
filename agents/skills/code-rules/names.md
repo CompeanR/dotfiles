@@ -27,7 +27,7 @@ Similar things are done the same way, and different things differently.
 
 ## Making code obvious
 
-- Use blank lines to separate the major blocks in a function, each led by a one-line comment.
+- Use blank lines to separate the major blocks in a function. Lead a block with a one-line comment only when it passes the test in `comments.md`.
 - Return a named type, never a tuple or generic pair:
 
 ```ts
