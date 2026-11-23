@@ -1,6 +1,6 @@
 return {
   {
-    dir = "~/development/pr-manager/nvim",
+    dir = "~/Development/pr-manager/nvim",
     name = "prm",
     lazy = false,
     opts = {

@@ -1,74 +1,75 @@
 {
-  "defaultModel": "claude-opus-5-5",
-  "defaultProvider": "anthropic",
-  "defaultThinkingLevel": "medium",
-  "defaultTools": ["+codemode"],
-  "enabledModels": [
-    "deepseek/deepseek-flash",
-    "openai-codex/gpt-6-astra",
-    "anthropic/auto",
-    "anthropic/claude-opus-5-5",
-    "openai-codex/gpt-6-luna",
-    "openai-codex/gpt-6.1-sol"
-  ],
-  "hideThinkingBlock": true,
-  "lastChangelogVersion": "1.5.0",
-  "packages": [
-    "npm:pi-web-access",
-    "npm:gentle-engram",
-    "npm:pi-subagents",
-    "npm:pi-intercom",
-    "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:@juicesharp/rpiv-todo",
-    "npm:pi-btw",
-    "npm:pi-undo-redo",
-    "npm:@gotgenes/pi-anthropic-auth",
-    "npm:pi-workflow-engine"
-  ],
-  "subagents": {
-    "disableBuiltins": true,
-    "defaultModel": "openai-codex/gpt-6-sol",
-    "globalConcurrencyLimit": 5,
-    "agentOverrides": {
-      "work-apply": {
-        "model": "anthropic/claude-opus-5-5",
-        "thinking": "medium",
-        "inheritProjectContext": false,
-        "inheritSkills": false,
-        "defaultContext": "fresh",
-        "acceptanceRole": "writer"
-      },
-      "work-explore": {
-        "model": "anthropic/claude-sonnet-5-5",
-        "thinking": "high",
-        "inheritProjectContext": false,
-        "inheritSkills": false,
-        "defaultContext": "fresh",
-        "acceptanceRole": "read-only"
-      },
-      "work-design": {
-        "model": "anthropic/claude-opus-5-5",
-        "thinking": "high",
-        "inheritProjectContext": false,
-        "inheritSkills": false,
-        "defaultContext": "fresh",
-        "acceptanceRole": "read-only"
-      },
-      "work-verify": {
-        "model": "anthropic/claude-opus-5-5",
-        "thinking": "high",
-        "inheritProjectContext": false,
-        "inheritSkills": false,
-        "defaultContext": "fresh",
-        "acceptanceRole": "read-only"
-      }
+    "defaultModel": "claude-opus-5-5",
+    "defaultProvider": "anthropic",
+    "defaultThinkingLevel": "medium",
+    "modelThinkingLevels": {
+        "anthropic/claude-opus-5-5": "medium",
+        "antigravity/gemini-4-neon": "high"
+    },
+    "defaultTools": ["+codemode"],
+    "enabledModels": [
+        "anthropic/claude-opus-5-5:medium",
+        "antigravity/gemini-4-neon:high"
+    ],
+    "hideThinkingBlock": true,
+    "lastChangelogVersion": "1.6.0",
+    "packages": [
+        "npm:pi-web-access",
+        "npm:gentle-engram",
+        "npm:pi-subagents",
+        "npm:pi-intercom",
+        "npm:@juicesharp/rpiv-ask-user-question",
+        "npm:@juicesharp/rpiv-todo",
+        "npm:pi-btw",
+        "npm:pi-undo-redo",
+        "npm:@gotgenes/pi-anthropic-auth",
+        "npm:pi-workflow-engine",
+        "npm:pi-antigravity"
+    ],
+    "subagents": {
+        "disableBuiltins": true,
+        "defaultModel": "antigravity/gemini-4-neon",
+        "globalConcurrencyLimit": 5,
+        "agentOverrides": {
+            "work-apply": {
+                "model": "antigravity/gemini-4-neon",
+                "thinking": "high",
+                "inheritProjectContext": false,
+                "inheritSkills": false,
+                "defaultContext": "fresh",
+                "acceptanceRole": "writer"
+            },
+            "work-explore": {
+                "model": "antigravity/gemini-4-neon",
+                "thinking": "high",
+                "inheritProjectContext": false,
+                "inheritSkills": false,
+                "defaultContext": "fresh",
+                "acceptanceRole": "read-only"
+            },
+            "work-design": {
+                "model": "antigravity/gemini-4-neon",
+                "thinking": "high",
+                "inheritProjectContext": false,
+                "inheritSkills": false,
+                "defaultContext": "fresh",
+                "acceptanceRole": "read-only"
+            },
+            "work-verify": {
+                "model": "antigravity/gemini-4-neon",
+                "thinking": "high",
+                "inheritProjectContext": false,
+                "inheritSkills": false,
+                "defaultContext": "fresh",
+                "acceptanceRole": "read-only"
+            }
+        }
+    },
+    "skills": [],
+    "theme": "matte-black",
+    "extensionChangelogVersions": {
+        "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.48.0",
+        "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.90.0",
+        "{\"source\":\"npm:@gotgenes/pi-anthropic-auth\",\"scope\":\"user\"}": "3.6.0"
     }
-  },
-  "skills": [],
-  "theme": "matte-black",
-  "extensionChangelogVersions": {
-    "{\"source\":\"npm:pi-web-access\",\"scope\":\"user\"}": "0.47.0",
-    "{\"source\":\"npm:pi-subagents\",\"scope\":\"user\"}": "0.87.0",
-    "{\"source\":\"npm:@gotgenes/pi-anthropic-auth\",\"scope\":\"user\"}": "3.4.4"
-  }
 }
