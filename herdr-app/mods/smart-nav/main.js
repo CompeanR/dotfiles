@@ -15,7 +15,8 @@ export default class SmartNav extends View {
         const pane = panes().find((p) => p.focused);
         const program = pane?.program;
         if (pane?.terminal && (program?.key === "nvim" || VIM.test(program?.name?.toLowerCase() ?? ""))) {
-          await hc(["keys", pane.terminal, KEYS[dir]]);
+          // Not awaited: held/repeated keys (picker ctrl+j/k) would queue behind each hc round trip.
+          hc(["keys", pane.terminal, KEYS[dir]]).catch(() => {});
         } else {
           run("pane.go", { direction: dir });
         }
