@@ -107,7 +107,11 @@
     "ctrl-space alt-6": "agent.select:6",
     "ctrl-space alt-7": "agent.select:7",
     "ctrl-space alt-8": "agent.select:8",
-    "ctrl-space alt-9": "agent.select:9"
+    "ctrl-space alt-9": "agent.select:9",
+    "ctrl-h": "smart-nav.left",
+    "ctrl-j": "smart-nav.down",
+    "ctrl-k": "smart-nav.up",
+    "ctrl-l": "smart-nav.right"
   },
   "terminal": {
     "ctrl-backspace": "send:\u0017",
