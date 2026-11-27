@@ -52,6 +52,24 @@ local function palette_override()
   return palette
 end
 
+-- herdr-app on Linux is faded as a whole window by Hyprland (0.8), text included,
+-- so lift every foreground a little to read like Ghostty, which fades only its background.
+local herdr_fade_boost = 1.15
+
+local function brighten_for_translucent_window()
+  if vim.env.HC_TERMINAL_SOCKET == nil or vim.fn.has("linux") == 0 then
+    return
+  end
+  for name, hl in pairs(vim.api.nvim_get_hl(0, {})) do
+    if hl.fg and not hl.link then
+      local r, g, b = bit.rshift(hl.fg, 16), bit.band(bit.rshift(hl.fg, 8), 0xff), bit.band(hl.fg, 0xff)
+      local f = math.min(herdr_fade_boost, 255 / math.max(r, g, b, 1))
+      hl.fg = math.floor(r * f + 0.5) * 65536 + math.floor(g * f + 0.5) * 256 + math.floor(b * f + 0.5)
+      vim.api.nvim_set_hl(0, name, hl)
+    end
+  end
+end
+
 local function apply_overrides()
   if vim.o.background ~= "dark" then
     return
@@ -65,6 +83,7 @@ local function apply_overrides()
   vim.api.nvim_set_hl(0, "RenderMarkdownH1", { fg = c.accent, bold = true })
   vim.api.nvim_set_hl(0, "RenderMarkdownH2", { fg = c.scope, bold = true })
   vim.api.nvim_set_hl(0, "@markup.strong", { fg = c.accent, bold = true })
+  brighten_for_translucent_window()
 end
 
 function M.load()
