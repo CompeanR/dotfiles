@@ -3,10 +3,14 @@
   "sounds": {
     "enabled": true
   },
+  "font": "Liga SFMono Nerd Font",
+  "font_size": 15,
+  "font_weight": 400,
   "font_ligatures": false,
   "minimum_contrast": 1.0,
   "colors": {
     "accent": "#FFC107",
     "selected": "#515151"
-  }
+  },
+  "theme": "omarchy"
 }

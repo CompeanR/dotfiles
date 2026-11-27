@@ -210,7 +210,8 @@ install_desktop() {
   fi
 
   # Herdr desktop app: shared settings and mods, per-OS keys (macOS defaults are cmd-based)
-  mkdir -p ~/.config/herdr-app/mods
+  mkdir -p ~/.config/herdr-app/mods ~/.config/herdr-app/themes
+  ln -sf "$ROOT/herdr-app/themes/omarchy.json" ~/.config/herdr-app/themes/omarchy.json
   ln -sf "$ROOT/herdr-app/settings.json" ~/.config/herdr-app/settings.json
   ln -sf "$ROOT/herdr-app/keys.${ghostty_host#config-}.json" ~/.config/herdr-app/keys.json
   for mod in "$ROOT"/herdr-app/mods/*/; do
