@@ -1,4 +1,5 @@
--- Inside herdr: vim-herdr-navigation owns <C-h/j/k/l>.
+-- Inside herdr-app (HC_TERMINAL_SOCKET): splits first, then `herdr-app do pane.go` at the edge.
+-- Inside herdr TUI: vim-herdr-navigation owns <C-h/j/k/l>.
 -- Outside herdr: falls back to vim-tmux-navigator (or plain wincmd).
 --
 -- LazyVim remaps <C-hjkl> → <C-w>* on VeryLazy (after plugin config).
@@ -10,7 +11,26 @@ return {
     vim.g.tmux_navigator_no_mappings = 1
   end,
   config = function()
+    local function setup_herdr_app()
+      local function nav(wincmd, dir)
+        local prev = vim.api.nvim_get_current_win()
+        vim.cmd("wincmd " .. wincmd)
+        if vim.api.nvim_get_current_win() == prev then
+          vim.system({ "herdr-app", "do", "pane.go", vim.json.encode({ direction = dir }) })
+        end
+      end
+      for lhs, spec in pairs({ ["<C-h>"] = { "h", "left" }, ["<C-j>"] = { "j", "down" }, ["<C-k>"] = { "k", "up" }, ["<C-l>"] = { "l", "right" } }) do
+        vim.keymap.set("n", lhs, function()
+          nav(spec[1], spec[2])
+        end, { silent = true, desc = "Navigate " .. spec[2] .. " (vim/herdr-app)" })
+      end
+    end
+
     local function setup()
+      if vim.env.HC_TERMINAL_SOCKET and not vim.env.HERDR_PANE_ID then
+        setup_herdr_app()
+        return
+      end
       local matches = vim.fn.glob(
         vim.fn.expand("~/.config/herdr/plugins/github/vim-herdr-navigation-*/editor/nvim.lua"),
         true,
